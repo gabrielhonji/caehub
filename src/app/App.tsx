@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { AppShell } from '../components/AppShell';
 import { Badge, EmptyState, ErrorState, Eyebrow, LoadingState } from '../components/primitives';
 import { SpaceSummary } from '../components/SpaceSummary';
@@ -21,35 +22,43 @@ function useFoundationData() {
   return { status, spaceList, taskList, load };
 }
 
-function GiroArtwork() {
-  return <div className="giro-art" aria-hidden="true"><span className="art-label">CAEHUB / GESTÃO</span><svg viewBox="0 0 64 64"><use href="/assets/honji-symbol.svg#mark" /></svg><div className="art-meta"><span>CAECOMP</span><span>01 / 03</span></div></div>;
-}
-
 function Dashboard({ spaces, tasks }: { spaces: Space[]; tasks: TaskPreview[] }) {
+  const workflow = [
+    ['Ideias', 8], ['Planejado', 5], ['Em andamento', 3], ['Aguardando', 2], ['Concluído', 12],
+  ] as const;
+  const departments = ['RH/RE', 'Marketing', 'Produtos', 'Eventos', 'Secretaria', 'Financeiro'];
   return <>
-    <section className="hero">
-      <div className="hero-kicker"><Eyebrow>CAEHUB / GESTÃO</Eyebrow><span>01 — UM PONTO DE PARTIDA</span></div>
-      <div className="hero-body">
-        <div className="hero-copy"><p className="hero-author">CAECOMP em movimento.</p><h1>Organizar para<br /><em>fazer acontecer.</em></h1><p>Um espaço comum para acompanhar iniciativas, responsabilidades e os próximos passos da organização.</p><a className="button button-primary" href="#/espacos">Explorar espaços <span aria-hidden="true">↓</span></a></div>
-        <GiroArtwork />
+    <section className="dashboard-intro">
+      <div className="dashboard-intro-main">
+        <Eyebrow>CAEHUB / VISÃO GERAL</Eyebrow>
+        <h1>O trabalho do CAECOMP,<br /><em>em um só lugar.</em></h1>
+        <p>Acompanhe os espaços, cartões e responsabilidades que estão movimentando a organização.</p>
       </div>
-      <div className="hero-foot"><span>6 DEPARTAMENTOS · CERCA DE 33 MEMBROS</span><span>IDEIAS QUE GANHAM CONTEXTO</span></div>
+      <aside className="context-note"><Eyebrow>AMBIENTE DE DESENVOLVIMENTO</Eyebrow><strong>Dados demonstrativos</strong><p>A estrutura representa o MVP de Gestão. Nenhuma informação real do grupo está publicada aqui.</p></aside>
     </section>
 
-    <section className="section overview-section">
-      <div className="section-heading editorial-heading"><div><Eyebrow>01 / PANORAMA</Eyebrow><h2>O trabalho visível.<br /><em>O contexto preservado.</em></h2></div><p>Uma leitura rápida do que existe agora, sem transformar cada informação em decoração.</p></div>
+    <section className="dashboard-block overview-section" aria-labelledby="overview-title">
+      <div className="compact-heading"><div><Eyebrow>HOJE</Eyebrow><h2 id="overview-title">Panorama</h2></div><span>Atualizado com dados fictícios</span></div>
       <div className="overview"><div><Eyebrow>ESPAÇOS ATIVOS</Eyebrow><strong>{spaces.length}</strong><span>contextos em desenvolvimento</span></div><div><Eyebrow>PRÓXIMAS AÇÕES</Eyebrow><strong>{tasks.length}</strong><span>itens para acompanhar</span></div><div><Eyebrow>DEPARTAMENTOS</Eyebrow><strong>6</strong><span>áreas da organização</span></div></div>
     </section>
 
-    <section className="section">
-      <div className="section-heading editorial-heading"><div><Eyebrow>02 / EM FOCO</Eyebrow><h2>O que está<br /><em>em movimento.</em></h2></div><a href="#/espacos">Ver todos os espaços <span aria-hidden="true">→</span></a></div>
-      <div className="task-list">{tasks.map((task, index) => <article key={task.id} className="task-row"><div className="task-index">{String(index + 1).padStart(2, '0')}</div><div className="task-main"><Badge tone={task.status === 'Em andamento' ? 'active' : task.status === 'Aguardando' ? 'waiting' : 'neutral'}>{task.status}</Badge><h3>{task.title}</h3><p>{task.space} · {task.helpers} auxiliares</p></div><time>{task.due}</time></article>)}</div>
+    <section className="dashboard-grid">
+      <div className="work-panel">
+        <div className="compact-heading"><div><Eyebrow>ACOMPANHAMENTO</Eyebrow><h2>Em foco</h2></div><a href="#/espacos">Ver espaços <span aria-hidden="true">→</span></a></div>
+        <div className="task-list">{tasks.map((task, index) => <article key={task.id} className="task-row"><div className="task-index" aria-label={`Item ${index + 1}`}>{String(index + 1).padStart(2, '0')}</div><div className="task-main"><Badge tone={task.status === 'Em andamento' ? 'active' : task.status === 'Aguardando' ? 'waiting' : 'neutral'}>{task.status}</Badge><h3>{task.title}</h3><p>{task.space} · {task.helpers} auxiliares</p></div><time>{task.due}</time></article>)}</div>
+      </div>
+      <aside className="workflow-panel">
+        <div className="compact-heading"><div><Eyebrow>FLUXO GERAL</Eyebrow><h2>Cartões</h2></div><strong>30</strong></div>
+        <ol className="workflow-list">{workflow.map(([label, count]) => <li key={label}><span>{label}</span><strong>{count}</strong><i style={{ '--progress': `${count / 12 * 100}%` } as CSSProperties} /></li>)}</ol>
+      </aside>
     </section>
 
-    <section className="section">
-      <div className="section-heading editorial-heading"><div><Eyebrow>03 / ESPAÇOS</Eyebrow><h2>Diferentes frentes.<br /><em>Uma mesma organização.</em></h2></div><p>Cada espaço encontra seu ritmo. Todos partem de uma linguagem comum.</p></div>
+    <section className="section spaces-section">
+      <div className="section-heading editorial-heading"><div><Eyebrow>ESPAÇOS</Eyebrow><h2>Onde o trabalho<br /><em>ganha contexto.</em></h2></div><p>Cada espaço reúne participantes e quadros de uma frente do CAECOMP.</p></div>
       <div className="spaces-grid">{spaces.slice(0, 3).map((space, index) => <SpaceSummary key={space.id} space={space} index={index} />)}</div>
     </section>
+
+    <section className="organization-strip" aria-labelledby="departments-title"><div><Eyebrow>ORGANIZAÇÃO</Eyebrow><h2 id="departments-title">Seis departamentos,<br />uma visão compartilhada.</h2></div><ul>{departments.map((department, index) => <li key={department}><span>{String(index + 1).padStart(2, '0')}</span>{department}</li>)}</ul></section>
   </>;
 }
 
