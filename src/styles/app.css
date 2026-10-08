@@ -2,3 +2,12 @@
 @media(max-width:980px){.hero-body{gap:40px}.spaces-grid{grid-template-columns:repeat(2,1fr)}.space-card:last-child{grid-column:1/-1}.editorial-heading>p{max-width:290px}}
 @media(max-width:720px){body:before{background-size:56px 56px}.header-inner{min-height:auto;padding:18px 0;flex-wrap:wrap;gap:16px}.brand-copy{gap:8px}.brand small{padding-left:8px}.header-inner nav{order:3;width:100%;margin:0;justify-content:space-between;border-top:1px solid var(--line);padding-top:7px;gap:10px}.theme-button{margin-left:auto}.content{padding-bottom:60px}.hero{padding-top:27px}.hero-kicker span{font-size:8px}.hero-body{grid-template-columns:1fr;gap:35px;padding:40px 0 45px}.hero-copy h1{font-size:clamp(49px,13vw,67px);letter-spacing:-3.6px}.giro-art{aspect-ratio:1.45}.giro-art svg{width:46%;height:66%}.hero-foot{font-size:8px;letter-spacing:.75px}.hero-foot span:last-child{text-align:right}.section{padding:54px 0}.section-heading{display:block;margin-bottom:28px}.editorial-heading h2{font-size:39px;letter-spacing:-2px}.editorial-heading>p{max-width:none;margin-top:20px}.section-heading>a{margin-top:19px}.overview{grid-template-columns:1fr}.overview>div{min-height:125px;border-right:0;border-bottom:1px solid var(--line)}.overview>div:last-child{border-bottom:0}.overview strong{margin-top:13px}.task-row{grid-template-columns:32px 1fr;gap:12px}.task-row time{grid-column:2;margin-top:3px}.spaces-grid{grid-template-columns:1fr}.space-card,.space-card:last-child{grid-column:auto;min-height:280px}.space-card h2{margin-top:37px}.page-header{padding:54px 0 42px}.page-header h1{font-size:50px;letter-spacing:-3px}.footer-inner{align-items:flex-start;flex-wrap:wrap;gap:24px;padding:28px 0}.footer-meta{width:100%;margin-left:0;text-align:left}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.spinner{animation:none}}
+
+/* The fixed grid belongs to the page canvas, following the portal's stacking model. */
+body{isolation:isolate;background:transparent}
+.hero-body{grid-template-columns:1.5fr 1fr;gap:80px}
+.giro-art{width:100%;max-width:390px;justify-self:end}
+.footer-version{display:flex;flex-direction:column;gap:4px;margin-left:auto;text-align:right;font-size:9px;letter-spacing:.8px}
+.footer-version>span:last-child{color:var(--muted);letter-spacing:.3px}
+@media(max-width:980px){.hero-body{gap:32px}.giro-art{max-width:330px}}
+@media(max-width:720px){.giro-art{max-width:none}.footer-version{width:100%;margin-left:0;text-align:left}}

@@ -22,7 +22,7 @@ function useFoundationData() {
 }
 
 function GiroArtwork() {
-  return <div className="giro-art" aria-hidden="true"><span className="art-label">HONJI / GIRO ORIGINAL</span><svg viewBox="0 0 64 64"><use href="/assets/honji-symbol.svg#mark" /></svg><div className="art-meta"><span>CAEHUB</span><span>01 / 03</span></div></div>;
+  return <div className="giro-art" aria-hidden="true"><span className="art-label">CAEHUB / GESTÃO</span><svg viewBox="0 0 64 64"><use href="/assets/honji-symbol.svg#mark" /></svg><div className="art-meta"><span>CAECOMP</span><span>01 / 03</span></div></div>;
 }
 
 function Dashboard({ spaces, tasks }: { spaces: Space[]; tasks: TaskPreview[] }) {

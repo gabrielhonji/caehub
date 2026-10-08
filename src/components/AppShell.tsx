@@ -23,8 +23,8 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
       <footer className="site-footer">
         <div className="footer-inner">
           <div className="footer-brand"><Brand /></div>
-          <div className="footer-credit"><span>DESENVOLVIDO POR</span><strong>gabriel.honji</strong></div>
-          <div className="footer-meta"><span>HONJI — CAEHUB</span><span>Fundação visual · 2026</span></div>
+          <div className="footer-credit"><span>UMA FERRAMENTA DO</span><strong>CAECOMP · UTFPR APUCARANA</strong></div>
+          <div className="footer-version"><span>CAEHUB — GESTÃO</span><span>CAEHUB v{__APP_VERSION__} · {__APP_RELEASE__}</span></div>
         </div>
       </footer>
     </div>
