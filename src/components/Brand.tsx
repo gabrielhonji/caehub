@@ -1,11 +1,15 @@
 export function Brand() {
   return (
     <a className="brand" href="#/" aria-label="CAEHUB, início">
-      <img className="cae-mark" src="/assets/caecomp-hub-mark-v1.png" alt="" />
+      <span className="cae-mark" aria-hidden="true" />
       <span className="brand-copy">
         <strong>CAEHUB</strong>
-        <small>CAECOMP</small>
+        <small>Gestão do CAECOMP</small>
       </span>
     </a>
   );
+}
+
+export function HonjiBrand() {
+  return <a className="honji-brand" href="https://gabriel.honji.com.br" aria-label="HONJI, abrir portfólio"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/honji-symbol.svg#mark" /></svg><strong>HONJI</strong></a>;
 }
