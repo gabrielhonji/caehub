@@ -1,0 +1,18 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /app
+    volumes:
+      - .:/app
+      - caehub_node_modules:/app/node_modules
+    networks:
+      - caehub_dev
+
+networks:
+  caehub_dev:
+    name: caehub_dev
+
+volumes:
+  caehub_node_modules:
