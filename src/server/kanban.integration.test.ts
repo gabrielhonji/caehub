@@ -42,6 +42,10 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   assert.equal((await memberApp.inject({method:'POST',url:`/api/cards/${publicId}/comments`,payload:{body:'Comentário persistido'}})).statusCode,201);
   const detail=(await memberApp.inject({method:'GET',url:`/api/cards/${publicId}`})).json();
   assert.equal(detail.helpers.length,1); assert.equal(detail.checklist.length,1); assert.equal(detail.comments.length,1);
+  assert.equal(detail.currentMembershipId,memberId); assert.ok(detail.eligibleParticipants.some((participant:any)=>participant.membershipId===memberId));
+  assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${publicId}`,payload:{visibility:'directors'}})).statusCode,403);
+  assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${publicId}`,payload:{priority:'high',dueAt:null,tags:['teste']}})).statusCode,200);
+  assert.equal((await memberApp.inject({method:'POST',url:`/api/cards/${publicId}/transfers`,payload:{toMembershipId:'00000000-0000-4000-8000-000000000099'}})).statusCode,403);
   await new KanbanService(db,new InstitutionalService(db)).myTasks(member,{participation:'helper'});
   const tasks=await memberApp.inject({method:'GET',url:'/api/my-tasks?participation=helper'});
   assert.equal(tasks.statusCode,200,tasks.body); assert.ok(tasks.json().some((card:any)=>card.id===publicId));
@@ -50,6 +54,7 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   if(!targetId){const target=await ownerApp.inject({method:'POST',url:'/api/members',payload:{honjiSubject:targetSubject,displayName:'Transfer Target',role:'member'}});targetId=target.json().id;}
   await ownerApp.inject({method:'PATCH',url:`/api/workspaces/${workspaceId}`,payload:{addMembershipId:targetId}});
   const assigned=await ownerApp.inject({method:'POST',url:`/api/boards/${boardId}/cards`,payload:{title:`Transferência ${Date.now()}`,columnId:board.columns[0].id,responsibleMembershipId:memberId}});
+  assert.equal((await memberApp.inject({method:'POST',url:`/api/cards/${assigned.json().id}/transfers`,payload:{toMembershipId:'00000000-0000-4000-8000-000000000099'}})).statusCode,409);
   const transfer=await memberApp.inject({method:'POST',url:`/api/cards/${assigned.json().id}/transfers`,payload:{toMembershipId:targetId}});
   assert.equal(transfer.statusCode,201); assert.equal(transfer.json().immediate,false);
   const targetApp=buildApp(new InstitutionalService(db),new DevelopmentIdentityGateway({subject:targetSubject,displayName:'Transfer Target',projectAccess:true,owner:false}));

@@ -9,10 +9,35 @@ services:
       - caehub_node_modules:/app/node_modules
     networks:
       - caehub_dev
+    depends_on:
+      - api
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /app
+    command: [npm, run, api]
+    environment:
+      NODE_ENV: development
+      CAEHUB_DEV_ACTOR_ID: caehub-local-owner
+      CAEHUB_DEV_ACTOR_NAME: Desenvolvimento CAEHUB
+      CAEHUB_DEV_OWNER: 'true'
+      DB_HOST: mysql
+      DB_PORT: '3306'
+      DB_NAME: gabriel_caehub
+      DB_USER: root
+      DB_PASSWORD: ''
+    volumes:
+      - .:/app
+      - caehub_node_modules:/app/node_modules
+    networks:
+      - caehub_dev
+    depends_on:
+      - mysql
   mysql:
     image: mysql:8.4
     environment:
-      MYSQL_ROOT_PASSWORD: caehub-dev-root
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
     volumes:
       - caehub_mysql:/var/lib/mysql
     networks:
