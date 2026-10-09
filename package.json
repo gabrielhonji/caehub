@@ -6,8 +6,25 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "api": "tsx src/server/index.ts",
+    "migrate": "tsx src/server/migrate.ts",
+    "test:server": "tsx --test src/server/**/*.test.ts"
   },
-  "dependencies": { "react": "19.3.0", "react-dom": "19.3.0" },
-  "devDependencies": { "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "@vitejs/plugin-react": "^6.0.0", "typescript": "~5.9.3", "vite": "8.3.2" }
+  "dependencies": {
+    "fastify": "^5.12.5",
+    "mysql2": "^3.24.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "vite": "8.3.2"
+  }
 }
