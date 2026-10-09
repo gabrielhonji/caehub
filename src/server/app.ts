@@ -2,11 +2,13 @@ import Fastify from 'fastify';
 import { z } from 'zod';
 import type { IdentityGateway } from './auth.js';
 import { Forbidden, InstitutionalService, NotFound, Conflict } from './service.js';
+import { KanbanService } from './kanban.js';
 
 const id = z.string().uuid();
 const role = z.enum(['president', 'vice_president', 'counselor', 'director', 'member']);
 export function buildApp(service: InstitutionalService, identity: IdentityGateway) {
   const app = Fastify({ logger: false });
+  const kanban = new KanbanService(service.db, service);
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof Forbidden) return reply.code(403).send({ error: 'forbidden', message: error.message });
     if (error instanceof NotFound) return reply.code(404).send({ error: 'not_found', message: error.message });
@@ -29,5 +31,24 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.get('/api/workspaces/:id', async (request) => service.workspace(await actor(), id.parse((request.params as { id: string }).id)));
   app.post('/api/workspaces', async (request, reply) => { const body = z.object({ name: z.string().min(1).max(160), description: z.string().max(5000).optional(), departmentId: id.optional() }).parse(request.body); const out = await service.createWorkspace(await actor(), body); return reply.code(201).send(out); });
   app.patch('/api/workspaces/:id', async (request) => { const body = z.object({ name: z.string().min(1).max(160).optional(), description: z.string().max(5000).optional(), archive: z.boolean().optional(), addMembershipId: id.optional(), removeMembershipId: id.optional() }).refine((v) => Object.keys(v).length > 0).parse(request.body); return service.manageWorkspace(await actor(), id.parse((request.params as { id: string }).id), body); });
+  app.get('/api/workspaces/:id/boards', async (request) => kanban.listBoards(await actor(), id.parse((request.params as { id: string }).id)));
+  app.post('/api/workspaces/:id/boards', async (request, reply) => { const body=z.object({name:z.string().trim().min(1).max(160)}).parse(request.body); return reply.code(201).send(await kanban.createBoard(await actor(),id.parse((request.params as {id:string}).id),body.name)); });
+  app.get('/api/boards/:id', async (request) => kanban.board(await actor(),id.parse((request.params as {id:string}).id)));
+  app.post('/api/boards/:id/columns', async (request,reply)=>{const body=z.object({name:z.string().trim().min(1).max(120)}).parse(request.body);return reply.code(201).send(await kanban.addColumn(await actor(),id.parse((request.params as {id:string}).id),body.name));});
+  app.patch('/api/columns/:id', async(request)=>{const body=z.object({name:z.string().trim().min(1).max(120).optional(),position:z.number().int().min(0).optional()}).refine(v=>Object.keys(v).length>0).parse(request.body);return kanban.updateColumn(await actor(),id.parse((request.params as {id:string}).id),body);});
+  app.delete('/api/columns/:id',async(request,reply)=>{const query=z.object({targetColumnId:id}).parse(request.query);await kanban.deleteColumn(await actor(),id.parse((request.params as {id:string}).id),query.targetColumnId);return reply.code(204).send();});
+  const cardInput=z.object({title:z.string().trim().min(1).max(200),description:z.string().max(10000).optional(),columnId:id.optional(),responsibleMembershipId:id.optional(),priority:z.enum(['low','normal','high']).optional(),dueAt:z.string().datetime().optional(),visibility:z.enum(['members','directors']).optional(),tags:z.array(z.string().trim().min(1).max(40)).max(12).optional()});
+  app.post('/api/boards/:id/cards',async(request,reply)=>reply.code(201).send(await kanban.createCard(await actor(),id.parse((request.params as {id:string}).id),cardInput.parse(request.body))));
+  app.get('/api/cards/:id',async request=>kanban.detail(await actor(),id.parse((request.params as {id:string}).id)));
+  app.patch('/api/cards/:id',async request=>{const body=cardInput.omit({title:true,columnId:true,responsibleMembershipId:true}).extend({title:z.string().trim().min(1).max(200).optional(),archived:z.boolean().optional()}).refine(v=>Object.keys(v).length>0).parse(request.body);return kanban.updateCard(await actor(),id.parse((request.params as {id:string}).id),body);});
+  app.post('/api/cards/:id/move',async request=>{const body=z.object({columnId:id,version:z.number().int().positive()}).parse(request.body);return kanban.moveCard(await actor(),id.parse((request.params as {id:string}).id),body.columnId,body.version);});
+  app.post('/api/cards/:id/helpers/me',async request=>kanban.volunteer(await actor(),id.parse((request.params as {id:string}).id)));
+  app.delete('/api/cards/:id/helpers/me',async(request,reply)=>{await kanban.leave(await actor(),id.parse((request.params as {id:string}).id));return reply.code(204).send();});
+  app.post('/api/cards/:id/transfers',async(request,reply)=>{const body=z.object({toMembershipId:id}).parse(request.body);return reply.code(201).send(await kanban.requestTransfer(await actor(),id.parse((request.params as {id:string}).id),body.toMembershipId));});
+  app.post('/api/transfers/:id/decision',async request=>{const body=z.object({decision:z.enum(['accepted','declined','cancelled'])}).parse(request.body);return kanban.decideTransfer(await actor(),id.parse((request.params as {id:string}).id),body.decision);});
+  app.post('/api/cards/:id/checklist',async(request,reply)=>{const body=z.object({content:z.string().trim().min(1).max(500)}).parse(request.body);return reply.code(201).send(await kanban.checklist(await actor(),id.parse((request.params as {id:string}).id),body));});
+  app.patch('/api/checklist/:id',async request=>{const body=z.object({completed:z.boolean()}).parse(request.body);return kanban.toggleChecklist(await actor(),id.parse((request.params as {id:string}).id),body.completed);});
+  app.post('/api/cards/:id/comments',async(request,reply)=>{const body=z.object({body:z.string().trim().min(1).max(5000)}).parse(request.body);return reply.code(201).send(await kanban.comment(await actor(),id.parse((request.params as {id:string}).id),body.body));});
+  app.get('/api/my-tasks',async request=>{const query=z.object({workspaceId:id.optional(),state:z.enum(['open','completed']).optional(),participation:z.enum(['created','responsible','helper']).optional()}).parse(request.query);return kanban.myTasks(await actor(),query);});
   return app;
 }

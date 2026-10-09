@@ -9,7 +9,7 @@ export class NotFound extends Error {}
 export class Conflict extends Error {}
 
 export class InstitutionalService {
-  constructor(private readonly db: Database) {}
+  constructor(readonly db: Database) {}
   async membership(actor: Actor): Promise<MembershipRow | undefined> {
     return this.db.one<MembershipRow>(`SELECT m.id,m.role,m.status,m.person_id,p.honji_subject,p.display_name FROM memberships m JOIN people p ON p.id=m.person_id WHERE m.organization_id=? AND p.honji_subject=?`, [CAECOMP_ORGANIZATION_ID, actor.subject]);
   }

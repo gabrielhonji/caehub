@@ -1,6 +1,6 @@
 # CAEHUB
 
-Fundação React do hub de Gestão do CAECOMP, integrada futuramente ao ecossistema Honji.
+Hub de Gestão do CAECOMP com React, API Fastify, MySQL e Kanban persistente.
 
 ## Executar
 
@@ -17,8 +17,8 @@ Para visualizar o Vite em desenvolvimento, use um túnel SSH para a rede/serviç
 
 - `docs/caehub/`: planejamento original e decisões complementares.
 - `src/components/`: primitives, shell e elementos reutilizáveis.
-- `src/domain/`: tipos e dados fictícios exclusivamente de desenvolvimento.
-- `src/services/`: fronteira preparada para futura integração.
+- `src/domain/`: tipos do frontend; fixtures históricas não são consumidas pelo Kanban.
+- `src/services/`: cliente tipado da API CAEHUB.
 
 ## Backend institucional
 
@@ -33,4 +33,4 @@ docker compose -f compose.dev.yml run --rm web npm run api
 
 As variáveis usam o contrato `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` e `DB_PASSWORD`; os defaults são somente para o MySQL de desenvolvimento. Para testar localmente uma identidade fixa, configure no processo do servidor `NODE_ENV=development`, `CAEHUB_DEV_ACTOR_ID` e, quando necessário, `CAEHUB_DEV_OWNER=true`. Essa identidade não vem de requisição HTTP e é recusada em produção.
 
-Veja os contratos em [`docs/caehub/API.md`](docs/caehub/API.md). Kanban, Agenda e Comercial continuam fora deste incremento.
+Veja os contratos em [`docs/caehub/API.md`](docs/caehub/API.md). O Kanban faz parte deste incremento; Agenda e Comercial permanecem demonstrativos e fora do escopo funcional.

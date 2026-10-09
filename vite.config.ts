@@ -10,4 +10,5 @@ export default defineConfig({
     __APP_RELEASE__: JSON.stringify(release),
   },
   plugins: [react()],
+  server: { proxy: { '/api': 'http://api:3000' } },
 });
