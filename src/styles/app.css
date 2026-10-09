@@ -74,16 +74,16 @@ body{isolation:isolate;background:transparent}
 .honji-brand{display:inline-flex;align-items:center;gap:12px;text-decoration:none;color:var(--text)}
 .honji-brand svg{width:32px;height:32px;fill:currentColor}
 .honji-brand strong{font:700 27px/1 var(--font-editorial);letter-spacing:-1.4px}
-.cae-mark{display:block;width:35px;height:35px;flex:0 0 35px;background:currentColor;mask:url('/assets/caecomp-kraken-mark-v2.png') center/contain no-repeat;-webkit-mask:url('/assets/caecomp-kraken-mark-v2.png') center/contain no-repeat}
+.cae-mark{display:block;width:34px;height:34px;flex:0 0 34px;background:currentColor;mask:url('/assets/caecomp-kraken-mark-v3.png') center/contain no-repeat;-webkit-mask:url('/assets/caecomp-kraken-mark-v3.png') center/contain no-repeat}
 .brand-copy{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
 .brand strong{font-size:13px;letter-spacing:.4px}
 .brand small{padding:0;border:0;font-size:9px;letter-spacing:.35px;text-transform:none}
-.header-inner>.theme-button{margin-left:auto}
+.header-inner>.theme-button{box-sizing:border-box;width:112px;min-width:112px;max-width:112px;height:44px;min-height:44px;margin-left:0;padding:0 12px;justify-content:center}
 .dashboard-intro:after{background:var(--accent);box-shadow:-16px 8px 0 color-mix(in srgb,var(--accent) 75%,var(--bg)),-8px 24px 0 var(--accent),8px 16px 0 color-mix(in srgb,var(--accent) 42%,var(--bg))}
 .context-note:after{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 22%,transparent) 0 50%,transparent 50%)}
 .organization-strip li:after{background:color-mix(in srgb,var(--accent) 18%,transparent)}
 .footer-inner{gap:24px}
-.footer-brand .cae-mark{width:46px;height:46px;flex-basis:46px}
+.footer-brand .cae-mark{width:32px;height:32px;flex-basis:32px}
 .footer-brand .brand-copy{display:none}
 .footer-organization{display:flex;flex-direction:column;padding-left:18px;border-left:1px solid var(--line)}
 .footer-organization strong{font:700 24px/1 var(--font-body);letter-spacing:-1px;color:var(--accent-strong)}
@@ -92,5 +92,5 @@ body{isolation:isolate;background:transparent}
 .footer-signature a{color:var(--accent-strong);font-weight:700;text-decoration:none}
 .footer-signature a:hover{text-decoration:underline;text-underline-offset:4px}
 .footer-signature i{font-style:normal;color:var(--line)}
-@media(max-width:720px){.header-inner{flex-wrap:nowrap}.navbar-brands{gap:12px}.navbar-divider{height:34px}.honji-brand{gap:8px}.honji-brand svg{width:26px;height:26px}.honji-brand strong{font-size:22px}.cae-mark{width:30px;height:30px;flex-basis:30px}.brand small{max-width:92px}.theme-button span{display:none}.theme-button{width:44px;padding:0}.footer-inner{flex-wrap:wrap}.footer-organization{flex:1}.footer-signature{width:100%;margin-left:0;flex-wrap:wrap;gap:7px}}
-@media(max-width:380px){.honji-brand strong{display:none}.brand small{max-width:78px;font-size:8px}.navbar-brands{gap:9px}.header-inner{gap:10px}}
+@media(max-width:720px){.header-inner{flex-wrap:nowrap}.navbar-brands{gap:12px}.navbar-divider{height:34px}.honji-brand{gap:8px}.honji-brand svg{width:26px;height:26px}.honji-brand strong{font-size:22px}.cae-mark{width:30px;height:30px;flex-basis:30px}.brand small{max-width:92px}.header-inner nav{order:initial;width:auto;margin-left:auto;padding:0;border:0}.header-inner nav a{font-size:11px}.theme-button span{display:none}.header-inner>.theme-button{width:44px;min-width:44px;max-width:44px;padding:0}.footer-inner{flex-wrap:wrap}.footer-organization{flex:1}.footer-signature{width:100%;margin-left:0;flex-wrap:wrap;gap:7px}}
+@media(max-width:380px){.honji-brand strong,.brand small{display:none}.navbar-brands{gap:9px}.header-inner{gap:10px}}
