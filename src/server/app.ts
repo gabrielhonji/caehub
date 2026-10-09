@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import manifest from '../../package.json' with { type: 'json' };
 import { z } from 'zod';
 import type { IdentityGateway } from './auth.js';
 import { Forbidden, InstitutionalService, NotFound, Conflict } from './service.js';
@@ -17,7 +18,7 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
     return reply.code(500).send({ error: 'internal_error' });
   });
   const actor = async () => { const value = await identity.current(); if (!value) throw new Forbidden('Honji identity integration is unavailable'); if (!value.projectAccess) throw new Forbidden('project.access is required'); return value; };
-  app.get('/health', async () => ({ ok: true }));
+  app.get('/health', async () => ({ ok: true, version: manifest.version, release: manifest.release }));
   app.get('/api/me', async () => { const current = await actor(); const membership = await service.membership(current); return { subject: current.subject, displayName: current.displayName, projectAccess: current.projectAccess, owner: current.owner, membership: membership ? { id: membership.id, role: membership.role, status: membership.status } : null, integration: 'honji-bff-pending' }; });
   app.get('/api/organization', async () => { await actor(); return service.organization(); });
   app.get('/api/organization/departments', async () => { await actor(); return service.departments(); });

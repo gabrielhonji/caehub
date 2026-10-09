@@ -21,7 +21,7 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
         <div className="footer-inner">
           <div className="footer-brand"><Brand /></div>
           <div className="footer-organization"><strong>CAECOMP</strong><span>Centro Acadêmico de Engenharia de Computação</span></div>
-          <div className="footer-signature"><span>DESENVOLVIDO POR</span><a href="https://github.com/gabrielhonji" target="_blank" rel="noreferrer">gabriel.honji</a><i aria-hidden="true">·</i><span>VERSÃO {__APP_VERSION__}</span><i aria-hidden="true">·</i><span>UTFPR / APUCARANA</span></div>
+          <div className="footer-signature"><span>DESENVOLVIDO POR</span><a href="https://github.com/gabrielhonji" target="_blank" rel="noreferrer">gabriel.honji</a><i aria-hidden="true">·</i><span>VERSÃO {__APP_VERSION__} · {__APP_RELEASE__}</span><i aria-hidden="true">·</i><span>UTFPR / APUCARANA</span></div>
         </div>
       </footer>
     </div>

@@ -1,6 +1,6 @@
 # API institucional e Kanban — Incrementos 01 e 02
 
-Base: `/api`. JSON; erros usam `{ error, message }` e retornam `400`, `403`, `404` ou `409`.
+Base: `/api`. JSON; erros usam `{ error, message }` e retornam `400`, `403`, `404` ou `409`. `GET /health` expõe também a versão e o identificador de release no formato `DDMMAAAA-HHMMSS`.
 
 O servidor resolve o ator na fronteira `IdentityGateway`. Em produção, sem o adaptador BFF Honji, toda rota protegida retorna `403`; não há cabeçalho, payload ou papel fornecido pelo navegador que conceda acesso. O único portão central conhecido é `project.access`.
 

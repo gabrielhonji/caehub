@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import manifest from './package.json' with { type: 'json' };
 
-const release = new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
+const release = manifest.release;
 
 export default defineConfig({
   define: {
