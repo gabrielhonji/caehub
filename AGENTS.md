@@ -1,13 +1,31 @@
 # CAEHUB — roteador de implementação
 
-Leia primeiro `docs/caehub/BASE.md` e a especificação diretamente afetada.
+Leia `docs/caehub/BASE.md` e somente a especificação diretamente afetada:
 
-- UI: `DESIGN.md` e `UI-REACT.md`.
+- UI: `DESIGN.md` e UI-001 em `UI-REACT.md`.
 - Dados, acesso e integração: `ARQUITETURA-SEGURANCA.md`.
-- Escopo: `PRODUTO.md`; critérios: `ACEITE.md`; execução: `ENG-001.md`.
-- Colaboração e integração Git: `ENG-002.md`; publicação no GitHub: `ENG-003.md`.
-- Decisões posteriores ao pacote: `DECISOES-VALIDADAS.md`; elas prevalecem apenas onde tratam do mesmo requisito.
+- Escopo: `PRODUTO.md`; critérios: `ACEITE.md`.
+- Decisões posteriores: `DECISOES-VALIDADAS.md`, apenas onde tratam do mesmo
+  requisito.
 
-Não invente contratos Honji, endpoints, permissões novas nem ativos oficiais. Mocks são exclusivamente de desenvolvimento. Preserve a camada de componentes local compartilhada e execute verificações proporcionais.
+Políticas obrigatórias:
 
-O CAEHUB usa um único repositório remoto. Todo incremento parte de uma base que contenha suas dependências, é validado, recebe commit e push ao concluir seus critérios de aceite. Para trabalho paralelo, use branches ou worktrees; a integração em `main` deve ser verificada antes da publicação.
+- **ENG-001** (`ENG-001.md`): delimitação, leitura seletiva, menor escopo
+  correto e validação proporcional; gate completo por marco e antes de release.
+- **ENG-002** (`ENG-002.md`): cada incremento parte de dependências integradas,
+  cumpre aceite, recebe commit e push; paralelismo usa branches/worktrees e a
+  integração em `main` é verificada antes de trabalho dependente/publicação.
+- **ENG-003** (`ENG-003.md`): confira raiz, estado, branch, remoto, commits,
+  `.gitignore` e verificações antes do push; nunca force push nem declare
+  publicação antes da confirmação do GitHub.
+
+Coordene conforme `COORDENACAO.md`: tarefas delimitadas, arquivos sem disputa e
+evidências curtas. Subagentes somente com autorização aplicável. Não carregue
+todo o pacote ou histórico por padrão.
+
+Não invente contratos Honji, endpoints, permissões, ativos oficiais ou decisões
+por silêncio. Mocks são apenas de desenvolvimento e dados de teste são
+fictícios. Preserve a camada local de componentes compartilhados.
+
+Ao concluir, informe alterações, verificações, limitações e próximo passo;
+atualize somente o estado afetado, sem duplicar especificações.
