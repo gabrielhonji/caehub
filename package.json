@@ -1,7 +1,7 @@
 {
   "name": "caehub",
-  "version": "1.0.0",
-  "release": "09102026-110719",
+  "version": "1.1.0",
+  "release": "09102026-235900",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,9 +14,11 @@
   },
   "dependencies": {
     "fastify": "^5.12.5",
+    "jose": "6.2.12",
     "mysql2": "^3.24.5",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "tsx": "^4.23.15",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -24,7 +26,6 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^6.0.0",
-    "tsx": "^4.23.15",
     "typescript": "~5.9.3",
     "vite": "8.3.2"
   }

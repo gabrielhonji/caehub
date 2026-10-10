@@ -24,6 +24,8 @@ O Vite usa proxy interno para o serviço `api`; nenhuma porta é publicada no ho
 
 O backend Fastify fica em `src/server/` e usa MySQL próprio do CAEHUB, separado da identidade Honji. As migrações são idempotentes e criam CAECOMP, seus seis departamentos e sete espaços iniciais (Direção Geral e um por departamento). O bootstrap não cria uma pessoa ativa.
 
+Em produção, o mesmo container serve o React e a API atrás de um BFF Honji. A rota pública `/acesso` apresenta o projeto antes do login; Authorization Code + PKCE cria uma sessão persistida no MySQL, e cada chamada à API revalida `project.access` no serviço central. As permissões de Espaços e Kanban continuam sendo avaliadas localmente. O mock por processo permanece restrito ao desenvolvimento.
+
 No desenvolvimento, o serviço MySQL é interno à rede Docker e não publica porta. Para preparar o banco e iniciar a API:
 
 ```sh

@@ -1,11 +1,15 @@
 import type { Board, Space, TaskPreview } from '../domain/types';
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/api${path}`, { ...init, headers: { 'content-type': 'application/json', ...init?.headers } });
+  const csrf=await sessionToken();
+  const response = await fetch(`/api${path}`, { ...init, headers: { 'content-type': 'application/json',...(csrf?{'x-csrf-token':csrf}:{}), ...init?.headers } });
+  if(response.status===403){const problem=await response.clone().json().catch(()=>({}));if(problem.message==='Honji identity integration is unavailable'){location.assign('/acesso');throw new Error('Sessão necessária.');}}
   if (!response.ok) { const problem = await response.json().catch(() => ({})); throw new Error(problem.message ?? `Falha ${response.status}`); }
   if (response.status === 204) return undefined as T;
   return response.json();
 }
+let tokenPromise:Promise<string>|undefined;
+function sessionToken(){return tokenPromise??=fetch('/api/me').then(async response=>{if(!response.ok){location.assign('/acesso');throw new Error('Sessão necessária.');}return String((await response.json()).csrfToken??'');});}
 type WorkspaceDto = { id:string;name:string;description:string|null;department?:string;participants?:unknown[] };
 type BoardDto = {id:string;workspaceId:string;name:string;canManage:boolean;columns:Array<{id:string;name:string;position:number;isCompletion:boolean;cards:Array<{id:string;title:string;description:string|null;dueAt?:string;visibility:'members'|'directors';responsibleName?:string;helperCount:number;version:number}>}>};
 const boardFrom = (dto:BoardDto):Board => ({id:dto.id,spaceId:dto.workspaceId,name:dto.name,canManage:dto.canManage,columns:dto.columns.map(column=>({id:column.id,label:column.name,isCompletion:Boolean(column.isCompletion),cards:column.cards.map(card=>({id:card.id,title:card.title,summary:card.description??'',column:column.name,columnId:column.id,assignee:card.responsibleName??'Sem responsável',helpers:Number(card.helperCount),visibility:card.visibility==='directors'?'Diretoria':'Membros',due:card.dueAt,version:Number(card.version)}))}))});

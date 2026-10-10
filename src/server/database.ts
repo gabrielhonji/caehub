@@ -33,6 +33,7 @@ export async function connect(config: DbConfig): Promise<Database> {
 }
 
 export async function migrate(db: Database): Promise<void> {
+  await db.run(`CREATE TABLE IF NOT EXISTS caehub_sessions (session_hash char(64) primary key, subject varchar(255) null, display_name varchar(255) null, csrf_token varchar(64) not null, oauth_state_hash char(64) null, oauth_nonce_hash char(64) null, oauth_verifier varchar(128) null, created_at datetime(3) not null, last_activity_at datetime(3) not null, expires_at datetime(3) not null, index caehub_sessions_expiry(expires_at))`);
   await db.run(`CREATE TABLE IF NOT EXISTS organizations (id char(36) primary key, slug varchar(80) not null unique, name varchar(255) not null, created_at datetime not null default current_timestamp, updated_at datetime not null default current_timestamp on update current_timestamp)`);
   await db.run(`CREATE TABLE IF NOT EXISTS departments (id char(36) primary key, organization_id char(36) not null, name varchar(120) not null, created_at datetime not null default current_timestamp, unique key departments_organization_name (organization_id,name), constraint fk_department_org foreign key (organization_id) references organizations(id))`);
   await db.run(`CREATE TABLE IF NOT EXISTS people (id char(36) primary key, honji_subject varchar(255) not null unique, display_name varchar(255) not null, created_at datetime not null default current_timestamp)`);

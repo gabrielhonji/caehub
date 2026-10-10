@@ -1,26 +1,46 @@
+import { createHash, randomBytes } from 'node:crypto';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Actor } from './domain.js';
+import type { Database } from './database.js';
 
-export interface IdentityGateway { current(): Promise<Actor | undefined>; }
+export interface IdentityGateway { current(request?: FastifyRequest): Promise<Actor | undefined>; register?(app: FastifyInstance): void; }
+export class UnavailableHonjiGateway implements IdentityGateway { async current(): Promise<Actor | undefined> { return undefined; } }
+export class DevelopmentIdentityGateway implements IdentityGateway { constructor(private readonly actor: Actor | undefined) {} async current(): Promise<Actor | undefined> { return this.actor; } }
+type Config={publicOrigin:string;issuer:string;identityOrigin:string;clientId:string;clientSecret:string;serviceClientId:string;serviceClientSecret:string;authorizationOrigin:string;ownerId:string};
+const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
+const cookie=(request:FastifyRequest,name:string)=>request.headers.cookie?.split(';').map(v=>v.trim()).find(v=>v.startsWith(`${name}=`))?.slice(name.length+1);
+const form=(values:Record<string,string>)=>new URLSearchParams(values);
 
-/** Production deliberately has no fallback: the Honji BFF contract is not yet available. */
-export class UnavailableHonjiGateway implements IdentityGateway {
-  async current(): Promise<Actor | undefined> { return undefined; }
+export class HonjiGateway implements IdentityGateway {
+  private readonly cookieName='__Host-caehub.sid'; private readonly jwks;
+  constructor(private readonly db:Database,private readonly config:Config){this.jwks=createRemoteJWKSet(new URL(`${config.issuer}/protocol/openid-connect/certs`));}
+  private postIdentity(path:string,body:URLSearchParams){return fetch(`${this.config.identityOrigin}${path}`,{method:'POST',headers:{Host:new URL(this.config.issuer).host,'content-type':'application/x-www-form-urlencoded'},body,signal:AbortSignal.timeout(5000)});}
+  private async session(request:FastifyRequest){const sid=cookie(request,this.cookieName);if(!sid)return;return this.db.one<any>('SELECT subject,display_name AS displayName,csrf_token AS csrfToken,created_at AS createdAt,last_activity_at AS lastActivity,expires_at AS expiresAt FROM caehub_sessions WHERE session_hash=? AND subject IS NOT NULL',[digest(sid)]);}
+  async current(request?:FastifyRequest):Promise<Actor|undefined>{
+    if(!request)return;
+    const sid=cookie(request,this.cookieName),session=await this.session(request);if(!sid||!session)return;
+    const now=Date.now();if(now-new Date(session.lastActivity).getTime()>=3600000||now>=new Date(session.expiresAt).getTime()){await this.db.run('DELETE FROM caehub_sessions WHERE session_hash=?',[digest(sid)]);return;}
+    const tokenResponse=await this.postIdentity('/protocol/openid-connect/token',form({grant_type:'client_credentials',client_id:this.config.serviceClientId,client_secret:this.config.serviceClientSecret}));
+    if(!tokenResponse.ok)return;const token=(await tokenResponse.json() as any).access_token;if(!token)return;
+    const decision=await fetch(`${this.config.authorizationOrigin}/internal/authorization/decisions`,{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify({integrationId:'caehub',userId:session.subject,resource:{projectId:'CAECOMP'},action:'project.access'}),signal:AbortSignal.timeout(5000)});
+    if(!decision.ok||!(await decision.json() as any).allowed)return;
+    if(request.method!=='GET'&&request.method!=='HEAD'&&(request.headers.origin!==this.config.publicOrigin||request.headers['x-csrf-token']!==session.csrfToken))return;
+    const owner=session.subject===this.config.ownerId;
+    if(owner){await this.db.run('INSERT IGNORE INTO people(id,honji_subject,display_name) VALUES(UUID(),?,?)',[session.subject,session.displayName]);await this.db.run("INSERT IGNORE INTO memberships(id,organization_id,person_id,role,status) SELECT UUID(),'1a4e0bd0-5f4a-4d10-8000-000000000001',id,'president','active' FROM people WHERE honji_subject=?",[session.subject]);}
+    await this.db.run('UPDATE caehub_sessions SET last_activity_at=NOW(3) WHERE session_hash=?',[digest(sid)]);(request as any).caehubCsrf=session.csrfToken;
+    return {subject:session.subject,displayName:session.displayName,projectAccess:true,owner};
+  }
+  register(app:FastifyInstance){
+    app.get('/acesso',async(_request,reply)=>reply.type('text/html').send(accessPage));app.get('/honji-access.css',async(_request,reply)=>reply.type('text/css').send(accessCss));
+    app.get('/auth/login',async(_request,reply)=>{const sid=randomBytes(32).toString('base64url'),state=randomBytes(32).toString('base64url'),nonce=randomBytes(32).toString('base64url'),verifier=randomBytes(32).toString('base64url'),challenge=createHash('sha256').update(verifier).digest('base64url');await this.db.run('INSERT INTO caehub_sessions(session_hash,oauth_state_hash,oauth_nonce_hash,oauth_verifier,csrf_token,created_at,last_activity_at,expires_at) VALUES(?,?,?,?,?,NOW(3),NOW(3),DATE_ADD(NOW(3),INTERVAL 10 MINUTE))',[digest(sid),digest(state),digest(nonce),verifier,randomBytes(24).toString('base64url')]);reply.header('set-cookie',`${this.cookieName}=${sid}; Path=/; HttpOnly; Secure; SameSite=Lax`).redirect(`${this.config.issuer}/protocol/openid-connect/auth?${form({client_id:this.config.clientId,response_type:'code',redirect_uri:`${this.config.publicOrigin}/auth/callback`,scope:'openid profile',state,nonce,code_challenge:challenge,code_challenge_method:'S256'})}`);});
+    app.get('/auth/callback',async(request,reply)=>{const query=request.query as any,sid=cookie(request,this.cookieName);if(!sid||!query.code||!query.state)return reply.code(400).send('Login inválido.');const pending=await this.db.one<any>('SELECT oauth_nonce_hash AS nonceHash,oauth_verifier AS verifier FROM caehub_sessions WHERE session_hash=? AND oauth_state_hash=? AND expires_at>NOW(3)',[digest(sid),digest(query.state)]);if(!pending)return reply.code(400).send('Login expirado.');const response=await this.postIdentity('/protocol/openid-connect/token',form({grant_type:'authorization_code',client_id:this.config.clientId,client_secret:this.config.clientSecret,code:query.code,redirect_uri:`${this.config.publicOrigin}/auth/callback`,code_verifier:pending.verifier}));if(!response.ok)return reply.code(401).send('Identidade inválida.');const idToken=(await response.json() as any).id_token;const {payload}=await jwtVerify(idToken,this.jwks,{issuer:this.config.issuer,audience:this.config.clientId,algorithms:['RS256']});if(!payload.sub||digest(String(payload.nonce))!==pending.nonceHash)return reply.code(401).send('Identidade inválida.');await this.db.run('UPDATE caehub_sessions SET subject=?,display_name=?,oauth_state_hash=NULL,oauth_nonce_hash=NULL,oauth_verifier=NULL,created_at=NOW(3),last_activity_at=NOW(3),expires_at=DATE_ADD(NOW(3),INTERVAL 12 HOUR) WHERE session_hash=?',[payload.sub,String(payload.name??''),digest(sid)]);return reply.redirect('/');});
+    app.post('/auth/logout',async(request,reply)=>{if(!await this.current(request))return reply.code(403).send({error:'forbidden'});const sid=cookie(request,this.cookieName);if(sid)await this.db.run('DELETE FROM caehub_sessions WHERE session_hash=?',[digest(sid)]);reply.header('set-cookie',`${this.cookieName}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`).send({redirect:`${this.config.issuer}/protocol/openid-connect/logout?${form({client_id:this.config.clientId,post_logout_redirect_uri:`${this.config.publicOrigin}/acesso`})}`});});
+  }
 }
-
-/** Explicit, process-configured fixture for local development and tests; never reads request headers. */
-export class DevelopmentIdentityGateway implements IdentityGateway {
-  constructor(private readonly actor: Actor | undefined) {}
-  async current(): Promise<Actor | undefined> { return this.actor; }
+export function configuredGateway(env:NodeJS.ProcessEnv,db?:Database):IdentityGateway{
+  if(env.NODE_ENV==='production'){if(!db)return new UnavailableHonjiGateway();const names=['PUBLIC_ORIGIN','OIDC_ISSUER','IDENTITY_INTERNAL_ORIGIN','OIDC_CLIENT_ID','OIDC_CLIENT_SECRET','AUTHORIZATION_SERVICE_CLIENT_ID','AUTHORIZATION_SERVICE_CLIENT_SECRET','AUTHORIZATION_SERVICE_ORIGIN','HONJI_ADMIN_ID'] as const;for(const name of names)if(!env[name])throw new Error(`${name}_missing`);const issuer=env.OIDC_ISSUER!;return new HonjiGateway(db,{publicOrigin:env.PUBLIC_ORIGIN!,issuer,identityOrigin:`${env.IDENTITY_INTERNAL_ORIGIN!}/realms/${issuer.split('/').at(-1)}`,clientId:env.OIDC_CLIENT_ID!,clientSecret:env.OIDC_CLIENT_SECRET!,serviceClientId:env.AUTHORIZATION_SERVICE_CLIENT_ID!,serviceClientSecret:env.AUTHORIZATION_SERVICE_CLIENT_SECRET!,authorizationOrigin:env.AUTHORIZATION_SERVICE_ORIGIN!,ownerId:env.HONJI_ADMIN_ID!});}
+  const subject=env.CAEHUB_DEV_ACTOR_ID;return new DevelopmentIdentityGateway(subject?{subject,displayName:env.CAEHUB_DEV_ACTOR_NAME??'Desenvolvedor CAEHUB',projectAccess:env.CAEHUB_DEV_PROJECT_ACCESS!=='false',owner:env.CAEHUB_DEV_OWNER==='true'}:undefined);
 }
-
-export function configuredGateway(env: NodeJS.ProcessEnv): IdentityGateway {
-  if (env.NODE_ENV === 'production') return new UnavailableHonjiGateway();
-  const subject = env.CAEHUB_DEV_ACTOR_ID;
-  if (!subject) return new UnavailableHonjiGateway();
-  return new DevelopmentIdentityGateway({
-    subject,
-    displayName: env.CAEHUB_DEV_ACTOR_NAME ?? 'Desenvolvedor CAEHUB',
-    projectAccess: env.CAEHUB_DEV_PROJECT_ACCESS !== 'false',
-    owner: env.CAEHUB_DEV_OWNER === 'true',
-  });
-}
+const accessPage='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Acessar CAEHUB — Honji</title><link rel="stylesheet" href="/honji-access.css"></head><body><main class="gate"><div class="brand">HONJI / CAECOMP</div><div class="eyebrow">Projeto protegido</div><h1>CAEHUB</h1><p>Gestão institucional, espaços e trabalho colaborativo do CAECOMP em um único lugar.</p><p>Entre com uma conta Honji que tenha acesso ao projeto CAECOMP.</p><div class="actions"><a class="primary" href="/auth/login">Entrar com Honji →</a><a href="https://gabriel.honji.com.br/#solicitar-acesso">Solicitar acesso</a></div><p class="note">Depois de entrar, suas permissões locais determinam quais espaços e ações estarão disponíveis.</p></main></body></html>';
+const accessCss=':root{color-scheme:light dark;font-family:Inter,system-ui,sans-serif;background:#e9eee9;color:#163a38}*{box-sizing:border-box}body{min-height:100vh;margin:0;display:grid;place-items:center;padding:24px;background-image:linear-gradient(#17645c17 1px,transparent 1px),linear-gradient(90deg,#17645c17 1px,transparent 1px);background-size:32px 32px}.gate{width:min(720px,100%);padding:clamp(30px,7vw,72px);background:#fbf7ee;border:1px solid #aec6bd;box-shadow:0 24px 70px #1237}.brand{font-weight:850;letter-spacing:.14em;color:#17645c}.eyebrow{margin:52px 0 12px;font-size:.75rem;font-weight:800;letter-spacing:.14em;color:#a54f2e;text-transform:uppercase}h1{margin:0;font:clamp(3rem,9vw,6rem)/.9 Georgia,serif}p{max-width:58ch;line-height:1.7;color:#526966}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}a{padding:13px 18px;border:1px solid #17645c;color:#17645c;text-decoration:none;font-weight:750}.primary{background:#17645c;color:#fff}.note{margin-top:32px;padding-top:22px;border-top:1px solid #c9d7d1;font-size:.9rem}@media(prefers-color-scheme:dark){:root{background:#102624;color:#eff6f2}.gate{background:#173330;border-color:#436762}.brand,a{color:#76c9bd}.primary{background:#76c9bd;color:#102624}p{color:#bad0ca}}';
