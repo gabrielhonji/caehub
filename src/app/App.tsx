@@ -3,6 +3,7 @@ import type { CSSProperties, FormEvent, ReactNode } from 'react';
 import { AppShell } from '../components/AppShell';
 import { Badge, Button, Dialog, EmptyState, ErrorState, Eyebrow, LoadingState } from '../components/primitives';
 import { SpaceSummary } from '../components/SpaceSummary';
+import { AgendaPage as FunctionalAgendaPage } from '../components/AgendaPage';
 import type { Board, BoardCard, Space, TaskPreview } from '../domain/types';
 import { addChecklistItem, addColumn, addComment, createCard, decideTransfer, deleteColumn, getBoards, getCardDetail, getSpaces, getTaskPreviews, moveCard, renameColumn, requestTransfer, toggleChecklistItem, updateCard, volunteer } from '../services/spaces';
 import type { CardDetailDto } from '../services/spaces';
@@ -107,7 +108,7 @@ export function App() {
   if (data.status === 'loading') content = <LoadingState />;
   else if (data.status === 'error') content = <ErrorState onRetry={data.load} />;
   else if (!parts.length) content = <Dashboard spaces={data.spaces} tasks={data.tasks} />;
-  else if (parts[0] === 'agenda' && !parts[1]) content = <AgendaPage />;
+  else if (parts[0] === 'agenda' && !parts[1]) content = <FunctionalAgendaPage spaces={data.spaces} />;
   else if (parts[0] === 'comercial' && !parts[1]) content = <CommercialPage />;
   else if (parts[0] === 'departamentos' && !parts[1]) content = <DepartmentsPage />;
   else if (parts[0] === 'minhas-tarefas' && !parts[1]) content = <MyTasksPage spaces={data.spaces}/>;

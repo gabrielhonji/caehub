@@ -10,7 +10,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "api": "tsx src/server/index.ts",
     "migrate": "tsx src/server/migrate.ts",
-    "test:server": "tsx --test src/server/**/*.test.ts"
+    "test:server": "tsx --test --test-concurrency=1 src/server/**/*.test.ts"
   },
   "dependencies": {
     "fastify": "^5.12.5",

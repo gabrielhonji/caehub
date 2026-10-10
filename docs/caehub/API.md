@@ -1,4 +1,4 @@
-# API institucional e Kanban — Incrementos 01 e 02
+# API institucional, Kanban e Agenda — Incrementos 01 a 03
 
 Base: `/api`. JSON; erros usam `{ error, message }` e retornam `400`, `403`, `404` ou `409`. `GET /health` expõe também a versão e o identificador de release no formato `DDMMAAAA-HHMMSS`.
 
@@ -26,12 +26,21 @@ O servidor resolve o ator na fronteira `IdentityGateway`. Em produção, o BFF H
 | `POST /api/cards/:id/checklist`, `PATCH /api/checklist/:id` | checklist persistente |
 | `POST /api/cards/:id/comments` | comentário persistente |
 | `GET /api/my-tasks` | consolidação sem duplicação; filtros `workspaceId`, `state`, `participation` |
+| `GET /api/agenda` | calendário pessoal, geral ou de Espaço por intervalo; indisponibilidades são projetadas sem duplicação |
+| `GET, POST /api/availability/me` | consulta e cadastro da indisponibilidade do ator |
+| `PUT, DELETE /api/availability/me/:id` | edição/remoção exclusivamente pelo titular |
+| `GET /api/availability/collective` | livre/ocupado/não informado para direção/administração, sem detalhes particulares |
+| `POST /api/meetings`, `PATCH /api/meetings/:id` | criação e gestão de reunião por direção/administração/organizador |
+| `POST /api/meetings/:id/response` | resposta do convidado: confirmado, talvez ou recusado |
+| `GET /api/agenda/notifications` | convites, reagendamentos e remoções persistidos do ator |
 
 Visibilidade `directors` é filtrada antes do detalhe e usa `404` para não revelar o recurso. Somente direção/administradores alteram visibilidade ou arquivamento. Criador, responsável e auxiliar podem editar campos permitidos. As cinco colunas padrão são inicializadas por quadro de forma idempotente; `is_completion` preserva a semântica de conclusão independentemente do nome.
 
 `POST /api/members` recebe `honjiSubject`, `displayName` e opcionalmente `role`. O sujeito é o alvo de uma operação já autorizada, não prova de identidade do ator. `POST /api/workspaces` recebe `name`, `description?`, `departmentId?`. IDs são UUIDs.
 
 Paginação ainda não é necessária para a escala institucional inicial; deverá ser incluída antes de uma listagem cujo volume a exija, sem alterar a política de escopo.
+
+Datas de reuniões usam ISO 8601 na API e instantes UTC no banco. Consultas aceitam `offsetMinutes` para projetar horários civis recorrentes no deslocamento local do cliente. Mudança de início ou fim redefine respostas ativas para `pending`, incrementa a revisão e cria notificações persistentes.
 
 ## Integração Honji
 

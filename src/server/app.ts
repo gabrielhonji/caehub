@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { IdentityGateway } from './auth.js';
 import { Forbidden, InstitutionalService, NotFound, Conflict } from './service.js';
 import { KanbanService } from './kanban.js';
+import { AgendaService } from './agenda.js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -14,6 +15,7 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   identity.register?.(app);
   app.addHook('onSend',async(_request,reply,payload)=>{reply.header('x-content-type-options','nosniff').header('referrer-policy','same-origin').header('content-security-policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");return payload;});
   const kanban = new KanbanService(service.db, service);
+  const agenda = new AgendaService(service.db, service);
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof Forbidden) return reply.code(403).send({ error: 'forbidden', message: error.message });
     if (error instanceof NotFound) return reply.code(404).send({ error: 'not_found', message: error.message });
@@ -55,6 +57,18 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.patch('/api/checklist/:id',async request=>{const body=z.object({completed:z.boolean()}).parse(request.body);return kanban.toggleChecklist(await actor(request),id.parse((request.params as {id:string}).id),body.completed);});
   app.post('/api/cards/:id/comments',async(request,reply)=>{const body=z.object({body:z.string().trim().min(1).max(5000)}).parse(request.body);return reply.code(201).send(await kanban.comment(await actor(request),id.parse((request.params as {id:string}).id),body.body));});
   app.get('/api/my-tasks',async request=>{const query=z.object({workspaceId:id.optional(),state:z.enum(['open','completed']).optional(),participation:z.enum(['created','responsible','helper']).optional()}).parse(request.query);return kanban.myTasks(await actor(request),query);});
+  const availabilityInput=z.object({kind:z.enum(['weekly','date']),weekday:z.number().int().min(0).max(6).optional(),date:z.string().date().optional(),startTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),endTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),note:z.string().trim().max(255).optional()}).superRefine((value,context)=>{if(value.kind==='weekly'&&value.weekday===undefined)context.addIssue({code:'custom',message:'weekday is required for weekly blocks'});if(value.kind==='date'&&!value.date)context.addIssue({code:'custom',message:'date is required for date blocks'});});
+  app.get('/api/availability/me',async request=>agenda.myAvailability(await actor(request)));
+  app.post('/api/availability/me',async(request,reply)=>reply.code(201).send(await agenda.createAvailability(await actor(request),availabilityInput.parse(request.body))));
+  app.put('/api/availability/me/:id',async request=>agenda.updateAvailability(await actor(request),id.parse((request.params as {id:string}).id),availabilityInput.parse(request.body)));
+  app.delete('/api/availability/me/:id',async(request,reply)=>{await agenda.deleteAvailability(await actor(request),id.parse((request.params as {id:string}).id));return reply.code(204).send();});
+  app.get('/api/availability/collective',async request=>{const query=z.object({from:z.string().datetime(),to:z.string().datetime(),membershipIds:z.string().optional(),departmentId:id.optional(),offsetMinutes:z.coerce.number().int().min(-840).max(840).optional()}).refine(value=>new Date(value.from)<new Date(value.to),{message:'invalid interval'}).parse(request.query);return agenda.collective(await actor(request),{...query,membershipIds:query.membershipIds?.split(',').filter(Boolean).map(value=>id.parse(value))});});
+  app.get('/api/agenda',async request=>{const query=z.object({from:z.string().datetime(),to:z.string().datetime(),scope:z.enum(['personal','general','workspace']).default('personal'),workspaceId:id.optional(),offsetMinutes:z.coerce.number().int().min(-840).max(840).optional()}).refine(value=>new Date(value.from)<new Date(value.to),{message:'invalid interval'}).parse(request.query);return agenda.calendar(await actor(request),query);});
+  const meetingInput=z.object({title:z.string().trim().min(1).max(200),description:z.string().max(10000).optional(),location:z.string().trim().max(255).optional(),workspaceId:id.optional(),startsAt:z.string().datetime(),endsAt:z.string().datetime(),participantIds:z.array(id).max(100).default([])});
+  app.post('/api/meetings',async(request,reply)=>reply.code(201).send(await agenda.createMeeting(await actor(request),meetingInput.parse(request.body))));
+  app.patch('/api/meetings/:id',async request=>{const body=meetingInput.partial().refine(value=>Object.keys(value).length>0).parse(request.body);return agenda.updateMeeting(await actor(request),id.parse((request.params as {id:string}).id),body);});
+  app.post('/api/meetings/:id/response',async request=>{const body=z.object({response:z.enum(['confirmed','maybe','declined'])}).parse(request.body);return agenda.respond(await actor(request),id.parse((request.params as {id:string}).id),body.response);});
+  app.get('/api/agenda/notifications',async request=>agenda.notifications(await actor(request)));
   app.get('/assets/:file',async(request,reply)=>{const file=(request.params as {file:string}).file;if(!/^[A-Za-z0-9._-]+$/.test(file))return reply.code(404).send();const path=resolve('dist/assets',file);const kind=file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':file.endsWith('.svg')?'image/svg+xml':'image/png';return reply.type(kind).send(await readFile(path));});
   app.get('/',async(request,reply)=>{if(!await identity.current(request))return reply.redirect('/acesso');return reply.type('text/html').send(await readFile(resolve('dist/index.html')));});
   return app;

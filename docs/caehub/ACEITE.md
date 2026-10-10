@@ -44,13 +44,14 @@ Critérios C/H verificam decisões/preferências; critérios R/P dependem de apr
 | G-05 | Consulta e ações respeitam contexto; cenários permitidos e negados cobrem recursos de outro Espaço |
 | G-06 | MVP atende UI-001, DESIGN, segurança e gate ENG-001; Agenda/Comercial não viram escopo implícito |
 
-## Agenda — gate posterior
+## Agenda — incremento inicial
 
 | ID | Critério |
 | --- | --- |
-| A-01 | P-04 fechado: fontes, turnos, conflitos, fuso, origem/edição e visibilidade |
-| A-02 | Consolidação preserva origem, não duplica conforme regra aprovada e não revela conteúdo/metadados protegidos |
-| A-03 | Turnos, limites temporais, alterações e cancelamentos seguem regras aprovadas; acessibilidade e permissões verificadas |
+| A-01 | Calendários pessoal, geral e de Espaço preservam origem única, intervalo e visibilidade contextual |
+| A-02 | Disponibilidade própria é editável somente pelo titular; consulta coletiva distingue livre/ocupado/não informado sem revelar descrições particulares |
+| A-03 | Direção/administração cria reuniões e gerencia convidados; convidados respondem confirmado/talvez/recusado; mudança temporal notifica e exige nova confirmação |
+| A-04 | Persistência, limites temporais, acessibilidade, responsividade e permissões positivas/negativas são verificados; itens expressamente posteriores permanecem fora do incremento |
 
 ## Comercial — gate posterior
 

@@ -1,6 +1,6 @@
 import type { Board, Space, TaskPreview } from '../domain/types';
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
+export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const csrf=await sessionToken();
   const response = await fetch(`/api${path}`, { ...init, headers: { 'content-type': 'application/json',...(csrf?{'x-csrf-token':csrf}:{}), ...init?.headers } });
   if(response.status===403){const problem=await response.clone().json().catch(()=>({}));if(problem.message==='Honji identity integration is unavailable'){location.assign('/acesso');throw new Error('Sessão necessária.');}}

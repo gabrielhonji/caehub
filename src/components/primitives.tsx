@@ -7,6 +7,7 @@ export function Badge({ children, tone = 'neutral' }: { children: ReactNode; ton
 export function LoadingState() { return <section className="state" aria-live="polite"><span className="spinner" aria-hidden="true" /><h2>Organizando seu espaço</h2><p>Os dados de desenvolvimento estão sendo preparados.</p></section>; }
 export function EmptyState({ title, children }: { title: string; children: ReactNode }) { return <section className="state"><Eyebrow>SEM ITENS</Eyebrow><h2>{title}</h2><p>{children}</p></section>; }
 export function ErrorState({ onRetry }: { onRetry: () => void }) { return <section className="state" role="alert"><Eyebrow>INDISPONÍVEL</Eyebrow><h2>Não foi possível carregar este conteúdo.</h2><p>Tente novamente. Se persistir, volte mais tarde.</p><Button onClick={onRetry}>Tentar novamente</Button></section>; }
+export function AccessDeniedState() { return <section className="state" role="alert"><Eyebrow>ACESSO RESTRITO</Eyebrow><h2>Esta consulta não está disponível para o seu perfil.</h2><p>As informações protegidas não foram exibidas. Se precisar desse acesso, procure a direção responsável.</p></section>; }
 
 export function Dialog({ title, children, onClose, closeLabel = 'Fechar' }: { title: string; children: ReactNode; onClose: () => void; closeLabel?: string }) {
   const closeButton = useRef<HTMLButtonElement>(null);
