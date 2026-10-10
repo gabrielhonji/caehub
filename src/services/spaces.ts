@@ -26,6 +26,9 @@ export const renameColumn=(columnId:string,name:string)=>api(`/columns/${columnI
 export const deleteColumn=(columnId:string,targetColumnId:string)=>api(`/columns/${columnId}?targetColumnId=${targetColumnId}`,{method:'DELETE'});
 export type CardDetailDto={id:string;title:string;description:string;priority:'low'|'normal'|'high';tags:string[];responsibleName?:string;responsibleMembershipId?:string;visibility:'members'|'directors';dueAt?:string;archivedAt?:string;helpers:Array<{membershipId:string;displayName:string}>;eligibleParticipants:Array<{membershipId:string;displayName:string}>;checklist:Array<{id:string;content:string;completed:boolean}>;comments:Array<{id:string;body:string;author:string;createdAt:string}>;activities:Array<{id:string;action:string;actor:string;createdAt:string}>;pendingTransfer:null|{id:string;toMembershipId:string;status:string};permissions:{edit:boolean;manage:boolean;volunteer:boolean};currentMembershipId:string};
 export const getCardDetail=(cardId:string)=>api<CardDetailDto>(`/cards/${cardId}`);
+export type ArchivedCardDto={id:string;title:string;description?:string;archivedAt:string;responsibleName?:string};
+export const getArchivedCards=(boardId:string)=>api<ArchivedCardDto[]>(`/boards/${boardId}/archived-cards`);
+export const updateWorkspace=(workspaceId:string,input:{name?:string;description?:string})=>api(`/workspaces/${workspaceId}`,{method:'PATCH',body:JSON.stringify(input)});
 export const updateCard=(cardId:string,input:Record<string,unknown>)=>api(`/cards/${cardId}`,{method:'PATCH',body:JSON.stringify(input)});
 export const requestTransfer=(cardId:string,toMembershipId:string)=>api<{id?:string;immediate:boolean}>(`/cards/${cardId}/transfers`,{method:'POST',body:JSON.stringify({toMembershipId})});
 export const decideTransfer=(transferId:string,decision:'accepted'|'declined'|'cancelled')=>api(`/transfers/${transferId}/decision`,{method:'POST',body:JSON.stringify({decision})});

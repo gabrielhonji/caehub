@@ -15,6 +15,14 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
     }).catch(() => undefined);
     return () => { active = false; };
   }, []);
+  useEffect(() => {
+    if (!profileOpen) return;
+    const close = (event: PointerEvent) => { if (!(event.target as Element).closest('.account-control')) setProfileOpen(false); };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setProfileOpen(false); };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', escape); };
+  }, [profileOpen]);
   async function logout() {
     if (!account || signingOut) return;
     setSigningOut(true);
@@ -39,7 +47,7 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
         <div className="header-inner">
           <div className="navbar-brands"><HonjiBrand /><span className="navbar-divider" aria-hidden="true" /><Brand /></div>
           <nav aria-label="Navegação do CAEHUB"><a className="home-link" href="#/" aria-current={current === '#/' ? 'page' : undefined} aria-label="Início"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z" /></svg></a><a href="#/minhas-tarefas" aria-current={current === '#/minhas-tarefas' ? 'page' : undefined}>Minhas tarefas</a><a href="#/agenda" aria-current={current === '#/agenda' ? 'page' : undefined}>Agenda</a><a href="#/comercial" aria-current={current === '#/comercial' ? 'page' : undefined}>Comercial</a><a href="#/espacos" aria-current={current === '#/espacos' ? 'page' : undefined}>Espaços</a></nav>
-          <div className="header-actions"><button className="theme-button" onClick={onTheme} aria-label={`Ativar tema ${theme === 'light' ? 'escuro' : 'claro'}`}>
+          <div className="header-actions"><button className="theme-button" onClick={onTheme} title={`Ativar tema ${theme === 'light' ? 'escuro' : 'claro'}`} aria-label={`Ativar tema ${theme === 'light' ? 'escuro' : 'claro'}`}>
               <svg viewBox="0 0 24 24" aria-hidden="true">{theme === 'light' ? <path d="M19.7 15.4A8.3 8.3 0 0 1 8.6 4.3 8.5 8.5 0 1 0 19.7 15.4Z" /> : <><circle cx="12" cy="12" r="4" /><path d="M11 1h2v4h-2zm0 18h2v4h-2zM1 11h4v2H1zm18 0h4v2h-4z" /></>}</svg>
               <span>{theme === 'light' ? 'Escuro' : 'Claro'}</span>
             </button><div className="account-control" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setProfileOpen(false); }}><button className="account-avatar" type="button" aria-label="Abrir opções da conta" aria-expanded={profileOpen} onClick={() => setProfileOpen(value => !value)}>{initials}</button>{profileOpen && <div className="account-panel"><a className="account-name" href="https://gabriel.honji.com.br/#perfil">{account?.displayName ?? 'Conta Honji'}<span>Editar perfil</span></a><a href="https://gabriel.honji.com.br/#acesso">Minha conta</a><button type="button" disabled={!account || signingOut} onClick={() => void logout()}>{signingOut ? 'Saindo…' : 'Sair'}</button></div>}</div></div>
