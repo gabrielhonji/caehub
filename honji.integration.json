@@ -1,5 +1,5 @@
 {
-  "app": "caehub",
+  "app": "caehub-gabriel",
   "displayName": "CAEHUB",
   "redirectUris": ["https://caehub-gabriel.honji.com.br/auth/callback"],
   "webOrigins": ["https://caehub-gabriel.honji.com.br"],

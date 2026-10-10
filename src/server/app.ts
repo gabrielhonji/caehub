@@ -71,7 +71,20 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.patch('/api/meetings/:id',async request=>agenda.updateMeeting(await actor(request),id.parse((request.params as {id:string}).id),meetingUpdate.parse(request.body)));
   app.post('/api/meetings/:id/response',async request=>{const body=z.object({response:z.enum(['confirmed','maybe','declined'])}).parse(request.body);return agenda.respond(await actor(request),id.parse((request.params as {id:string}).id),body.response);});
   app.get('/api/agenda/notifications',async request=>agenda.notifications(await actor(request)));
-  app.get('/assets/:file',async(request,reply)=>{const file=(request.params as {file:string}).file;if(!/^[A-Za-z0-9._-]+$/.test(file))return reply.code(404).send();const path=resolve('dist/assets',file);const kind=file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':file.endsWith('.svg')?'image/svg+xml':'image/png';return reply.type(kind).send(await readFile(path));});
+  app.get('/assets/:file',async(request,reply)=>{
+    const file=(request.params as {file:string}).file;
+    if(!/^[A-Za-z0-9._-]+$/.test(file))return reply.code(404).send();
+    const path=resolve('dist/assets',file);
+    const kind=file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':file.endsWith('.svg')?'image/svg+xml':'image/png';
+    try {
+      const asset=await readFile(path);
+      if(/-[A-Za-z0-9_-]{8,}\.[A-Za-z0-9]+$/.test(file))reply.header('cache-control','public, max-age=31536000, immutable');
+      return reply.type(kind).send(asset);
+    } catch(error) {
+      if((error as NodeJS.ErrnoException).code==='ENOENT')return reply.code(404).send();
+      throw error;
+    }
+  });
   app.get('/',async(request,reply)=>{if(!await identity.current(request))return reply.redirect('/acesso');return reply.type('text/html').send(await readFile(resolve('dist/index.html')));});
   return app;
 }

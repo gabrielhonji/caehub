@@ -10,3 +10,10 @@ test('health exposes the shared version and release metadata', async () => {
   assert.deepEqual(response.json(), { ok: true, version: manifest.version, release: manifest.release });
   await app.close();
 });
+
+test('missing static assets return 404 instead of an internal error', async () => {
+  const app = buildApp({ db: {} } as never, { current: async () => undefined });
+  const response = await app.inject({ method: 'GET', url: '/assets/missing-12345678.js' });
+  assert.equal(response.statusCode, 404);
+  await app.close();
+});
