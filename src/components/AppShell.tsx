@@ -3,14 +3,15 @@ import type { ReactNode } from 'react';
 import { Brand, HonjiBrand } from './Brand';
 
 export function AppShell({ children, theme, onTheme }: { children: ReactNode; theme: 'light' | 'dark'; onTheme: () => void }) {
+  type DebugMode = 'real' | 'admin' | 'events_director' | 'member';
   const current = location.hash || '#/';
   const [profileOpen, setProfileOpen] = useState(false);
-  const [account, setAccount] = useState<{ displayName: string; csrfToken: string }>();
+  const [account, setAccount] = useState<{ displayName: string; csrfToken: string; debugView?: { available: boolean; mode: DebugMode } }>();
   const [signingOut, setSigningOut] = useState(false);
   useEffect(() => {
     let active = true;
     fetch('/api/me', { credentials: 'same-origin' }).then(async response => response.ok ? response.json() : undefined).then(value => {
-      if (active && value?.displayName) setAccount({ displayName: value.displayName, csrfToken: value.csrfToken ?? '' });
+      if (active && value?.displayName) setAccount({ displayName: value.displayName, csrfToken: value.csrfToken ?? '', debugView: value.debugView });
     }).catch(() => undefined);
     return () => { active = false; };
   }, []);
@@ -23,6 +24,12 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
       if (response.ok && result.redirect) location.assign(result.redirect);
       else setSigningOut(false);
     } catch { setSigningOut(false); }
+  }
+  async function setDebugView(mode: DebugMode) {
+    if (!account) return;
+    const response = await fetch('/api/debug-view', { method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': account.csrfToken }, body: JSON.stringify({ mode }) });
+    if (response.ok) location.reload();
   }
   const initials = account?.displayName.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase() || 'CH';
   return (
@@ -46,6 +53,9 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
           <div className="footer-signature"><span>DESENVOLVIDO POR</span><a href="https://github.com/gabrielhonji" target="_blank" rel="noreferrer">gabriel.honji</a><i aria-hidden="true">·</i><span>VERSÃO {__APP_VERSION__} · {__APP_RELEASE__}</span><i aria-hidden="true">·</i><span>UTFPR / APUCARANA</span></div>
         </div>
       </footer>
+      {account?.debugView?.available && <aside className="debug-view-switcher" aria-label="Visualização de depuração"><span>Visualizar como</span><div>{([
+        ['real', 'Minha conta'], ['admin', 'Admin / Presidência'], ['events_director', 'Diretor Eventos'], ['member', 'Membro'],
+      ] as [DebugMode, string][]).map(([mode, label]) => <button type="button" key={mode} aria-pressed={account.debugView?.mode === mode} onClick={() => void setDebugView(mode)}>{label}</button>)}</div></aside>}
     </div>
   );
 }

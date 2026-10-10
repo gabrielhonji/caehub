@@ -23,9 +23,9 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
     if (error instanceof z.ZodError) return reply.code(400).send({ error: 'invalid_request', issues: error.issues });
     return reply.code(500).send({ error: 'internal_error' });
   });
-  const actor = async (request: import("fastify").FastifyRequest) => { const value = await identity.current(request); if (!value) throw new Forbidden('Honji identity integration is unavailable'); if (!value.projectAccess) throw new Forbidden('project.access is required'); return value; };
+  const actor = async (request: import("fastify").FastifyRequest) => { const value = await identity.current(request); if (!value) throw new Forbidden('Honji identity integration is unavailable'); if (!value.projectAccess) throw new Forbidden('project.access is required'); if(value.debugView&&value.debugView.mode!=='real'&&!['GET','HEAD'].includes(request.method))throw new Forbidden('debug profiles are read-only'); return value; };
   app.get('/health', async (request) => ({ ok: true, version: manifest.version, release: manifest.release }));
-  app.get('/api/me', async (request) => { const current = await actor(request); const membership = await service.membership(current); return { subject: current.subject, displayName: current.displayName, projectAccess: current.projectAccess, owner: current.owner, csrfToken:(request as any).caehubCsrf??'', membership: membership ? { id: membership.id, role: membership.role, status: membership.status } : null, integration: 'honji-bff' }; });
+  app.get('/api/me', async (request) => { const current = await actor(request); const membership = await service.membership(current); return { subject: current.subject, displayName: current.displayName, projectAccess: current.projectAccess, owner: current.owner, csrfToken:(request as any).caehubCsrf??'', membership: membership ? { id: membership.id, role: membership.role, status: membership.status } : null, integration: 'honji-bff', debugView:current.debugView }; });
   app.get('/api/organization', async (request) => { await actor(request); return service.organization(); });
   app.get('/api/organization/departments', async (request) => { await actor(request); return service.departments(); });
   app.get('/api/members', async (request) => service.listMembers(await actor(request)));

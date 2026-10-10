@@ -34,6 +34,8 @@ export async function connect(config: DbConfig): Promise<Database> {
 
 export async function migrate(db: Database): Promise<void> {
   await db.run(`CREATE TABLE IF NOT EXISTS caehub_sessions (session_hash char(64) primary key, subject varchar(255) null, display_name varchar(255) null, csrf_token varchar(64) not null, oauth_state_hash char(64) null, oauth_nonce_hash char(64) null, oauth_verifier varchar(128) null, created_at datetime(3) not null, last_activity_at datetime(3) not null, expires_at datetime(3) not null, index caehub_sessions_expiry(expires_at))`);
+  const debugMode = await db.one<RowDataPacket>(`SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='caehub_sessions' AND column_name='debug_mode'`);
+  if (!debugMode) await db.run("ALTER TABLE caehub_sessions ADD COLUMN debug_mode enum('real','admin','events_director','member') NOT NULL DEFAULT 'real'");
   await db.run(`CREATE TABLE IF NOT EXISTS organizations (id char(36) primary key, slug varchar(80) not null unique, name varchar(255) not null, created_at datetime not null default current_timestamp, updated_at datetime not null default current_timestamp on update current_timestamp)`);
   await db.run(`CREATE TABLE IF NOT EXISTS departments (id char(36) primary key, organization_id char(36) not null, name varchar(120) not null, created_at datetime not null default current_timestamp, unique key departments_organization_name (organization_id,name), constraint fk_department_org foreign key (organization_id) references organizations(id))`);
   await db.run(`CREATE TABLE IF NOT EXISTS people (id char(36) primary key, honji_subject varchar(255) not null unique, display_name varchar(255) not null, created_at datetime not null default current_timestamp)`);
@@ -73,6 +75,17 @@ async function seed(db: Database): Promise<void> {
   const bootstrapMembership = '1a4e0bd0-5f4a-4d10-8000-000000000011';
   await db.run(`INSERT IGNORE INTO people (id,honji_subject,display_name) VALUES (?, 'caehub-system-bootstrap', 'CAEHUB system bootstrap')`, [bootstrapPerson]);
   await db.run(`INSERT IGNORE INTO memberships (id,organization_id,person_id,role,status,ended_at) VALUES (?,?,?,'member','ended',NOW())`, [bootstrapMembership, orgId, bootstrapPerson]);
+  const templates = [
+    ['1a4e0bd0-5f4a-4d10-8000-000000000020', '1a4e0bd0-5f4a-4d10-8000-000000000021', 'caehub-debug-admin', 'Administração / Presidência', 'president'],
+    ['1a4e0bd0-5f4a-4d10-8000-000000000022', '1a4e0bd0-5f4a-4d10-8000-000000000023', 'caehub-debug-events-director', 'Direção de Eventos', 'director'],
+    ['1a4e0bd0-5f4a-4d10-8000-000000000024', '1a4e0bd0-5f4a-4d10-8000-000000000025', 'caehub-debug-member', 'Membro', 'member'],
+  ] as const;
+  for (const [personId, membershipId, subject, name, role] of templates) {
+    await db.run('INSERT IGNORE INTO people (id,honji_subject,display_name) VALUES (?,?,?)', [personId, subject, name]);
+    await db.run("INSERT IGNORE INTO memberships (id,organization_id,person_id,role,status) VALUES (?,?,?,?,'active')", [membershipId, orgId, personId, role]);
+  }
+  await db.run(`INSERT IGNORE INTO department_memberships (id,department_id,membership_id,kind) VALUES
+    ('1a4e0bd0-5f4a-4d10-8000-000000000026','1a4e0bd0-5f4a-4d10-8000-000000000104','1a4e0bd0-5f4a-4d10-8000-000000000023','director')`);
   const spaces: Array<[string, string, number | null]> = [['1a4e0bd0-5f4a-4d10-8000-000000000201', 'Direção Geral', null], ...departments.map((name, index) => [`1a4e0bd0-5f4a-4d10-8000-0000000002${String(index + 2).padStart(2, '0')}`, name, index] as [string, string, number])];
   for (const [id, name, index] of spaces) {
     const departmentId = index === null ? null : `1a4e0bd0-5f4a-4d10-8000-0000000001${String(index + 1).padStart(2, '0')}`;
