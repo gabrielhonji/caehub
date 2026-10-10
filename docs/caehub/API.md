@@ -2,7 +2,7 @@
 
 Base: `/api`. JSON; erros usam `{ error, message }` e retornam `400`, `403`, `404` ou `409`. `GET /health` expõe também a versão e o identificador de release no formato `DDMMAAAA-HHMMSS`.
 
-O servidor resolve o ator na fronteira `IdentityGateway`. Em produção, sem o adaptador BFF Honji, toda rota protegida retorna `403`; não há cabeçalho, payload ou papel fornecido pelo navegador que conceda acesso. O único portão central conhecido é `project.access`.
+O servidor resolve o ator na fronteira `IdentityGateway`. Em produção, o BFF Honji usa Authorization Code + PKCE, sessão persistida no MySQL e uma decisão central nova de `project.access` em cada requisição protegida. Sem configuração completa ou decisão positiva, o acesso é negado; nenhum cabeçalho, payload ou papel fornecido pelo navegador concede acesso.
 
 | Método e rota | Operação |
 | --- | --- |
@@ -33,6 +33,6 @@ Visibilidade `directors` é filtrada antes do detalhe e usa `404` para não reve
 
 Paginação ainda não é necessária para a escala institucional inicial; deverá ser incluída antes de uma listagem cujo volume a exija, sem alterar a política de escopo.
 
-## Limite pendente
+## Integração Honji
 
-O adaptador real para sessão e decisão `project.access` do BFF Honji ainda não possui contrato de transporte. Implementar `IdentityGateway` com essa fonte confiável é a única substituição necessária para retirar o modo de negação em produção; tokens e senhas não são persistidos no CAEHUB.
+As rotas `/acesso`, `/auth/login`, `/auth/callback` e `/auth/logout` implementam o portão Honji. O cookie de sessão é Secure, HttpOnly, SameSite=Lax e não contém tokens; identificadores de sessão são armazenados somente como hash. Mutações exigem origem exata e token CSRF da sessão. Client secrets permanecem fora do repositório e da imagem.
