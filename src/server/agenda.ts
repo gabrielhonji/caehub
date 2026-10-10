@@ -6,6 +6,7 @@ import { Conflict, Forbidden, InstitutionalService, NotFound } from './service.j
 
 type AvailabilityInput = { kind: 'weekly' | 'date'; weekday?: number; date?: string; startTime: string; endTime: string; note?: string };
 type MeetingInput = { title: string; description?: string; location?: string; workspaceId?: string; startsAt: string; endsAt: string; participantIds: string[] };
+type MeetingUpdateInput = Partial<MeetingInput> & { expectedRevision:number };
 type CalendarScope = 'personal' | 'general' | 'workspace';
 const sqlDate = (value: string) => new Date(value).toISOString().slice(0, 23).replace('T', ' ');
 const timePart = (value: unknown) => String(value).slice(0, 5);
@@ -113,6 +114,12 @@ export class AgendaService {
     });
   }
 
+  async options(actor:Actor) {
+    const member=await this.institutional.requireMember(actor);
+    if(!await this.institutional.isAdmin(actor,member)&&member.role!=='director') throw new Forbidden('director or institutional administrator required');
+    return this.db.many<RowDataPacket>(`SELECT m.id,m.role,p.display_name AS displayName,COALESCE((SELECT JSON_ARRAYAGG(dm.department_id) FROM department_memberships dm WHERE dm.membership_id=m.id AND dm.ended_at IS NULL),JSON_ARRAY()) AS departmentIds FROM memberships m JOIN people p ON p.id=m.person_id WHERE m.organization_id=? AND m.status='active' ORDER BY p.display_name`,[CAECOMP_ORGANIZATION_ID]);
+  }
+
   async createMeeting(actor: Actor, input: MeetingInput) {
     const organizer = await this.institutional.requireMember(actor);
     if (!await this.mayOrganize(actor, organizer, input.workspaceId)) throw new Forbidden('director or institutional administrator required');
@@ -138,14 +145,18 @@ export class AgendaService {
     return { member, meeting };
   }
 
-  async updateMeeting(actor: Actor, id: string, input: Partial<MeetingInput>) {
-    const { member, meeting } = await this.meetingFor(actor, id);
-    if (meeting.organizer_membership_id !== member.id && !await this.institutional.isAdmin(actor, member)) throw new Forbidden('meeting organizer required');
-    const startsAt = input.startsAt ?? new Date(meeting.starts_at).toISOString(), endsAt = input.endsAt ?? new Date(meeting.ends_at).toISOString();
-    if (new Date(startsAt) >= new Date(endsAt)) throw new Conflict('end time must be after start time');
-    const rescheduled = Boolean(input.startsAt || input.endsAt) && (sqlDate(startsAt) !== sqlDate(new Date(meeting.starts_at).toISOString()) || sqlDate(endsAt) !== sqlDate(new Date(meeting.ends_at).toISOString()));
-    await this.db.transaction(async (tx) => {
-      await tx.run(`UPDATE meetings SET title=COALESCE(?,title),description=COALESCE(?,description),location=COALESCE(?,location),workspace_id=COALESCE(?,workspace_id),starts_at=?,ends_at=?,revision=revision+? WHERE id=?`, [input.title ?? null, input.description ?? null, input.location ?? null, input.workspaceId ?? null, sqlDate(startsAt), sqlDate(endsAt), rescheduled ? 1 : 0, id]);
+  async updateMeeting(actor: Actor, id: string, input: MeetingUpdateInput) {
+    const member=await this.institutional.requireMember(actor);
+    if(input.workspaceId&&!await this.mayOrganize(actor,member,input.workspaceId)) throw new Forbidden('workspace meeting administration required');
+    const outcome=await this.db.transaction(async (tx) => {
+      const meeting=await tx.one<RowDataPacket>('SELECT * FROM meetings WHERE id=? AND organization_id=? AND cancelled_at IS NULL FOR UPDATE',[id,CAECOMP_ORGANIZATION_ID]);
+      if(!meeting) throw new NotFound('meeting');
+      if(meeting.organizer_membership_id!==member.id&&!await this.institutional.isAdmin(actor,member)) throw new Forbidden('meeting organizer required');
+      if(Number(meeting.revision)!==input.expectedRevision) throw new Conflict('meeting was updated; reload before saving');
+      const startsAt = input.startsAt ?? new Date(meeting.starts_at).toISOString(), endsAt = input.endsAt ?? new Date(meeting.ends_at).toISOString();
+      if (new Date(startsAt) >= new Date(endsAt)) throw new Conflict('end time must be after start time');
+      const rescheduled = Boolean(input.startsAt || input.endsAt) && (sqlDate(startsAt) !== sqlDate(new Date(meeting.starts_at).toISOString()) || sqlDate(endsAt) !== sqlDate(new Date(meeting.ends_at).toISOString()));
+      await tx.run(`UPDATE meetings SET title=COALESCE(?,title),description=COALESCE(?,description),location=COALESCE(?,location),workspace_id=COALESCE(?,workspace_id),starts_at=?,ends_at=?,revision=revision+1 WHERE id=?`, [input.title ?? null, input.description ?? null, input.location ?? null, input.workspaceId ?? null, sqlDate(startsAt), sqlDate(endsAt), id]);
       if (rescheduled) { await tx.run("UPDATE meeting_participants SET response='pending',response_revision=response_revision+1,responded_at=NULL WHERE meeting_id=? AND removed_at IS NULL", [id]); const participants = await tx.many<RowDataPacket>('SELECT membership_id AS membershipId FROM meeting_participants WHERE meeting_id=? AND removed_at IS NULL', [id]); for (const p of participants) await tx.run("INSERT INTO agenda_notifications (id,membership_id,meeting_id,kind) VALUES (?,?,?,'rescheduled')", [randomUUID(), p.membershipId, id]); }
       if (input.participantIds) {
         const desired = [...new Set(input.participantIds)].filter((value) => value !== meeting.organizer_membership_id);
@@ -154,9 +165,10 @@ export class AgendaService {
         for (const existing of current.filter((p) => !desired.includes(p.membershipId))) { await tx.run('UPDATE meeting_participants SET removed_at=NOW(3) WHERE meeting_id=? AND membership_id=? AND removed_at IS NULL', [id, existing.membershipId]); await tx.run("INSERT INTO agenda_notifications (id,membership_id,meeting_id,kind) VALUES (?,?,?,'removed')", [randomUUID(), existing.membershipId, id]); }
         for (const membershipId of desired.filter((value) => !current.some((p) => p.membershipId === value))) { await tx.run("INSERT INTO meeting_participants (meeting_id,membership_id) VALUES (?,?)", [id, membershipId]); await tx.run("INSERT INTO agenda_notifications (id,membership_id,meeting_id,kind) VALUES (?,?,?,'invited')", [randomUUID(), membershipId, id]); }
       }
+      return {rescheduled,revision:Number(meeting.revision)+1};
     });
-    await this.institutional.audit(actor, 'meeting.updated', 'meeting', id, { rescheduled });
-    return { id, rescheduled };
+    await this.institutional.audit(actor, 'meeting.updated', 'meeting', id, { rescheduled:outcome.rescheduled });
+    return { id, ...outcome };
   }
 
   async respond(actor: Actor, id: string, response: 'confirmed' | 'maybe' | 'declined') {

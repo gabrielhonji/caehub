@@ -30,6 +30,7 @@ O servidor resolve o ator na fronteira `IdentityGateway`. Em produção, o BFF H
 | `GET, POST /api/availability/me` | consulta e cadastro da indisponibilidade do ator |
 | `PUT, DELETE /api/availability/me/:id` | edição/remoção exclusivamente pelo titular |
 | `GET /api/availability/collective` | livre/ocupado/não informado para direção/administração, sem detalhes particulares |
+| `GET /api/availability/options` | opções mínimas de pessoas de todos os departamentos para filtros e convites da direção/administração |
 | `POST /api/meetings`, `PATCH /api/meetings/:id` | criação e gestão de reunião por direção/administração/organizador |
 | `POST /api/meetings/:id/response` | resposta do convidado: confirmado, talvez ou recusado |
 | `GET /api/agenda/notifications` | convites, reagendamentos e remoções persistidos do ator |
@@ -40,7 +41,7 @@ Visibilidade `directors` é filtrada antes do detalhe e usa `404` para não reve
 
 Paginação ainda não é necessária para a escala institucional inicial; deverá ser incluída antes de uma listagem cujo volume a exija, sem alterar a política de escopo.
 
-Datas de reuniões usam ISO 8601 na API e instantes UTC no banco. Consultas aceitam `offsetMinutes` para projetar horários civis recorrentes no deslocamento local do cliente. Mudança de início ou fim redefine respostas ativas para `pending`, incrementa a revisão e cria notificações persistentes.
+Datas de reuniões usam ISO 8601 na API e instantes UTC no banco. Consultas aceitam `offsetMinutes` para projetar horários civis recorrentes no deslocamento local do cliente. Mudança de início ou fim redefine respostas ativas para `pending`, incrementa a revisão e cria notificações persistentes. Edições recebem `expectedRevision`; uma versão obsoleta retorna conflito em vez de sobrescrever alterações concorrentes.
 
 ## Integração Honji
 
