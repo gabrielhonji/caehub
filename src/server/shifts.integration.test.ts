@@ -76,5 +76,8 @@ test('shifts serialize capacity, preserve provisional acceptance, conflicts, his
     const crossResults=await Promise.all(crossIds.map(shiftId=>participation(f.apps.member,shiftId,{action:'volunteer'})));
     assert.deepEqual(crossResults.map(r=>r.statusCode).sort(),[200,409]);
     assert.equal(crossResults.find(r=>r.statusCode===409)?.json().error,'schedule_conflict');
+    assert.equal((await f.apps.owner.inject({method:'PATCH',url:`/api/members/${f.ids.other}`,payload:{status:'ended'}})).statusCode,200);
+    assert.equal((await participation(f.apps.director,classId,{action:'remove',membershipId:f.ids.other})).statusCode,200,'Direction can release a reservation after membership ends');
+    assert.equal((await participation(f.apps.director,classId,{action:'assign',membershipId:f.ids.other,confirmConflict:true})).statusCode,409,'Ended membership cannot receive a new reservation');
   }finally {await f.close();}
 });

@@ -93,3 +93,5 @@ Validação local: 18 testes de backend, TypeScript/build e fluxos Chromium nos
 dois temas em 1440/390 px. Inclui corrida pela última vaga, conflitos entre
 turnos concorrentes, aulas/reuniões, redução de capacidade, privacidade,
 acesso contextual e finalização duplicada. Capturas usam dados fictícios.
+Direção pode liberar participações de vínculos encerrados, sem permitir novas
+atribuições a esses vínculos. A regressão é coberta por teste de integração.

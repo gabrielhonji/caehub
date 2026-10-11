@@ -8,7 +8,7 @@ Agenda Avançada implementada: grade UTFPR, consulta semanal por pessoas/vários
 departamentos, solicitações de revisão, votações e escalas contextualizadas.
 Reutiliza Agenda/API, notificações e componentes locais. Janela prioritária de
 desistência: 2 horas, configurável pela direção. O usuário autorizou commit,
-push, integração e deploy da versão 1.4.0 pelo canal oficial.
+push, integração e deploy da versão 1.4.1 pelo canal oficial.
 
 Evidência: 18 testes de backend passaram em MySQL descartável; TypeScript e
 build Vite em modo de produção passaram. Chromium verificou upload/prévia real

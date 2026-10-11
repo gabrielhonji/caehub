@@ -61,8 +61,9 @@ export class Shifts {
     if(!target)throw new Conflict('Selecione a pessoa.');
     await this.db.transaction(async tx=>{
       // Membership lock serializes concurrent reservations for the same person across shifts.
-      await activeParticipants(tx,[target]);
-      await tx.one('SELECT id FROM memberships WHERE id=? FOR UPDATE',[target]);
+      if(input.action!=='remove')await activeParticipants(tx,[target]);
+      const targetMember=await tx.one('SELECT id FROM memberships WHERE id=? AND organization_id=? FOR UPDATE',[target,CAECOMP_ORGANIZATION_ID]);
+      if(!targetMember)throw new Conflict('Vínculo institucional inexistente.');
       const shift=await tx.one<RowDataPacket>('SELECT * FROM agenda_shifts WHERE id=? AND organization_id=? FOR UPDATE',[id,CAECOMP_ORGANIZATION_ID]);
       if(!shift)throw new NotFound('shift');
       await this.access(actor,member,shift,management);
