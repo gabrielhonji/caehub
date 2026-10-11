@@ -50,3 +50,19 @@ o cabeçalho permanece visível e o conteúdo tem rolagem limitada à viewport.
 Escape fecha o diálogo superior; Tab fica no diálogo e fechar restaura o foco.
 A composição mantém a variante padrão usada pelo Kanban. Layout, teclado e
 formulários longos são verificados em Chromium, 1440/390 px e nos dois temas.
+
+## Formulários e notificações da Agenda (1.6.0)
+
+`AgendaTimeFields` compõe controles nativos com os campos e tokens existentes:
+uma data, relógios predefinidos ou específicos e término posterior ao início.
+Traduz para os mesmos timestamps da API; a opção de outro dia preserva eventos
+longos. É compartilhado por reuniões, votações, turnos e disponibilidade;
+reset após sucesso e fechamento com rascunho seguem os fluxos existentes.
+
+`AgendaNotifications` assume a responsabilidade de atualizações globais no
+`AppShell`, compondo `Dialog`, `Button` e `Badge`. O sino tem nome acessível,
+contador de não lidas e leitura persistida pela API existente. Atualiza após
+operações da agenda, ao abrir e ao retornar à janela; respostas antigas não
+sobrescrevem a consulta mais recente. Filtros usam grupos de botões com
+`aria-pressed`; detalhes opcionais ficam recolhidos. Nenhum controle base ou
+biblioteca foi duplicado. Revisão em 1440/768/390 px e ambos os temas.

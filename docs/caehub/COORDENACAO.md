@@ -1,4 +1,27 @@
 # Coordenação de agentes
+## Atividade atual — Grade e criação na Agenda, 11/10/2026
+
+Incremento `fix/agenda-import-and-creation`, sobre `main` em `eb3d99c`, versão
+1.6.0. Importação lista pendências e só confirma metadados, blocos válidos e
+revisão explícita. Extrator inclui a primeira coluna e consolida períodos
+ocupados consecutivos, sem inventar horários ou unir períodos vazios.
+O usuário confirmou o término de quarta às 18h20, conforme o PDF.
+
+Reuniões, votações, turnos e disponibilidade compartilham data e relógios com
+presets/customização e término posterior; detalhes opcionais recolhidos.
+Consulta semanal oferece intervalos predefinidos/customizados e filtros
+conectados. Notificações ficam no sino do cabeçalho, com leitura persistida.
+
+Validação: 22 testes de servidor, TypeScript e Vite. Chromium com o PDF real
+verificou os seis blocos esperados, ocupação na segunda, almoço livre na terça,
+quarta livre após o término, bloqueio da confirmação incompleta, relógios,
+intervalo customizado, criação de reunião/votação/turno e leitura de notificações
+entre páginas. Revisão visual em 1440/768/390 px nos dois temas, sem overflow
+nem exceções JavaScript; dados das capturas são fictícios. Documento privado
+não versionado. Grade importada anteriormente exige reimportação do mesmo
+período para substituir os blocos antigos; blocos manuais permanecem.
+Publicação segue integração em `main`, `build-app` e `deploy-app`, com gate de
+saúde e reversão do canal. Sem alteração de auth, schema ou infraestrutura.
 
 ## Atividade atual — UX da Agenda, 11/10/2026
 

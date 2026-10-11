@@ -3,10 +3,10 @@ import type { Space } from '../domain/types';
 import type { MemberOption } from '../services/agenda';
 import { cancelShift, closePoll, createPoll, createShift, participateShift, relatedShiftMeetings, shiftHistory, updateShift, votePoll, type MeetingPoll, type OperationalShift } from '../services/agenda-advanced';
 import { AgendaPeoplePicker } from './AvailabilityPlanning';
+import { AgendaTimeFields } from './AgendaTimeFields';
 import { AgendaWorkflow } from './AgendaWorkflow';
 import { Badge, Button, Dialog, EmptyState, Eyebrow } from './primitives';
 
-const localInput=(value:string)=>{const date=new Date(value);return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);};
 const dateTime=(value:string)=>new Date(value).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
 const instant=(value:FormDataEntryValue|null)=>new Date(String(value)).toISOString();
 const statusLabel:Record<string,string>={pending:'Reserva pendente',confirmed:'Confirmado',declined:'Recusado',withdrawn:'Desistiu',removed:'Removido',cancelled:'Cancelado'};
@@ -18,14 +18,13 @@ function ShiftFields({spaces,shift}:{spaces:Space[];shift?:OperationalShift}) {
   useEffect(()=>{let active=true;setMeetings([]);setError('');if(workspaceId)void relatedShiftMeetings(workspaceId).then(rows=>{if(active)setMeetings(rows);}).catch(()=>{if(active)setError('Não foi possível carregar reuniões deste espaço.');});return ()=>{active=false;};},[workspaceId]);
   return <>
     <label>Título<input name="title" required maxLength={200} defaultValue={shift?.title}/></label>
-    <label>Descrição<textarea name="description" maxLength={10000} defaultValue={shift?.description}/></label>
-    <div className="agenda-form-grid"><label>Início<input name="startsAt" type="datetime-local" required defaultValue={shift&&localInput(shift.startsAt)}/></label><label>Fim<input name="endsAt" type="datetime-local" required defaultValue={shift&&localInput(shift.endsAt)}/></label></div>
-    <label>Local<input name="location" maxLength={255} defaultValue={shift?.location}/></label>
+    <AgendaTimeFields startsAt={shift?.startsAt} endsAt={shift?.endsAt}/>
     <label>Espaço responsável<select name="workspaceId" required value={workspaceId} onChange={event=>setWorkspaceId(event.target.value)}><option value="" disabled>Selecione</option>{spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-    <label>Reunião/evento relacionado (opcional)<select key={`${workspaceId}-${meetings.length}`} name="relatedMeetingId" defaultValue={workspaceId===shift?.workspaceId?shift?.relatedMeetingId??'':''}><option value="">Sem associação</option>{workspaceId===shift?.workspaceId&&shift?.relatedMeetingId&&!meetings.some(m=>m.id===shift.relatedMeetingId)&&<option value={shift.relatedMeetingId}>Reunião vinculada</option>}{meetings.map(m=><option key={m.id} value={m.id}>{m.title} · {dateTime(m.startsAt)}</option>)}</select></label>{error&&<p role="alert">{error}</p>}
-    <div className="agenda-form-grid"><label>Equipe mínima (opcional)<input name="minimumCapacity" type="number" min={0} max={1000} defaultValue={shift?.minimumCapacity??''}/></label><label>Capacidade máxima<input name="maximumCapacity" type="number" min={1} max={1000} required defaultValue={shift?.maximumCapacity??1}/></label></div>
+    <label>Capacidade máxima<input name="maximumCapacity" type="number" min={1} max={1000} required defaultValue={shift?.maximumCapacity??1}/></label>
+    <details className="optional-fields"><summary>Detalhes e configurações do turno (opcionais)</summary><div><label>Descrição<textarea name="description" maxLength={10000} defaultValue={shift?.description}/></label><label>Local<input name="location" maxLength={255} defaultValue={shift?.location}/></label><label>Reunião/evento relacionado (opcional)<select key={`${workspaceId}-${meetings.length}`} name="relatedMeetingId" defaultValue={workspaceId===shift?.workspaceId?shift?.relatedMeetingId??'':''}><option value="">Sem associação</option>{workspaceId===shift?.workspaceId&&shift?.relatedMeetingId&&!meetings.some(m=>m.id===shift.relatedMeetingId)&&<option value={shift.relatedMeetingId}>Reunião vinculada</option>}{meetings.map(m=><option key={m.id} value={m.id}>{m.title} · {dateTime(m.startsAt)}</option>)}</select></label>{error&&<p role="alert">{error}</p>}
+    <label>Equipe mínima (opcional)<input name="minimumCapacity" type="number" min={0} max={1000} defaultValue={shift?.minimumCapacity??''}/></label>
     <label>Aviso prioritário de desistência (horas antes)<input name="priorityWindowHours" type="number" min={0} max={8760} required defaultValue={shift?.priorityWindowHours??2}/></label>
-    <p>O padrão é 2 horas. Reservas também ocupam vagas; apenas confirmações contam para a equipe mínima.</p>
+    <p>O padrão é 2 horas. Reservas também ocupam vagas; apenas confirmações contam para a equipe mínima.</p></div></details>
   </>;
 }
 function shiftData(data:FormData) {
@@ -57,14 +56,13 @@ export function AgendaOperations({polls,shifts,members,spaces,canManage,onSaved}
   return <section className="advanced-agenda agenda-operations" aria-busy={busy}>
     <div className="agenda-section-heading"><Eyebrow>CONVITES E PARTICIPAÇÕES</Eyebrow><h2>Votações e turnos</h2><p>Consulte o que precisa da sua resposta e abra um item para participar ou gerenciar.</p></div>
     <fieldset disabled={busy} className="workflow-controls agenda-operations-toolbar"><div role="group" aria-label="Tipo de participação"><Button aria-pressed={view==='polls'} onClick={()=>setView('polls')}>Votações ({polls.filter(p=>!p.closedAt).length})</Button><Button aria-pressed={view==='shifts'} onClick={()=>setView('shifts')}>Turnos ({shifts.filter(s=>!s.cancelledAt&&new Date(s.endsAt)>=new Date()).length})</Button></div>{canManage&&<Button variant="primary" onClick={()=>setTask(view==='polls'?'newPoll':'newShift')}>{view==='polls'?'Criar votação de horários':'Criar turno'}</Button>}</fieldset>
-    <label className="agenda-archive-toggle"><input type="checkbox" checked={archived} onChange={e=>setArchived(e.target.checked)}/>Mostrar encerrados e cancelados</label>
+    <div className="agenda-filter-group" role="group" aria-label="Status das participações"><Button aria-pressed={!archived} onClick={()=>setArchived(false)}>Ativos</Button><Button aria-pressed={archived} onClick={()=>setArchived(true)}>Incluir encerrados e cancelados</Button></div>
     <p role="status" aria-live="polite">{message}</p>
     <fieldset disabled={busy} className="workflow-controls">
       {canManage&&<AgendaWorkflow busy={busy} title="Criar votação de horários" open={task==='newPoll'} onClose={()=>setTask(null)}><p role="status">{message}</p><form className="agenda-form" onSubmit={event=>submit(event,data=>createPoll({title:String(data.get('title')),description:String(data.get('description')||''),location:String(data.get('location')||''),workspaceId:String(data.get('workspaceId')||'')||undefined,deadline:data.get('deadline')?instant(data.get('deadline')):undefined,participantIds:data.getAll('participantIds').map(String),options:Array.from({length:optionCount},(_,index)=>({startsAt:instant(data.get(`start-${index}`)),endsAt:instant(data.get(`end-${index}`))}))}),'Votação criada; participantes notificados.')}>
-        <label>Título<input name="title" required maxLength={200}/></label><label>Descrição<textarea name="description" maxLength={10000}/></label><label>Local<input name="location" maxLength={255}/></label>
+        <label className="wide-field">Título<input name="title" required maxLength={200}/></label><details className="optional-fields"><summary>Descrição, local e prazo (opcionais)</summary><div><label>Descrição<textarea name="description" maxLength={10000}/></label><label>Local<input name="location" maxLength={255}/></label><label>Prazo (opcional)<input name="deadline" type="datetime-local"/></label></div></details>
         <label>Espaço<select name="workspaceId"><option value="">Institucional</option>{spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-        <label>Prazo (opcional)<input name="deadline" type="datetime-local"/></label>
-        {Array.from({length:optionCount},(_,index)=><fieldset key={index}><legend>Opção {index+1}</legend><div className="agenda-form-grid"><label>Início<input name={`start-${index}`} type="datetime-local" required/></label><label>Fim<input name={`end-${index}`} type="datetime-local" required/></label></div></fieldset>)}
+        {Array.from({length:optionCount},(_,index)=><fieldset key={index}><legend>Opção {index+1}</legend><AgendaTimeFields startName={`start-${index}`} endName={`end-${index}`}/></fieldset>)}
         <div className="response-actions"><Button type="button" disabled={optionCount>=30} onClick={()=>setOptionCount(c=>c+1)}>Adicionar horário</Button><Button type="button" disabled={optionCount<=2} onClick={()=>setOptionCount(c=>c-1)}>Retirar último horário</Button></div>
         <AgendaPeoplePicker members={members}/><Button variant="primary">Abrir votação</Button>
       </form></AgendaWorkflow>}
@@ -82,7 +80,7 @@ export function AgendaOperations({polls,shifts,members,spaces,canManage,onSaved}
           {poll.canManage&&!poll.closedAt&&<form className="agenda-form" onSubmit={event=>submit(event,data=>closePoll(poll.id,String(data.get('winner')||'')||undefined),'Reunião convocada; votos vencedores confirmados.')}>
             {leaders.length>1&&max>0&&<label>Desempate<select name="winner" required defaultValue=""><option value="" disabled>Escolha entre os horários empatados</option>{leaders.map(o=><option key={o.id} value={o.id}>{dateTime(o.startsAt)}</option>)}</select></label>}
             {!max&&<p>Sem votos válidos: não é possível convocar.</p>}
-            <label className="checkbox-label"><input type="checkbox" required/>Confirmo o encerramento e a convocação no horário vencedor.</label><Button disabled={!max}>Encerrar e convocar</Button>
+            <label className="checkbox-label inline-check"><input type="checkbox" required/>Confirmo o encerramento e a convocação no horário vencedor.</label><Button disabled={!max}>Encerrar e convocar</Button>
           </form>}
         </article></AgendaWorkflow></div>;
       })}

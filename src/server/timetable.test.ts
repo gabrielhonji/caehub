@@ -21,6 +21,18 @@ test('missing textual times stay unknown; duplicate pages do not duplicate candi
   assert.ok(result.rows.every(row => row.needsReview && row.startTime === null && row.endTime === null));
 });
 
+test('left-aligned first-day cells are retained while clocks and empty neighboring cells stay empty', () => {
+  const xml=`<page>${word('Segunda',160,10)}${word('Terça',300,10)}${word('M1',10,30)}${word('07h30',55,30)}${word('08h20',105,30)}${word('AULA',150,30)}${word('-',300,30)}</page>`;
+  assert.deepEqual(parseTimetable(xml).rows,[{weekday:1,code:'M1',startTime:'07:30',endTime:'08:20',needsReview:false}]);
+  assert.deepEqual(parseTimetable(xml.replace(word('AULA',150,30),'')).rows,[]);
+});
+
+test('consolidation includes printed recesses but never bridges an empty period or morning/afternoon', () => {
+  const row=(code:string,range:string,y:number,occupied=true)=>word(code,10,y)+word(range,55,y,90)+(occupied?word('AULA',150,y):word('-',150,y));
+  const xml=`<page>${word('Segunda',160,10)}${word('Terça',300,10)}${row('M1','07:30–08:20',30)}${row('M2','08:40–09:30',50)}${row('M3','09:30–10:20',70,false)}${row('M4','10:20–11:10',90)}${row('T1','13:00–13:50',110)}</page>`;
+  assert.deepEqual(parseTimetable(xml).rows.map(r=>[r.weekday,r.startTime,r.endTime]),[[1,'07:30','09:30'],[1,'10:20','11:10'],[1,'13:00','13:50']]);
+});
+
 test('UTFPR layout accepts two printed clock columns without inventing code mappings', () => {
   const xml = `<page>${word('Segunda', 160, 10)}${word('Terça', 300, 10)}${word('M1', 10, 30)}${word('07h30', 55, 30)}${word('08h20', 105, 30)}${word('AULA', 300, 30)}</page>`;
   const result = parseTimetable(xml);

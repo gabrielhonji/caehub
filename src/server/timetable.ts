@@ -35,16 +35,26 @@ export function parseTimetable(xml: string): { rows: TimetableRow[]; warnings: s
         const center = (column.x + column.right) / 2;
         const left = index === 0 ? (code.right + center) / 2 : ((columns[index - 1].x + columns[index - 1].right) / 2 + center) / 2;
         const right = index + 1 === columns.length ? center + (center - left) : (center + (columns[index + 1].x + columns[index + 1].right) / 2) / 2;
-        const occupied = rowWords.some(word => word.x >= columns[0].x - 5 && (word.x + word.right) / 2 >= left && (word.x + word.right) / 2 < right && !/^[-–—.]$/.test(word.text) && !/^[0-9:h]+$/.test(word.text));
+        const occupied = rowWords.some(word => word.x > code.right && (word.x + word.right) / 2 >= left && (word.x + word.right) / 2 < right && !/^[-–—.]$/.test(word.text) && !/^[0-9:h]+$/.test(word.text) && !/^\d{1,2}[:h]\d{2}/i.test(word.text));
         if (occupied) rows.push({ weekday: weekday(column.text), code: code.text.toUpperCase(), startTime, endTime, needsReview: !startTime || !endTime || startTime >= endTime });
       }
     }
   }
   const unique = [...new Map(rows.map(row => [`${row.weekday}/${row.code}/${row.startTime}/${row.endTime}`, row])).values()];
-  const warnings = ['Confira cada dia e intervalo antes de confirmar. Códigos M/T/N não definem horários universais.'];
+  const blocks: TimetableRow[] = [];
+  for (const row of unique.sort((a,b)=>a.weekday-b.weekday || 'MTN'.indexOf(a.code[0])-'MTN'.indexOf(b.code[0]) || Number(a.code.slice(1))-Number(b.code.slice(1)))) {
+    const previous=blocks.at(-1);
+    const lastCode=previous?.code.split('–').at(-1) ?? '';
+    // Consecutive occupied table periods form one block, including printed recesses.
+    // A blank period or a change of morning/afternoon/night always separates blocks.
+    if (previous && !previous.needsReview && !row.needsReview && previous.weekday===row.weekday && lastCode[0]===row.code[0] && Number(row.code.slice(1))===Number(lastCode.slice(1))+1 && row.startTime! >= previous.endTime!) {
+      previous.code=`${previous.code.split('–')[0]}–${row.code}`;previous.endTime=row.endTime;
+    } else blocks.push({...row});
+  }
+  const warnings = ['Confira os blocos por dia antes de confirmar. Períodos consecutivos incluem os intervalos de recreio; períodos vazios separam os blocos. Os horários vêm do PDF, não dos códigos M/T/N.'];
   if (!unique.length) warnings.push('Tabela não reconhecida. PDF escaneado ou estrutura diferente: adicione os horários manualmente. Nenhuma aula foi presumida.');
   if (unique.some(row => row.needsReview)) warnings.push('Há intervalos sem horário textual seguro. Preencha o início e o fim usando seu documento.');
-  return { rows: unique.slice(0, 200), warnings };
+  return { rows: blocks.slice(0, 200), warnings };
 }
 
 let running = 0;

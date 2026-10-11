@@ -6,6 +6,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, { ...init, headers: { ...(init?.body != null ? { 'content-type': 'application/json' } : {}),...(csrf?{'x-csrf-token':csrf}:{}), ...init?.headers } });
   if(response.status===403){const problem=await response.clone().json().catch(()=>({}));if(problem.message==='Honji identity integration is unavailable'){location.assign('/acesso');throw new Error('Sessão necessária.');}}
   if (!response.ok) { const problem = await response.json().catch(() => ({})); throw Object.assign(new Error(problem.message ?? `Falha ${response.status}`),{code:problem.error}); }
+  if (!['GET','HEAD'].includes(method)&&/^\/(?:meetings|meeting-polls|shifts|availability|agenda\/notifications)/.test(path)) window.dispatchEvent(new Event('caehub:agenda-updated'));
   if (response.status === 204) return undefined as T;
   return response.json();
 }
