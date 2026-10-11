@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { Space } from '../domain/types';
-import { createAvailability, createMeeting, deleteAvailability, getAgendaNotifications, getAvailability, getAvailabilityOptions, getCalendar, getCollective, getDepartments, getSession, respondMeeting, updateAvailability, updateMeeting } from '../services/agenda';
+import { createAvailability, createMeeting, deleteAvailability, getAgendaFoundation, getCollective, respondMeeting, updateAvailability, updateMeeting } from '../services/agenda';
 import type { AgendaNotification, AvailabilityBlock, CalendarItem, CollectiveAvailability, DepartmentOption, MemberOption, Session } from '../services/agenda';
 import { AccessDeniedState, Badge, Button, EmptyState, ErrorState, Eyebrow, LoadingState } from './primitives';
 
@@ -48,21 +48,18 @@ export function AgendaPage({ spaces }:{spaces:Space[]}) {
   const [status,setStatus]=useState<'loading'|'ready'|'error'|'denied'>('loading');
   const [feedback,setFeedback]=useState('');
   const [editing,setEditing]=useState<AvailabilityBlock>();
+  const loaded=useRef(false);
   const canManage=roleCanManage(session);
   const range=useMemo(()=>{
     if(view==='week'){const from=startOfWeek(anchor);return {from,to:addDays(from,7)};}
     const from=new Date(anchor.getFullYear(),anchor.getMonth(),1);return {from,to:new Date(anchor.getFullYear(),anchor.getMonth()+1,1)};
   },[anchor,view]);
   const load=useCallback(async()=>{
-    setStatus('loading');
+    if(!loaded.current)setStatus('loading');
     try{
-      const current=await getSession();
-      const [calendar,availability,memberList,departmentList,inbox]=await Promise.all([
-        getCalendar({from:range.from.toISOString(),to:range.to.toISOString(),scope,workspaceId:scope==='workspace'?workspaceId:undefined,offsetMinutes:String(range.from.getTimezoneOffset())}),
-        getAvailability(),roleCanManage(current)?getAvailabilityOptions():Promise.resolve([]),getDepartments(),getAgendaNotifications()
-      ]);
-      setItems(calendar);setBlocks(availability);setSession(current);setMembers(memberList);setDepartments(departmentList);setNotifications(inbox);setStatus('ready');
-    }catch(error){setStatus(error instanceof Error&&error.message.toLowerCase().includes('required')?'denied':'error');}
+      const value=await getAgendaFoundation({from:range.from.toISOString(),to:range.to.toISOString(),scope,workspaceId:scope==='workspace'?workspaceId:undefined,offsetMinutes:String(range.from.getTimezoneOffset())});
+      setItems(value.calendar);setBlocks(value.availability);setSession(value.session);setMembers(value.members);setDepartments(value.departments);setNotifications(value.notifications);loaded.current=true;setStatus('ready');
+    }catch(error){if(!loaded.current)setStatus(error instanceof Error&&error.message.toLowerCase().includes('required')?'denied':'error');}
   },[range.from.getTime(),range.to.getTime(),scope,workspaceId]);
   useEffect(()=>{void load();},[load]);
   const act=async(work:()=>Promise<unknown>,message:string)=>{setFeedback('');try{await work();setFeedback(message);setEditing(undefined);await load();}catch(error){setFeedback(error instanceof Error?error.message:'Não foi possível salvar.');}};

@@ -58,6 +58,12 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.patch('/api/checklist/:id',async request=>{const body=z.object({completed:z.boolean()}).parse(request.body);return kanban.toggleChecklist(await actor(request),id.parse((request.params as {id:string}).id),body.completed);});
   app.post('/api/cards/:id/comments',async(request,reply)=>{const body=z.object({body:z.string().trim().min(1).max(5000)}).parse(request.body);return reply.code(201).send(await kanban.comment(await actor(request),id.parse((request.params as {id:string}).id),body.body));});
   app.get('/api/my-tasks',async request=>{const query=z.object({workspaceId:id.optional(),state:z.enum(['open','completed']).optional(),participation:z.enum(['created','responsible','helper']).optional()}).parse(request.query);return kanban.myTasks(await actor(request),query);});
+  app.get('/api/foundation',async request=>{
+    const current=await actor(request);
+    const workspaces=await service.listWorkspaces(current) as Array<{id:string;departmentId?:string|null}>;
+    const [tasks,boards]=await Promise.all([kanban.myTasks(current,{state:'open'}),kanban.boardsForWorkspaces(current,workspaces)]);
+    return {workspaces,tasks,boards};
+  });
   const availabilityInput=z.object({kind:z.enum(['weekly','date']),weekday:z.number().int().min(0).max(6).optional(),date:z.string().date().optional(),startTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),endTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),note:z.string().trim().max(255).optional()}).superRefine((value,context)=>{if(value.kind==='weekly'&&value.weekday===undefined)context.addIssue({code:'custom',message:'weekday is required for weekly blocks'});if(value.kind==='date'&&!value.date)context.addIssue({code:'custom',message:'date is required for date blocks'});});
   app.get('/api/availability/me',async request=>agenda.myAvailability(await actor(request)));
   app.post('/api/availability/me',async(request,reply)=>reply.code(201).send(await agenda.createAvailability(await actor(request),availabilityInput.parse(request.body))));
@@ -65,7 +71,14 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.delete('/api/availability/me/:id',async(request,reply)=>{await agenda.deleteAvailability(await actor(request),id.parse((request.params as {id:string}).id));return reply.code(204).send();});
   app.get('/api/availability/collective',async request=>{const query=z.object({from:z.string().datetime(),to:z.string().datetime(),membershipIds:z.string().optional(),departmentId:id.optional(),offsetMinutes:z.coerce.number().int().min(-840).max(840).optional()}).refine(value=>new Date(value.from)<new Date(value.to),{message:'invalid interval'}).parse(request.query);return agenda.collective(await actor(request),{...query,membershipIds:query.membershipIds?.split(',').filter(Boolean).map(value=>id.parse(value))});});
   app.get('/api/availability/options',async request=>agenda.options(await actor(request)));
-  app.get('/api/agenda',async request=>{const query=z.object({from:z.string().datetime(),to:z.string().datetime(),scope:z.enum(['personal','general','workspace']).default('personal'),workspaceId:id.optional(),offsetMinutes:z.coerce.number().int().min(-840).max(840).optional()}).refine(value=>new Date(value.from)<new Date(value.to),{message:'invalid interval'}).parse(request.query);return agenda.calendar(await actor(request),query);});
+  const agendaQuery=z.object({from:z.string().datetime(),to:z.string().datetime(),scope:z.enum(['personal','general','workspace']).default('personal'),workspaceId:id.optional(),offsetMinutes:z.coerce.number().int().min(-840).max(840).optional()}).refine(value=>new Date(value.from)<new Date(value.to),{message:'invalid interval'});
+  app.get('/api/agenda',async request=>agenda.calendar(await actor(request),agendaQuery.parse(request.query)));
+  app.get('/api/agenda/foundation',async request=>{
+    const current=await actor(request),query=agendaQuery.parse(request.query),membership=await service.requireMember(current);
+    const canManage=current.owner||['president','vice_president','counselor','director'].includes(membership.role);
+    const [calendar,availability,members,departments,notifications]=await Promise.all([agenda.calendar(current,query),agenda.myAvailability(current),canManage?agenda.options(current):Promise.resolve([]),service.departments(),agenda.notifications(current)]);
+    return {calendar,availability,members,departments,notifications,session:{membership:{id:membership.id,role:membership.role},owner:current.owner}};
+  });
   const meetingInput=z.object({title:z.string().trim().min(1).max(200),description:z.string().max(10000).optional(),location:z.string().trim().max(255).optional(),workspaceId:id.optional(),startsAt:z.string().datetime(),endsAt:z.string().datetime(),participantIds:z.array(id).max(100).default([])});
   app.post('/api/meetings',async(request,reply)=>reply.code(201).send(await agenda.createMeeting(await actor(request),meetingInput.parse(request.body))));
   const meetingUpdate=z.object({expectedRevision:z.number().int().positive(),title:z.string().trim().min(1).max(200).optional(),description:z.string().max(10000).optional(),location:z.string().trim().max(255).optional(),workspaceId:id.optional(),startsAt:z.string().datetime().optional(),endsAt:z.string().datetime().optional(),participantIds:z.array(id).max(100).optional()}).refine(value=>Object.keys(value).some(key=>key!=='expectedRevision'));

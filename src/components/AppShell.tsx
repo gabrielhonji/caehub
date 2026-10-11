@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Brand, HonjiBrand } from './Brand';
+import { getSessionInfo } from '../services/spaces';
 
 export function AppShell({ children, theme, onTheme }: { children: ReactNode; theme: 'light' | 'dark'; onTheme: () => void }) {
   type DebugMode = 'real' | 'admin' | 'events_director' | 'member';
@@ -10,7 +11,7 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
   const [signingOut, setSigningOut] = useState(false);
   useEffect(() => {
     let active = true;
-    fetch('/api/me', { credentials: 'same-origin' }).then(async response => response.ok ? response.json() : undefined).then(value => {
+    getSessionInfo().then(value => {
       if (active && value?.displayName) setAccount({ displayName: value.displayName, csrfToken: value.csrfToken ?? '', debugView: value.debugView });
     }).catch(() => undefined);
     return () => { active = false; };

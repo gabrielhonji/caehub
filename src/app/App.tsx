@@ -1,24 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent, ReactNode } from 'react';
 import { AppShell } from '../components/AppShell';
 import { Badge, Button, Dialog, EmptyState, ErrorState, Eyebrow, LoadingState } from '../components/primitives';
 import { SpaceSummary } from '../components/SpaceSummary';
 import { AgendaPage as FunctionalAgendaPage } from '../components/AgendaPage';
 import type { Board, BoardCard, Space, TaskPreview } from '../domain/types';
-import { addChecklistItem, addColumn, addComment, createCard, decideTransfer, deleteColumn, getArchivedCards, getBoards, getCardDetail, getSpaces, getTaskPreviews, moveCard, renameColumn, requestTransfer, toggleChecklistItem, updateCard, updateWorkspace, volunteer } from '../services/spaces';
+import { addChecklistItem, addColumn, addComment, createCard, decideTransfer, deleteColumn, getArchivedCards, getCardDetail, getFoundation, getTaskPreviews, moveCard, renameColumn, requestTransfer, toggleChecklistItem, updateCard, updateWorkspace, volunteer } from '../services/spaces';
 import type { ArchivedCardDto, CardDetailDto } from '../services/spaces';
 import { readTheme, saveTheme } from '../services/theme';
 
 type Status = 'loading' | 'ready' | 'error';
-type FoundationData = { status: Status; spaces: Space[]; tasks: TaskPreview[]; boards: Board[]; load: () => void };
+type FoundationData = { status: Status; spaces: Space[]; tasks: TaskPreview[]; boards: Board[]; load: () => Promise<void> };
 
 function useFoundationData(): FoundationData {
   const [status, setStatus] = useState<Status>('loading');
   const [spaceList, setSpaces] = useState<Space[]>([]);
   const [taskList, setTasks] = useState<TaskPreview[]>([]);
   const [boardList, setBoards] = useState<Board[]>([]);
-  const load = () => { setStatus('loading'); Promise.all([getSpaces(), getTaskPreviews(), getBoards()]).then(([nextSpaces, nextTasks, nextBoards]) => { setSpaces(nextSpaces); setTasks(nextTasks); setBoards(nextBoards); setStatus('ready'); }).catch(() => setStatus('error')); };
-  useEffect(load, []);
+  const loaded=useRef(false);
+  const load = async () => { if(!loaded.current)setStatus('loading');try{const next=await getFoundation();setSpaces(next.spaces);setTasks(next.tasks);setBoards(next.boards);loaded.current=true;setStatus('ready');}catch{if(!loaded.current)setStatus('error');} };
+  useEffect(() => { void load(); }, []);
   return { status, spaces: spaceList, tasks: taskList, boards: boardList, load };
 }
 
@@ -48,9 +49,9 @@ function DepartmentsPage({ active }: { active?: string }) {
   return <><section className="page-header"><Eyebrow>GESTÃO · DEPARTAMENTOS</Eyebrow><h1>Uma organização,<br /><em>seis frentes.</em></h1><p>Uma visão demonstrativa das áreas que estruturam o trabalho do CAECOMP. Participantes e permissões serão exibidos conforme os acessos.</p></section><section className="departments-page"><div className="compact-heading"><div><Eyebrow>ESTRUTURA</Eyebrow><h2>Frentes do CAECOMP</h2></div><span>Organização institucional</span></div><div className="departments-grid">{departments.map((department, index) => <article key={department.name}><span>{String(index + 1).padStart(2, '0')}</span><h2>{department.name}</h2><p>{department.description}</p><a className="button button-secondary" href={`#/departamentos/${department.name.toLowerCase().replaceAll(' / ', '-').replaceAll(' ', '-')}`}>Ver departamento <i aria-hidden="true">→</i></a></article>)}</div></section></>;
 }
 
-function CardPreview({ card, board, onOpen, onChanged }: { card: BoardCard; board: Board; onOpen: (card: BoardCard) => void; onChanged: () => void }) { const [busy,setBusy]=useState(false); const act=async(work:()=>Promise<unknown>)=>{setBusy(true);try{await work();onChanged();}finally{setBusy(false);}}; return <article className={`board-card ${statusClass(card.column)}`}><div className="card-topline"><Badge tone={cardTone(card.column)}>{card.column}</Badge><button className="card-icon-action" type="button" title="Editar e ver detalhes" aria-label={`Editar ${card.title}`} onClick={()=>onOpen(card)}>✎</button></div><button className="card-detail-trigger" type="button" onClick={()=>onOpen(card)}><h3>{card.title}</h3><p>{card.summary}</p></button><footer><span>{card.assignee}</span>{card.helpers ? <span>{card.helpers} auxiliares</span> : <span>Sem auxiliares</span>}</footer><div className="card-quick-actions"><button type="button" disabled={busy} title="Quero ajudar" aria-label={`Quero ajudar em ${card.title}`} onClick={()=>void act(()=>volunteer(card.id))}>✋</button><label title="Mover cartão"><span className="sr-only">Mover {card.title}</span><select disabled={busy} value={card.columnId} onChange={event=>void act(()=>moveCard(card.id,event.target.value,card.version??1))}>{board.columns.map(column=><option value={column.id} key={column.id}>{column.label}</option>)}</select></label></div></article>; }
+function CardPreview({ card, board, onOpen, onChanged }: { card: BoardCard; board: Board; onOpen: (card: BoardCard) => void; onChanged: () => Promise<void> }) { const [busy,setBusy]=useState(false); const act=async(work:()=>Promise<unknown>)=>{setBusy(true);try{await work();await onChanged();}finally{setBusy(false);}}; return <article className={`board-card ${statusClass(card.column)}`}><div className="card-topline"><Badge tone={cardTone(card.column)}>{card.column}</Badge><button className="card-icon-action" type="button" title="Editar e ver detalhes" aria-label={`Editar ${card.title}`} onClick={()=>onOpen(card)}>✎</button></div><button className="card-detail-trigger" type="button" onClick={()=>onOpen(card)}><h3>{card.title}</h3><p>{card.summary}</p></button><footer><span>{card.assignee}</span>{card.helpers ? <span>{card.helpers} auxiliares</span> : <span>Sem auxiliares</span>}</footer><div className="card-quick-actions"><button type="button" disabled={busy} title="Quero ajudar" aria-label={`Quero ajudar em ${card.title}`} onClick={()=>void act(()=>volunteer(card.id))}>✋</button><label title="Mover cartão"><span className="sr-only">Mover {card.title}</span><select disabled={busy} value={card.columnId} onChange={event=>void act(()=>moveCard(card.id,event.target.value,card.version??1))}>{board.columns.map(column=><option value={column.id} key={column.id}>{column.label}</option>)}</select></label></div></article>; }
 
-function SpaceTools({space,board,onChanged}:{space:Space;board:Board;onChanged:()=>void}) {
+function SpaceTools({space,board,onChanged}:{space:Space;board:Board;onChanged:()=>Promise<void>}) {
   const [mode,setMode]=useState<'edit'|'archive'>();
   const [archived,setArchived]=useState<ArchivedCardDto[]>([]);
   const openArchive=async()=>{setArchived(await getArchivedCards(board.id));setMode('archive');};
@@ -61,7 +62,7 @@ function SpaceTools({space,board,onChanged}:{space:Space;board:Board;onChanged:(
   </div>;
 }
 
-function SpacePage({ space, board, onOpenCard, onChanged }: { space: Space; board?: Board; onOpenCard: (card: BoardCard) => void; onChanged: () => void }) {
+function SpacePage({ space, board, onOpenCard, onChanged }: { space: Space; board?: Board; onOpenCard: (card: BoardCard) => void; onChanged: () => Promise<void> }) {
   useEffect(()=>{const close=(event:PointerEvent)=>document.querySelectorAll<HTMLDetailsElement>('.column-manager[open]').forEach(details=>{if(!details.contains(event.target as Node))details.open=false;});document.addEventListener('pointerdown',close);return()=>document.removeEventListener('pointerdown',close);},[space.id]);
   if (!board) return <section className="state"><Crumb>{space.name}</Crumb><Eyebrow>SEM QUADRO</Eyebrow><h1>Este espaço ainda não tem um quadro para mostrar.</h1><p>Quando um quadro for disponibilizado, ele aparecerá neste contexto.</p><a className="button button-secondary" href="#/espacos">Voltar aos espaços <span aria-hidden="true">←</span></a></section>;
   const submitCard=async(event:FormEvent<HTMLFormElement>)=>{event.preventDefault();const data=new FormData(event.currentTarget);await createCard(board.id,{title:String(data.get('title')),description:String(data.get('description')??''),columnId:String(data.get('columnId'))});event.currentTarget.reset();onChanged();};
@@ -71,11 +72,11 @@ function SpacePage({ space, board, onOpenCard, onChanged }: { space: Space; boar
 
 function CardPage({ card, space }: { card: BoardCard; space?: Space }) { return <section className="card-detail"><Crumb>{space?.name ?? 'Cartão'}</Crumb><div className="card-detail-grid"><article><Eyebrow>CARTÃO · {card.column.toUpperCase()}</Eyebrow><h1>{card.title}</h1><p className="card-summary">{card.summary}</p><div className="detail-block"><Eyebrow>CONTEXTO</Eyebrow><p>{space ? `${space.name} · ${space.department}` : 'Espaço de origem indisponível'}</p></div><div className="detail-block"><Eyebrow>VISIBILIDADE</Eyebrow><Badge>{card.visibility}</Badge></div></article><aside className="card-sidebar"><div><Eyebrow>RESPONSÁVEL PRINCIPAL</Eyebrow><strong>{card.assignee}</strong></div><div><Eyebrow>AUXILIARES</Eyebrow><strong>{card.helpers || 'Nenhum'}</strong></div><div><Eyebrow>PRAZO</Eyebrow><strong>{card.due ?? 'Sem prazo definido'}</strong></div><p>Dados demonstrativos. O CAEHUB não habilita alterações neste protótipo.</p></aside></div></section>; }
 
-function CardCollaboration({card,onChanged}:{card:BoardCard;onChanged:()=>void}) {
+function CardCollaboration({card,onChanged}:{card:BoardCard;onChanged:()=>Promise<void>}) {
   const [detail,setDetail]=useState<CardDetailDto>(); const [error,setError]=useState(''); const [success,setSuccess]=useState('');
   const load=()=>getCardDetail(card.id).then(value=>{setDetail(value);setError('')}).catch(e=>setError(e.message));
   useEffect(()=>{void load()},[card.id]);
-  const act=async(work:()=>Promise<unknown>,message:string)=>{setError('');setSuccess('');try{await work();setSuccess(message);await load();onChanged();}catch(e){setError(e instanceof Error?e.message:'Falha ao salvar')}};
+  const act=async(work:()=>Promise<unknown>,message:string)=>{setError('');setSuccess('');try{await work();setSuccess(message);await Promise.all([load(),onChanged()]);}catch(e){setError(e instanceof Error?e.message:'Falha ao salvar')}};
   const submitText=async(event:FormEvent<HTMLFormElement>,kind:'checklist'|'comment')=>{event.preventDefault();const form=event.currentTarget;const value=String(new FormData(form).get('value'));await act(()=>kind==='checklist'?addChecklistItem(card.id,value):addComment(card.id,value),kind==='checklist'?'Item adicionado.':'Comentário publicado.');form.reset()};
   if(!detail)return error?<p role="alert">{error}</p>:<LoadingState/>;
   const mayTransfer=detail.permissions.manage||detail.responsibleMembershipId===detail.currentMembershipId;
@@ -113,9 +114,10 @@ function NotFound() { return <section className="state"><Eyebrow>PÁGINA NÃO EN
 export function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => readTheme() ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
   const [route, setRoute] = useState(location.hash || '#/');
-  const [activeCard, setActiveCard] = useState<BoardCard>();
+  const [activeCardId, setActiveCardId] = useState<string>();
   const [notice, setNotice] = useState<{ title: string; returnToCard?: BoardCard }>();
   const data = useFoundationData();
+  const activeCard=data.boards.flatMap(board=>board.columns).flatMap(column=>column.cards).find(card=>card.id===activeCardId);
   useEffect(() => { document.documentElement.dataset.theme = theme; saveTheme(theme); }, [theme]);
   useEffect(() => { const update = () => setRoute(location.hash || '#/'); addEventListener('hashchange', update); return () => removeEventListener('hashchange', update); }, []);
   let content: ReactNode;
@@ -128,8 +130,8 @@ export function App() {
   else if (parts[0] === 'departamentos') content = <DepartmentsPage active={parts[1]} />;
   else if (parts[0] === 'minhas-tarefas' && !parts[1]) content = <MyTasksPage spaces={data.spaces}/>;
   else if (parts[0] === 'espacos' && !parts[1]) content = <SpacesPage spaces={data.spaces} />;
-  else if (parts[0] === 'espacos' && parts[1]) { const space = data.spaces.find((item) => item.id === parts[1]); content = space ? <SpacePage space={space} board={data.boards.find((item) => item.spaceId === space.id)} onOpenCard={setActiveCard} onChanged={data.load} /> : <NotFound />; }
+  else if (parts[0] === 'espacos' && parts[1]) { const space = data.spaces.find((item) => item.id === parts[1]); content = space ? <SpacePage space={space} board={data.boards.find((item) => item.spaceId === space.id)} onOpenCard={card=>setActiveCardId(card.id)} onChanged={data.load} /> : <NotFound />; }
   else if (parts[0] === 'cartoes' && parts[1]) { const board = data.boards.find((item) => item.columns.some((column) => column.cards.some((card) => card.id === parts[1]))); const card = board?.columns.flatMap((column) => column.cards).find((item) => item.id === parts[1]); content = card ? <CardPage card={card} space={data.spaces.find((item) => item.id === board?.spaceId)} /> : <NotFound />; }
   else content = <NotFound />;
-  return <AppShell theme={theme} onTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{content}{activeCard && <Dialog title={activeCard.title} closeLabel="Sair" onClose={() => setActiveCard(undefined)}><CardCollaboration card={activeCard} onChanged={data.load}/></Dialog>}{notice && <Dialog title={notice.title} onClose={() => setNotice(undefined)}><div className="notice-modal"><p>Esta ação não faz parte do fluxo Kanban atual.</p></div></Dialog>}</AppShell>;
+  return <AppShell theme={theme} onTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{content}{activeCard && <Dialog title={activeCard.title} closeLabel="Sair" onClose={() => setActiveCardId(undefined)}><CardCollaboration card={activeCard} onChanged={data.load}/></Dialog>}{notice && <Dialog title={notice.title} onClose={() => setNotice(undefined)}><div className="notice-modal"><p>Esta ação não faz parte do fluxo Kanban atual.</p></div></Dialog>}</AppShell>;
 }

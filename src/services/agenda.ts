@@ -7,6 +7,7 @@ export type MemberOption = { id:string;displayName:string;role:string;department
 export type DepartmentOption = { id:string;name:string };
 export type Session = { membership:null|{id:string;role:string};owner:boolean };
 export type AgendaNotification = { id:string;meetingId:string;title:string;kind:'invited'|'rescheduled'|'removed';createdAt:string;readAt?:string };
+export type AgendaFoundation={calendar:CalendarItem[];availability:AvailabilityBlock[];members:MemberOption[];departments:DepartmentOption[];notifications:AgendaNotification[];session:Session};
 
 export const getSession=()=>api<Session>('/me');
 export const getAvailabilityOptions=()=>api<MemberOption[]>('/availability/options');
@@ -21,3 +22,4 @@ export const createMeeting=(input:{title:string;description?:string;location?:st
 export const updateMeeting=(id:string,input:{expectedRevision:number;title?:string;description?:string;location?:string;workspaceId?:string;startsAt?:string;endsAt?:string;participantIds?:string[]})=>api<{id:string;rescheduled:boolean;revision:number}>(`/meetings/${id}`,{method:'PATCH',body:JSON.stringify(input)});
 export const respondMeeting=(id:string,response:'confirmed'|'maybe'|'declined')=>api(`/meetings/${id}/response`,{method:'POST',body:JSON.stringify({response})});
 export const getAgendaNotifications=()=>api<AgendaNotification[]>('/agenda/notifications');
+export const getAgendaFoundation=(input:{from:string;to:string;scope:'personal'|'general'|'workspace';workspaceId?:string;offsetMinutes?:string})=>api<AgendaFoundation>(`/agenda/foundation?${new URLSearchParams(Object.entries(input).filter(([,value])=>value!==undefined) as [string,string][]).toString()}`);

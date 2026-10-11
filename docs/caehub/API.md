@@ -26,7 +26,9 @@ O servidor resolve o ator na fronteira `IdentityGateway`. Em produção, o BFF H
 | `POST /api/cards/:id/checklist`, `PATCH /api/checklist/:id` | checklist persistente |
 | `POST /api/cards/:id/comments` | comentário persistente |
 | `GET /api/my-tasks` | consolidação sem duplicação; filtros `workspaceId`, `state`, `participation` |
+| `GET /api/foundation` | carga agregada de espaços, tarefas e quadros acessíveis para evitar consultas HTTP em cascata |
 | `GET /api/agenda` | calendário pessoal, geral ou de Espaço por intervalo; indisponibilidades são projetadas sem duplicação |
+| `GET /api/agenda/foundation` | carga agregada do período: calendário, indisponibilidade própria, opções autorizadas, departamentos, notificações e contexto da sessão |
 | `GET, POST /api/availability/me` | consulta e cadastro da indisponibilidade do ator |
 | `PUT, DELETE /api/availability/me/:id` | edição/remoção exclusivamente pelo titular |
 | `GET /api/availability/collective` | livre/ocupado/não informado para direção/administração, sem detalhes particulares |
@@ -46,3 +48,5 @@ Datas de reuniões usam ISO 8601 na API e instantes UTC no banco. Consultas acei
 ## Integração Honji
 
 As rotas `/acesso`, `/auth/login`, `/auth/callback` e `/auth/logout` implementam o portão Honji. O cookie de sessão é Secure, HttpOnly, SameSite=Lax e não contém tokens; identificadores de sessão são armazenados somente como hash. Mutações exigem origem exata e token CSRF da sessão. Client secrets permanecem fora do repositório e da imagem.
+
+Cada requisição protegida continua exigindo uma decisão central atual de `project.access`. Apenas o token técnico de client credentials é reaproveitado até pouco antes de expirar; decisões de usuário não são armazenadas em cache. As rotas `foundation` reduzem o número de travessias dessa fronteira sem afrouxar revogação ou autorização contextual.

@@ -49,6 +49,23 @@ export class KanbanService {
     const cards = await this.db.many<RowDataPacket>(`SELECT c.id,c.column_id AS columnId,c.title,c.description,c.priority,c.due_at AS dueAt,c.visibility,c.tags,c.completed_at AS completedAt,c.version,p.display_name AS responsibleName,(SELECT COUNT(*) FROM card_participants cp WHERE cp.card_id=c.id AND cp.left_at IS NULL) AS helperCount FROM cards c LEFT JOIN memberships rm ON rm.id=c.responsible_membership_id LEFT JOIN people p ON p.id=rm.person_id WHERE c.board_id=? AND c.archived_at IS NULL ${ctx.manager ? '' : "AND c.visibility='members'"} ORDER BY c.created_at`, [boardId]);
     return { id: board.id, workspaceId: board.workspaceId, name: board.name, canManage: ctx.manager, columns: columns.map((column) => ({ ...column, cards: cards.filter((card) => card.columnId === column.id) })) };
   }
+  async boardsForWorkspaces(actor: Actor, workspaces: Array<{id:string;departmentId?:string|null}>) {
+    if(!workspaces.length)return [];
+    const member=await this.institutional.requireMember(actor) as Member;
+    const admin=await this.institutional.isAdmin(actor,member);
+    const managed=admin?[]:await this.db.many<RowDataPacket>('SELECT department_id AS departmentId FROM department_memberships WHERE membership_id=? AND kind=\'director\' AND ended_at IS NULL',[member.id]);
+    const managedDepartments=new Set(managed.map(row=>String(row.departmentId)));
+    const managers=new Map(workspaces.map(workspace=>[workspace.id,admin||Boolean(workspace.departmentId&&managedDepartments.has(workspace.departmentId))]));
+    const boards=await this.db.many<RowDataPacket & {id:string;workspaceId:string}>('SELECT id,workspace_id AS workspaceId,name FROM boards WHERE workspace_id IN (?) ORDER BY created_at',[workspaces.map(workspace=>workspace.id)]);
+    if(!boards.length)return [];
+    const boardIds=boards.map(board=>board.id);
+    const columns=await this.db.many<RowDataPacket & {id:string;boardId:string}>('SELECT id,board_id AS boardId,name,position,is_completion AS isCompletion FROM board_columns WHERE board_id IN (?) ORDER BY board_id,position',[boardIds]);
+    const cards=await this.db.many<RowDataPacket & {boardId:string;columnId:string}>(`SELECT c.id,c.board_id AS boardId,c.column_id AS columnId,c.title,c.description,c.priority,c.due_at AS dueAt,c.visibility,c.tags,c.completed_at AS completedAt,c.version,p.display_name AS responsibleName,(SELECT COUNT(*) FROM card_participants cp WHERE cp.card_id=c.id AND cp.left_at IS NULL) AS helperCount FROM cards c LEFT JOIN memberships rm ON rm.id=c.responsible_membership_id LEFT JOIN people p ON p.id=rm.person_id WHERE c.board_id IN (?) AND c.archived_at IS NULL ORDER BY c.created_at`,[boardIds]);
+    return boards.map(board=>{
+      const canManage=Boolean(managers.get(board.workspaceId));
+      return {id:board.id,workspaceId:board.workspaceId,name:board.name,canManage,columns:columns.filter(column=>column.boardId===board.id).map(column=>({...column,cards:cards.filter(card=>card.columnId===column.id&&(canManage||card.visibility==='members'))}))};
+    });
+  }
   async archived(actor: Actor, boardId: string) {
     const board=await this.db.one<RowDataPacket & {workspaceId:string}>('SELECT workspace_id AS workspaceId FROM boards WHERE id=?',[boardId]);
     if(!board) throw new NotFound('board');

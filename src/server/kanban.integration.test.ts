@@ -43,6 +43,14 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   const detail=(await memberApp.inject({method:'GET',url:`/api/cards/${publicId}`})).json();
   assert.equal(detail.helpers.length,1); assert.equal(detail.checklist.length,1); assert.equal(detail.comments.length,1);
   assert.equal(detail.currentMembershipId,memberId); assert.ok(detail.eligibleParticipants.some((participant:any)=>participant.membershipId===memberId));
+  let identityChecks=0;
+  const foundationApp=buildApp(new InstitutionalService(db),{current:async()=>{identityChecks+=1;return member;}});
+  const foundation=await foundationApp.inject({method:'GET',url:'/api/foundation'});
+  assert.equal(foundation.statusCode,200,foundation.body);
+  assert.equal(identityChecks,1,'foundation must cross the identity boundary only once');
+  assert.ok(foundation.json().workspaces.some((workspace:any)=>workspace.id===workspaceId));
+  assert.ok(foundation.json().boards.some((candidate:any)=>candidate.id===boardId));
+  await foundationApp.close();
   assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${publicId}`,payload:{visibility:'directors'}})).statusCode,403);
   assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${publicId}`,payload:{priority:'high',dueAt:null,tags:['teste']}})).statusCode,200);
   assert.equal((await memberApp.inject({method:'POST',url:`/api/cards/${publicId}/transfers`,payload:{toMembershipId:'00000000-0000-4000-8000-000000000099'}})).statusCode,403);
