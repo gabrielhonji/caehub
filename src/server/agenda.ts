@@ -100,7 +100,7 @@ export class AgendaService {
           if (!matches) continue;
           const date = dayKey(cursor);
           if(wallInstant(date,timePart(block.startTime),query.offsetMinutes)>=to||wallInstant(date,timePart(block.endTime),query.offsetMinutes)<=from)continue;
-          items.push({ id: block.id, type: 'unavailable', title: block.note || 'Indisponível', startsAt: wallInstant(date,timePart(block.startTime),query.offsetMinutes).toISOString(), endsAt: wallInstant(date,timePart(block.endTime),query.offsetMinutes).toISOString(), recurring: block.kind === 'weekly' });
+          items.push({ id: block.id, type: 'unavailable', title: block.term ? 'Aula' : block.note || 'Ocupado', startsAt: wallInstant(date,timePart(block.startTime),query.offsetMinutes).toISOString(), endsAt: wallInstant(date,timePart(block.endTime),query.offsetMinutes).toISOString(), recurring: block.kind === 'weekly' });
         }
       }
     }

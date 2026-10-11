@@ -38,3 +38,6 @@
 .shift-pending { border-inline-start-style: dashed; }
 .shift-history { padding-inline-start: 1.2rem; }
 .shift-history pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.calendar-event-time{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px;font-variant-numeric:tabular-nums}.calendar-event-time time,.calendar-event-time span{font-size:11px;font-weight:700;color:var(--accent)}.calendar-event strong{overflow-wrap:anywhere}
+.calendar-event .calendar-event-time time,.calendar-event .calendar-event-time span{font-size:11px;font-weight:700;color:var(--accent)}
+.calendar-section:has(.calendar-scroll){overflow:visible}.calendar-scroll{max-width:100%;overflow-x:auto}

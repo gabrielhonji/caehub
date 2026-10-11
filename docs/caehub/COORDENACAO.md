@@ -1,5 +1,18 @@
 # Coordenação de agentes
-## Atividade atual — Grade e criação na Agenda, 11/10/2026
+## Atividade atual — Cards da Agenda, 11/10/2026
+
+Incremento `fix/agenda-card-times`, base `8eae416`, versão 1.6.1. Todos os cards
+mostram início/fim com relógios mais legíveis; término em outro dia inclui a
+data. Grade própria é identificada como Aula. Outros blocos próprios preservam
+notas particulares ou mostram Ocupado. Consulta coletiva continua retornando
+somente ocupação; não recebe títulos, notas ou período letivo de terceiros.
+
+Validação: 22 testes de servidor, incluindo rótulo pessoal, horários projetados
+e ausência de detalhes na consulta coletiva/agenda de outro titular; TypeScript
+e Vite. Chromium verifica relógios, término em outro dia e cards em
+1440/768/390 px, temas claro/escuro, com dados fictícios. Publicação pelo canal
+oficial após commit/push e integração em main. Não altera dados persistidos.
+
 
 Incremento `fix/agenda-import-and-creation`, sobre `main` em `eb3d99c`, versão
 1.6.0. Importação lista pendências e só confirma metadados, blocos válidos e
