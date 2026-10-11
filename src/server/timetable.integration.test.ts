@@ -1,0 +1,62 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import type { RowDataPacket } from 'mysql2';
+import { buildApp } from './app.js';
+import { DevelopmentIdentityGateway } from './auth.js';
+import { configFromEnv, connect, migrate } from './database.js';
+import { InstitutionalService } from './service.js';
+
+test('confirmed imports persist, serialize reimports, preserve manual blocks and enforce owner-only exceptions', async () => {
+  const db = await connect(configFromEnv(process.env)); await migrate(db); await migrate(db);
+  const suffix = Date.now();
+  const owner = { subject: `timetable-owner-${suffix}`, displayName: 'Owner fictício', owner: true, projectAccess: true };
+  const member = { subject: `timetable-member-${suffix}`, displayName: 'Membro fictício', owner: false, projectAccess: true };
+  const other = { subject: `timetable-other-${suffix}`, displayName: 'Outro fictício', owner: false, projectAccess: true };
+  const ownerApp = buildApp(new InstitutionalService(db), new DevelopmentIdentityGateway(owner));
+  const memberApp = buildApp(new InstitutionalService(db), new DevelopmentIdentityGateway(member));
+  const otherApp = buildApp(new InstitutionalService(db), new DevelopmentIdentityGateway(other));
+  try {
+    const membershipId = (await ownerApp.inject({ method: 'POST', url: '/api/members', payload: { honjiSubject: member.subject, displayName: member.displayName } })).json().id;
+    await ownerApp.inject({ method: 'POST', url: '/api/members', payload: { honjiSubject: other.subject, displayName: other.displayName } });
+    const manual = await memberApp.inject({ method: 'POST', url: '/api/availability/me', payload: { kind: 'date', date: '2026-12-01', startTime: '10:00', endTime: '11:00', note: 'Particular' } });
+    assert.equal(manual.statusCode, 201, manual.body);
+    const input = { term: `Teste ${suffix}`, validFrom: '2026-11-01', validTo: '2026-11-30', confirmed: true, rows: [{ weekday: 1, startTime: '07:30', endTime: '08:20' }] };
+    assert.equal((await memberApp.inject({ method: 'POST', url: '/api/availability/import/confirm', payload: { ...input, confirmed: false } })).statusCode, 400);
+    assert.equal((await memberApp.inject({ method: 'POST', url: '/api/availability/import/confirm', payload: { ...input, validFrom: '2026-12-01' } })).statusCode, 409);
+    assert.equal((await memberApp.inject({ method: 'POST', url: '/api/availability/import/confirm', payload: { ...input, rows: [{ weekday: 1, startTime: '08:20', endTime: '07:30' }] } })).statusCode, 409);
+    assert.equal((await memberApp.inject({ method: 'POST', url: '/api/availability/import/preview', headers: { 'content-type': 'application/pdf' }, payload: Buffer.alloc(5 * 1024 * 1024 + 1) })).statusCode, 413);
+    const concurrent = await Promise.all([1, 2].map(() => memberApp.inject({ method: 'POST', url: '/api/availability/import/confirm', payload: input })));
+    for (const response of concurrent) assert.equal(response.statusCode, 200, response.body);
+    assert.equal(concurrent[0].json().id, concurrent[1].json().id);
+    const blocks = (await memberApp.inject({ method: 'GET', url: '/api/availability/me' })).json();
+    assert.equal(blocks.length, 2);
+    const academic = blocks.find((block: any) => block.term === input.term);
+    assert.ok(academic);
+    assert.equal((await otherApp.inject({ method: 'PUT', url: `/api/availability/me/${academic.id}/exception`, payload: { date: '2026-11-02', excluded: true } })).statusCode, 403);
+    assert.equal((await memberApp.inject({ method: 'PUT', url: `/api/availability/me/${academic.id}/exception`, payload: { date: '2026-11-03', excluded: true } })).statusCode, 409);
+    assert.equal((await memberApp.inject({ method: 'PUT', url: `/api/availability/me/${academic.id}/exception`, payload: { date: '2026-11-02', excluded: true } })).statusCode, 200);
+    const calendar = async (date: string) => (await memberApp.inject({ method: 'GET', url: `/api/agenda?scope=personal&from=${date}T00:00:00.000Z&to=${date}T23:59:59.000Z` })).json();
+    assert.equal((await calendar('2026-11-02')).some((item: any) => item.id === academic.id), false);
+    assert.equal((await calendar('2026-11-09')).some((item: any) => item.id === academic.id), true);
+    assert.equal((await calendar('2026-12-07')).some((item: any) => item.id === academic.id), false);
+    const outside = await ownerApp.inject({ method: 'GET', url: `/api/availability/collective?membershipIds=${membershipId}&from=2026-12-07T07:30:00.000Z&to=2026-12-07T08:20:00.000Z` });
+    assert.equal(outside.json()[0].status, 'unknown');
+    const inside = await ownerApp.inject({ method: 'GET', url: `/api/availability/collective?membershipIds=${membershipId}&from=2026-11-09T07:30:00.000Z&to=2026-11-09T08:20:00.000Z` });
+    assert.equal(inside.json()[0].status, 'busy');
+    assert.equal(JSON.stringify(inside.json()).includes('Particular'), false);
+    assert.equal((await memberApp.inject({ method: 'GET', url: '/api/availability/collective?from=2026-11-09T07:30:00.000Z&to=2026-11-09T08:20:00.000Z' })).statusCode, 403);
+    await memberApp.inject({ method: 'POST', url: '/api/availability/import/confirm', payload: input });
+    const retained = await db.one<RowDataPacket>('SELECT block_id FROM availability_occurrence_exceptions WHERE block_id=?', [academic.id]);
+    assert.ok(retained, 'unchanged reimports retain exceptions');
+    const updated = await memberApp.inject({ method: 'POST', url: '/api/availability/import/confirm', payload: { ...input, rows: [{ weekday: 2, startTime: '09:00', endTime: '10:00' }] } });
+    assert.equal(updated.statusCode, 200, updated.body);
+    const reloadedApp = buildApp(new InstitutionalService(db), new DevelopmentIdentityGateway(member));
+    try {
+      const afterRestart = (await reloadedApp.inject({ method: 'GET', url: '/api/availability/me' })).json();
+      assert.equal(afterRestart.length, 2);
+      assert.equal(afterRestart.find((block: any) => block.term)?.weekday, 2);
+      assert.ok(afterRestart.some((block: any) => block.id === manual.json().id));
+    } finally { await reloadedApp.close(); }
+    assert.equal((await memberApp.inject({ method: 'POST', url: '/api/availability/import/preview', headers: { 'content-type': 'application/pdf' }, payload: Buffer.from('Invalid') })).statusCode, 409);
+  } finally { await Promise.all([ownerApp.close(), memberApp.close(), otherApp.close()]); await db.close(); }
+});

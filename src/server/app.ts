@@ -5,6 +5,8 @@ import type { IdentityGateway } from './auth.js';
 import { Forbidden, InstitutionalService, NotFound, Conflict } from './service.js';
 import { KanbanService } from './kanban.js';
 import { AgendaService } from './agenda.js';
+import { extractTimetable } from './timetable.js';
+import { TimetableService } from './timetable-service.js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -16,7 +18,10 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.addHook('onSend',async(_request,reply,payload)=>{reply.header('x-content-type-options','nosniff').header('referrer-policy','same-origin').header('content-security-policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");return payload;});
   const kanban = new KanbanService(service.db, service);
   const agenda = new AgendaService(service.db, service);
+  const timetables = new TimetableService(service.db, service);
+  app.addContentTypeParser('application/pdf', { parseAs: 'buffer', bodyLimit: 5 * 1024 * 1024 }, (_request, body, done) => done(null, body));
   app.setErrorHandler((error, _request, reply) => {
+    if ((error as { code?: string }).code === 'FST_ERR_CTP_BODY_TOO_LARGE') return reply.code(413).send({ error: 'payload_too_large', message: 'O arquivo ou formulário excede o tamanho permitido.' });
     if (error instanceof Forbidden) return reply.code(403).send({ error: 'forbidden', message: error.message });
     if (error instanceof NotFound) return reply.code(404).send({ error: 'not_found', message: error.message });
     if (error instanceof Conflict) return reply.code(409).send({ error: 'conflict', message: error.message });
@@ -66,6 +71,17 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   });
   const availabilityInput=z.object({kind:z.enum(['weekly','date']),weekday:z.number().int().min(0).max(6).optional(),date:z.string().date().optional(),startTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),endTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),note:z.string().trim().max(255).optional()}).superRefine((value,context)=>{if(value.kind==='weekly'&&value.weekday===undefined)context.addIssue({code:'custom',message:'weekday is required for weekly blocks'});if(value.kind==='date'&&!value.date)context.addIssue({code:'custom',message:'date is required for date blocks'});});
   app.get('/api/availability/me',async request=>agenda.myAvailability(await actor(request)));
+  app.post('/api/availability/import/preview', { bodyLimit: 5 * 1024 * 1024 }, async request => {
+    await service.requireMember(await actor(request));
+    if (!Buffer.isBuffer(request.body)) throw new Conflict('Envie o arquivo como PDF.');
+    return extractTimetable(request.body);
+  });
+  const importInput = z.object({ term: z.string().trim().min(1).max(80), validFrom: z.string().date(), validTo: z.string().date(), confirmed: z.literal(true), rows: z.array(z.object({ weekday: z.number().int().min(0).max(6), startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/) })).min(1).max(200) });
+  app.post('/api/availability/import/confirm', async request => timetables.confirm(await actor(request), importInput.parse(request.body)));
+  app.put('/api/availability/me/:id/exception', async request => {
+    const body = z.object({ date: z.string().date(), excluded: z.boolean() }).parse(request.body);
+    return timetables.exception(await actor(request), id.parse((request.params as { id: string }).id), body.date, body.excluded);
+  });
   app.post('/api/availability/me',async(request,reply)=>reply.code(201).send(await agenda.createAvailability(await actor(request),availabilityInput.parse(request.body))));
   app.put('/api/availability/me/:id',async request=>agenda.updateAvailability(await actor(request),id.parse((request.params as {id:string}).id),availabilityInput.parse(request.body)));
   app.delete('/api/availability/me/:id',async(request,reply)=>{await agenda.deleteAvailability(await actor(request),id.parse((request.params as {id:string}).id));return reply.code(204).send();});

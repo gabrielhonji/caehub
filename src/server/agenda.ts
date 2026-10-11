@@ -3,6 +3,7 @@ import type { RowDataPacket } from 'mysql2';
 import { CAECOMP_ORGANIZATION_ID, type Database } from './database.js';
 import type { Actor } from './domain.js';
 import { Conflict, Forbidden, InstitutionalService, NotFound } from './service.js';
+import { occurrenceApplies } from './timetable-service.js';
 
 type AvailabilityInput = { kind: 'weekly' | 'date'; weekday?: number; date?: string; startTime: string; endTime: string; note?: string };
 type MeetingInput = { title: string; description?: string; location?: string; workspaceId?: string; startsAt: string; endsAt: string; participantIds: string[] };
@@ -32,7 +33,7 @@ export class AgendaService {
 
   async myAvailability(actor: Actor) {
     const member = await this.institutional.requireMember(actor);
-    return this.db.many<RowDataPacket>(`SELECT id,kind,weekday,DATE_FORMAT(specific_date,'%Y-%m-%d') AS date,TIME_FORMAT(start_time,'%H:%i') AS startTime,TIME_FORMAT(end_time,'%H:%i') AS endTime,note FROM availability_blocks WHERE membership_id=? ORDER BY kind,weekday,specific_date,start_time`, [member.id]);
+    return this.db.many<RowDataPacket>(`SELECT b.id,b.kind,b.weekday,DATE_FORMAT(b.specific_date,'%Y-%m-%d') AS date,TIME_FORMAT(b.start_time,'%H:%i') AS startTime,TIME_FORMAT(b.end_time,'%H:%i') AS endTime,b.note,t.term,DATE_FORMAT(t.valid_from,'%Y-%m-%d') AS validFrom,DATE_FORMAT(t.valid_to,'%Y-%m-%d') AS validTo,(SELECT JSON_ARRAYAGG(DATE_FORMAT(e.specific_date,'%Y-%m-%d')) FROM availability_occurrence_exceptions e WHERE e.block_id=b.id) AS excludedDates FROM availability_blocks b LEFT JOIN academic_timetable_imports t ON t.id=b.timetable_import_id WHERE b.membership_id=? ORDER BY b.kind,b.weekday,b.specific_date,b.start_time`, [member.id]);
   }
 
   async createAvailability(actor: Actor, input: AvailabilityInput) {
@@ -79,7 +80,7 @@ export class AgendaService {
       const from = new Date(query.from), to = new Date(query.to);
       for (const block of blocks) {
         for (let cursor = new Date(from); cursor < to; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
-          const matches = block.kind === 'weekly' ? cursor.getUTCDay() === Number(block.weekday) : dayKey(cursor) === block.date;
+          const matches = occurrenceApplies(block as never, dayKey(cursor), cursor.getUTCDay());
           if (!matches) continue;
           const date = dayKey(cursor);
           items.push({ id: block.id, type: 'unavailable', title: block.note || 'Indisponível', startsAt: wallInstant(date,timePart(block.startTime),query.offsetMinutes).toISOString(), endsAt: wallInstant(date,timePart(block.endTime),query.offsetMinutes).toISOString(), recurring: block.kind === 'weekly' });
@@ -97,20 +98,22 @@ export class AgendaService {
     if (query.departmentId) { where += ' AND EXISTS(SELECT 1 FROM department_memberships dm WHERE dm.membership_id=m.id AND dm.department_id=? AND dm.ended_at IS NULL)'; values.push(query.departmentId); }
     const members = await this.db.many<RowDataPacket>(`SELECT m.id AS membershipId,p.display_name AS displayName FROM memberships m JOIN people p ON p.id=m.person_id WHERE m.organization_id=? AND m.status='active' ${where} ORDER BY p.display_name`, values);
     const from = new Date(query.from), to = new Date(query.to);
-    const blocks = members.length ? await this.db.many<RowDataPacket>(`SELECT membership_id AS membershipId,kind,weekday,DATE_FORMAT(specific_date,'%Y-%m-%d') AS date,TIME_FORMAT(start_time,'%H:%i') AS startTime,TIME_FORMAT(end_time,'%H:%i') AS endTime FROM availability_blocks WHERE membership_id IN (${members.map(() => '?').join(',')})`, members.map((m) => m.membershipId)) : [];
+    const blocks = members.length ? await this.db.many<RowDataPacket>(`SELECT b.membership_id AS membershipId,b.kind,b.weekday,DATE_FORMAT(b.specific_date,'%Y-%m-%d') AS date,TIME_FORMAT(b.start_time,'%H:%i') AS startTime,TIME_FORMAT(b.end_time,'%H:%i') AS endTime,DATE_FORMAT(t.valid_from,'%Y-%m-%d') AS validFrom,DATE_FORMAT(t.valid_to,'%Y-%m-%d') AS validTo,(SELECT JSON_ARRAYAGG(DATE_FORMAT(e.specific_date,'%Y-%m-%d')) FROM availability_occurrence_exceptions e WHERE e.block_id=b.id) AS excludedDates FROM availability_blocks b LEFT JOIN academic_timetable_imports t ON t.id=b.timetable_import_id WHERE b.membership_id IN (${members.map(() => '?').join(',')})`, members.map((m) => m.membershipId)) : [];
     const meetings = members.length ? await this.db.many<RowDataPacket>(`SELECT mp.membership_id AS membershipId,m.starts_at AS startsAt,m.ends_at AS endsAt FROM meeting_participants mp JOIN meetings m ON m.id=mp.meeting_id WHERE mp.membership_id IN (${members.map(() => '?').join(',')}) AND mp.removed_at IS NULL AND mp.response<>'declined' AND m.cancelled_at IS NULL AND m.starts_at<? AND m.ends_at>? UNION ALL SELECT m.organizer_membership_id AS membershipId,m.starts_at AS startsAt,m.ends_at AS endsAt FROM meetings m WHERE m.organizer_membership_id IN (${members.map(() => '?').join(',')}) AND m.cancelled_at IS NULL AND m.starts_at<? AND m.ends_at>?`, [...members.map((m) => m.membershipId), sqlDate(query.to), sqlDate(query.from), ...members.map((m) => m.membershipId), sqlDate(query.to), sqlDate(query.from)]) : [];
     return members.map((person) => {
       const own = blocks.filter((b) => b.membershipId === person.membershipId);
       const busy = meetings.some((m) => m.membershipId === person.membershipId && new Date(m.startsAt) < to && new Date(m.endsAt) > from) || own.some((block) => {
         for (let cursor = new Date(from); cursor < to; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
-          const matches = block.kind === 'weekly' ? cursor.getUTCDay() === Number(block.weekday) : dayKey(cursor) === block.date;
+          const matches = occurrenceApplies(block as never, dayKey(cursor), cursor.getUTCDay());
           if (!matches) continue;
           const start = wallInstant(dayKey(cursor),timePart(block.startTime),query.offsetMinutes), end = wallInstant(dayKey(cursor),timePart(block.endTime),query.offsetMinutes);
           if (start < to && end > from) return true;
         }
         return false;
       });
-      return { membershipId: person.membershipId, displayName: person.displayName, status: busy ? 'busy' : own.some((block)=>block.kind==='weekly') ? 'free' : 'unknown' };
+      const firstDay = dayKey(new Date(from.getTime() - (query.offsetMinutes ?? 0) * 60_000));
+      const lastDay = dayKey(new Date(to.getTime() - 1 - (query.offsetMinutes ?? 0) * 60_000));
+      return { membershipId: person.membershipId, displayName: person.displayName, status: busy ? 'busy' : own.some((block)=>block.kind==='weekly' && (!block.validFrom || block.validFrom <= firstDay) && (!block.validTo || block.validTo >= lastDay)) ? 'free' : 'unknown' };
     });
   }
 

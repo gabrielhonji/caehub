@@ -47,6 +47,34 @@ Datas de reuniões usam ISO 8601 na API e instantes UTC no banco. Consultas acei
 
 ## Integração Honji
 
+### Grade acadêmica — validação local concluída
+
+- `POST /api/availability/import/preview`: corpo binário `application/pdf`,
+  protegido pela mesma identidade/CSRF. Retorna `rows` e `warnings`, sem salvar.
+  Cada candidato contém `weekday`, `code`, `startTime`, `endTime`, `needsReview`;
+  horários incertos são `null` e precisam ser preenchidos.
+- `POST /api/availability/import/confirm`: `{term, validFrom, validTo,
+  confirmed:true, rows:[{weekday,startTime,endTime}]}`. Valida os intervalos,
+  elimina duplicatas e substitui somente a grade importada do mesmo período.
+- `PUT /api/availability/me/:id/exception`: `{date,excluded}` libera/restaura
+  uma ocorrência semanal, exclusivamente pelo titular.
+
+`GET /api/availability/me` acrescenta `term`, `validFrom`, `validTo` e
+`excludedDates` aos blocos importados. Calendário e consulta coletiva aplicam
+vigência e exceções sem expor notas particulares.
+
+Migração idempotente acrescenta `academic_timetable_imports`,
+`availability_blocks.timetable_import_id` e `availability_occurrence_exceptions`.
+Testes de extração, persistência, reimportação concorrente e autorização passaram
+em container. PDFs acima de 5 MB recebem HTTP 413; intervalos/períodos inválidos
+recebem 409 e confirmação ausente recebe 400. O exemplar real fornecido foi
+verificado na extração e na prévia, sem persistir dados pessoais. A revisão
+Chromium cobriu o fluxo completo com dados fictícios. O build Compose com
+`--pull` passou depois de host, container, daemon e BuildKit resolverem o
+registry; o timeout anterior foi transitório. Não há deploy desta etapa.
+
+### Contrato central existente
+
 As rotas `/acesso`, `/auth/login`, `/auth/callback` e `/auth/logout` implementam o portão Honji. O cookie de sessão é Secure, HttpOnly, SameSite=Lax e não contém tokens; identificadores de sessão são armazenados somente como hash. Mutações exigem origem exata e token CSRF da sessão. Client secrets permanecem fora do repositório e da imagem.
 
 Cada requisição protegida continua exigindo uma decisão central atual de `project.access`. Apenas o token técnico de client credentials é reaproveitado até pouco antes de expirar; decisões de usuário não são armazenadas em cache. As rotas `foundation` reduzem o número de travessias dessa fronteira sem afrouxar revogação ou autorização contextual.

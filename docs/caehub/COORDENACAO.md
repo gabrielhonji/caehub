@@ -1,5 +1,35 @@
 # Coordenação de agentes
 
+## Atividade atual — Agente 04, 11/10/2026
+
+Objetivo: Agenda Avançada, reuniões coletivas e escalas. Branch local:
+`feat/agenda-avancada`, base `e97e004` com incrementos 01–03 presentes.
+Primeira etapa validada localmente nos arquivos `src/server/timetable*`, Agenda/API,
+`src/components/TimetableImport.tsx`, serviço React, estilos, Dockerfiles e
+documentação pertinente. O cliente HTTP compartilhado também foi corrigido:
+requisições sem corpo não enviam Content-Type JSON. Commit e push da branch
+fazem parte do encerramento deste incremento; merge e deploy não estão autorizados.
+
+Evidência: 15 testes de backend passaram em MySQL descartável; TypeScript e
+build Vite em modo de produção passaram. Chromium verificou upload/prévia real
+sem persistência, confirmação obrigatória, erro de PDF inválido, cadastro
+fictício, exceção/restauração/remoção e teclado. Revisão visual e ausência de
+overflow em 1440/390 px nos dois temas; nenhuma exceção JavaScript.
+O exemplar UTFPR anexado foi extraído com início/fim impressos reconhecidos;
+nenhum documento ou dado pessoal foi adicionado ao repositório. Teste sintético
+cobre o formato de duas colunas de horários, sem separador.
+
+O bloqueio do socket foi resolvido pela autorização do usuário para executar
+Docker fora do sandbox, sem sudo, alteração de grupos/ACLs ou portas no host.
+O MySQL de desenvolvimento recusou conexão; foi preservado e substituído apenas
+para validação por container/banco descartáveis na rede
+`caehub_agenda04_validation`. O timeout anterior de DNS do Docker Hub não se
+repetiu fora do sandbox: host, container, daemon e BuildKit resolveram o
+registry; pull das bases e `docker compose -f compose.dev.yml --progress plain
+build --pull` passaram. Nenhuma configuração de DNS ou proxy foi alterada.
+Próximo incremento funcional: disponibilidade coletiva ampliada e solicitações
+“Organizando reunião”.
+
 ## Execução simples como padrão
 
 **H:** usar o método mais simples; um quadro Kanban de coordenação não é obrigatório. Kanban de produto em Gestão continua confirmado. Não confundir essas duas decisões.

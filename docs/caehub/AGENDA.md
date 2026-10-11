@@ -23,3 +23,41 @@ Não inclui importação de PDF UTFPR, votação de horários, fluxo “Organiza
 ## Evidência esperada
 
 Testar persistência, projeção sem duplicação, edição exclusiva da disponibilidade, privacidade da consulta coletiva, criação restrita à direção/administração, respostas dos convidados, gestão de convidados, reconfirmação e notificação após mudança temporal, acesso contextual aos calendários e estados responsivos/acessíveis da interface.
+
+## Incremento 04 — primeira etapa validada localmente
+
+Implementação local em `feat/agenda-avancada`: upload de PDF, prévia editável,
+confirmação, período letivo e exceções que liberam uma ocorrência semanal.
+Extração conservadora usa `pdftotext -bbox-layout` (Poppler nos containers),
+sem IA/OCR e sem presumir o horário civil dos códigos M/T/N. Apenas tabelas
+reconhecidas geram candidatos; estrutura diferente exige correção manual.
+PDFs não são persistidos. Limites operacionais: 5 MB, dez primeiras páginas,
+oito segundos, 4 MB de texto extraído e duas extrações simultâneas por processo.
+
+A confirmação substitui a grade importada do mesmo titular/período em uma
+transação serializada pelo vínculo institucional. Blocos manuais permanecem;
+blocos importados idênticos preservam ID e exceções. Blocos retirados da grade
+perdem suas exceções. A UI exige confirmação dessa substituição. A grade vale
+somente entre as datas informadas; fora delas não confirma disponibilidade.
+Exceções liberam somente o bloco escolhido, sem cancelar reuniões ou outros
+blocos coincidentes. Correções de horário usam a edição própria existente.
+
+Validação em 11/10/2026: 15 testes passaram em container e banco descartável,
+incluindo reimportação simultânea, período/exceções, autorização, confirmação,
+intervalos inválidos e rejeição HTTP 413 para PDFs acima do limite. TypeScript e
+build frontend em modo de produção passaram. Chromium verificou o fluxo com
+teclado, nos dois temas e em desktop/mobile, incluindo cadastro, liberação,
+restauração e remoção de dados fictícios.
+
+O PDF UTFPR anexado foi validado separadamente por extração real e upload na
+prévia sem salvamento. O formato contém duas colunas de horários impressos, sem
+separador textual; o leitor foi ajustado e coberto por teste sintético. Essa
+evidência vale para o exemplar fornecido, sem garantir todos os formatos UTFPR.
+Documentos escaneados ou formatos não reconhecidos continuam exigindo correção
+manual. PDF, texto extraído e dados pessoais não foram versionados.
+
+A construção das imagens pelo Compose com `--pull` passou. O timeout anterior
+de DNS do Docker Hub não se repetiu nos testes separados de host, container,
+daemon e BuildKit; nenhuma configuração de rede foi alterada. Merge e deploy
+não fazem parte desta etapa. Solicitações, votações, escalas e ampliação de
+notificações permanecem pendentes.
