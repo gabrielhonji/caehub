@@ -58,6 +58,38 @@ manual. PDF, texto extraído e dados pessoais não foram versionados.
 
 A construção das imagens pelo Compose com `--pull` passou. O timeout anterior
 de DNS do Docker Hub não se repetiu nos testes separados de host, container,
-daemon e BuildKit; nenhuma configuração de rede foi alterada. Merge e deploy
-não fazem parte desta etapa. Solicitações, votações, escalas e ampliação de
-notificações permanecem pendentes.
+daemon e BuildKit; nenhuma configuração de rede foi alterada. Essa foi a
+evidência da primeira etapa, anterior à ampliação abaixo.
+
+## Incremento 04 — Agenda Avançada
+
+Consulta semanal combina indivíduos e vários departamentos, mostra ocupação
+por intervalos e destaca quando todos estão livres. Não informado permanece
+distinto de livre. Solicitações de revisão persistem convidados, prazo e
+respostas; atrasos são sinalizados sem impedir a organização.
+
+Votações permitem múltiplas escolhas ou nenhuma opção, alterações até o prazo
+e encerramento explícito. Desempate exige escolha entre líderes; nenhum voto
+válido impede convocação. Finalização serializada cria uma única reunião,
+confirmando votantes ativos do horário vencedor. Demais participantes e
+convidados posteriores ficam pendentes. Mudança temporal exige reconfirmação.
+
+Turnos pertencem a espaços autorizados e podem associar uma reunião/evento do
+mesmo espaço. Voluntários confirmam imediatamente; atribuições diretas reservam
+vaga até aceite/recusa. Reservas e confirmações respeitam o máximo rígido,
+inclusive sob concorrência. Somente confirmações atingem o mínimo opcional.
+Conflitos com aulas, blocos próprios, reuniões e turnos exigem confirmação
+consciente registrada. A janela prioritária de desistência começa em 2 horas
+antes do início e é configurável pela direção. Remoções, desistências,
+cancelamentos e mudanças temporais preservam histórico; reagendamento exige
+novo aceite. Cancelamentos e recusas liberam ocupação.
+
+Notificações internas persistentes abrangem solicitações, votações, convocações,
+atribuições, respostas, desistências, remoções e cancelamentos, com leitura
+exclusiva do titular. Sem email, SMS, expiração automática ou Google Calendar.
+O contexto Honji e a decisão atual de `project.access` são reutilizados.
+
+Validação local: 18 testes de backend, TypeScript/build e fluxos Chromium nos
+dois temas em 1440/390 px. Inclui corrida pela última vaga, conflitos entre
+turnos concorrentes, aulas/reuniões, redução de capacidade, privacidade,
+acesso contextual e finalização duplicada. Capturas usam dados fictícios.

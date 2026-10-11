@@ -1,0 +1,102 @@
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import type { Space } from '../domain/types';
+import type { MemberOption } from '../services/agenda';
+import { cancelShift, closePoll, createPoll, createShift, participateShift, relatedShiftMeetings, shiftHistory, updateShift, votePoll, type MeetingPoll, type OperationalShift } from '../services/agenda-advanced';
+import { AgendaPeoplePicker } from './AvailabilityPlanning';
+import { Badge, Button, Dialog, EmptyState, Eyebrow } from './primitives';
+
+const localInput=(value:string)=>{const date=new Date(value);return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);};
+const dateTime=(value:string)=>new Date(value).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+const instant=(value:FormDataEntryValue|null)=>new Date(String(value)).toISOString();
+const statusLabel:Record<string,string>={pending:'Reserva pendente',confirmed:'Confirmado',declined:'Recusado',withdrawn:'Desistiu',removed:'Removido',cancelled:'Cancelado'};
+const actionLabel:Record<string,string>={created:'Turno criado',assign:'Vaga atribuída',volunteer:'Inscrição voluntária',accept:'Reserva aceita',decline:'Reserva recusada',withdraw:'Desistência',remove:'Participação removida',updated:'Turno atualizado',cancelled:'Turno cancelado'};
+type Run=(work:()=>Promise<unknown>,message:string)=>Promise<boolean>;
+
+function ShiftFields({spaces,shift}:{spaces:Space[];shift?:OperationalShift}) {
+  const [workspaceId,setWorkspaceId]=useState(shift?.workspaceId??''),[meetings,setMeetings]=useState<Awaited<ReturnType<typeof relatedShiftMeetings>>>([]),[error,setError]=useState('');
+  useEffect(()=>{let active=true;setMeetings([]);setError('');if(workspaceId)void relatedShiftMeetings(workspaceId).then(rows=>{if(active)setMeetings(rows);}).catch(()=>{if(active)setError('Não foi possível carregar reuniões deste espaço.');});return ()=>{active=false;};},[workspaceId]);
+  return <>
+    <label>Título<input name="title" required maxLength={200} defaultValue={shift?.title}/></label>
+    <label>Descrição<textarea name="description" maxLength={10000} defaultValue={shift?.description}/></label>
+    <div className="agenda-form-grid"><label>Início<input name="startsAt" type="datetime-local" required defaultValue={shift&&localInput(shift.startsAt)}/></label><label>Fim<input name="endsAt" type="datetime-local" required defaultValue={shift&&localInput(shift.endsAt)}/></label></div>
+    <label>Local<input name="location" maxLength={255} defaultValue={shift?.location}/></label>
+    <label>Espaço responsável<select name="workspaceId" required value={workspaceId} onChange={event=>setWorkspaceId(event.target.value)}><option value="" disabled>Selecione</option>{spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+    <label>Reunião/evento relacionado (opcional)<select key={`${workspaceId}-${meetings.length}`} name="relatedMeetingId" defaultValue={workspaceId===shift?.workspaceId?shift?.relatedMeetingId??'':''}><option value="">Sem associação</option>{workspaceId===shift?.workspaceId&&shift?.relatedMeetingId&&!meetings.some(m=>m.id===shift.relatedMeetingId)&&<option value={shift.relatedMeetingId}>Reunião vinculada</option>}{meetings.map(m=><option key={m.id} value={m.id}>{m.title} · {dateTime(m.startsAt)}</option>)}</select></label>{error&&<p role="alert">{error}</p>}
+    <div className="agenda-form-grid"><label>Equipe mínima (opcional)<input name="minimumCapacity" type="number" min={0} max={1000} defaultValue={shift?.minimumCapacity??''}/></label><label>Capacidade máxima<input name="maximumCapacity" type="number" min={1} max={1000} required defaultValue={shift?.maximumCapacity??1}/></label></div>
+    <label>Aviso prioritário de desistência (horas antes)<input name="priorityWindowHours" type="number" min={0} max={8760} required defaultValue={shift?.priorityWindowHours??2}/></label>
+    <p>O padrão é 2 horas. Reservas também ocupam vagas; apenas confirmações contam para a equipe mínima.</p>
+  </>;
+}
+function shiftData(data:FormData) {
+  return {title:String(data.get('title')),description:String(data.get('description')||''),location:String(data.get('location')||''),workspaceId:String(data.get('workspaceId')),relatedMeetingId:String(data.get('relatedMeetingId')||'')||null,startsAt:instant(data.get('startsAt')),endsAt:instant(data.get('endsAt')),minimumCapacity:data.get('minimumCapacity')===''?null:Number(data.get('minimumCapacity')),maximumCapacity:Number(data.get('maximumCapacity')),priorityWindowHours:Number(data.get('priorityWindowHours'))};
+}
+
+export function AgendaOperations({polls,shifts,members,spaces,canManage,onSaved}:{polls:MeetingPoll[];shifts:OperationalShift[];members:MemberOption[];spaces:Space[];canManage:boolean;onSaved:()=>Promise<void>}) {
+  const [busy,setBusy]=useState(false),[message,setMessage]=useState('');
+  const [optionCount,setOptionCount]=useState(2);
+  const [confirmation,setConfirmation]=useState<{title:string;text:string;work:()=>Promise<unknown>} | null>(null);
+  const [history,setHistory]=useState<Awaited<ReturnType<typeof shiftHistory>>>();
+  const opener=useRef<HTMLElement|null>(null);
+  const rememberFocus=()=>{opener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;};
+  const openConfirmation=(value:NonNullable<typeof confirmation>)=>{rememberFocus();setConfirmation(value);};
+  const run:Run=async(work,success)=>{if(!confirmation&&!history)rememberFocus();setBusy(true);setMessage('');try {await work();await onSaved();setMessage(success);return true;}catch(error){setMessage(error instanceof Error?error.message:'Não foi possível salvar.');return false;}finally{setBusy(false);}};
+  const participate=(shift:OperationalShift,action:string,membershipId?:string)=>void run(async()=>{
+    try {await participateShift(shift.id,{action,membershipId});}
+    catch(error) {
+      if((error as {code?:string}).code!=='schedule_conflict')throw error;
+      setConfirmation({title:'Conflito de horário',text:'Há sobreposição com aulas, reuniões ou outros turnos. Ao prosseguir, sua decisão será registrada. A reserva atribuída ainda exige aceite.',work:()=>participateShift(shift.id,{action,membershipId,confirmConflict:true})});
+    }
+  },'Operação processada.');
+  const submit=(event:FormEvent<HTMLFormElement>,work:(data:FormData)=>Promise<unknown>,success:string)=>{event.preventDefault();const data=new FormData(event.currentTarget);void run(()=>work(data),success);};
+  return <section className="agenda-panel advanced-agenda agenda-operations" aria-busy={busy}>
+    <Eyebrow>REUNIÕES E ESCALAS</Eyebrow><h2>Votações e turnos.</h2>
+    <p role="status" aria-live="polite">{message}</p>
+    <fieldset disabled={busy} className="workflow-controls">
+      {canManage&&<details><summary>Criar votação de horários</summary><form className="agenda-form" onSubmit={event=>submit(event,data=>createPoll({title:String(data.get('title')),description:String(data.get('description')||''),location:String(data.get('location')||''),workspaceId:String(data.get('workspaceId')||'')||undefined,deadline:data.get('deadline')?instant(data.get('deadline')):undefined,participantIds:data.getAll('participantIds').map(String),options:Array.from({length:optionCount},(_,index)=>({startsAt:instant(data.get(`start-${index}`)),endsAt:instant(data.get(`end-${index}`))}))}),'Votação criada; participantes notificados.')}>
+        <label>Título<input name="title" required maxLength={200}/></label><label>Descrição<textarea name="description" maxLength={10000}/></label><label>Local<input name="location" maxLength={255}/></label>
+        <label>Espaço<select name="workspaceId"><option value="">Institucional</option>{spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+        <label>Prazo (opcional)<input name="deadline" type="datetime-local"/></label>
+        {Array.from({length:optionCount},(_,index)=><fieldset key={index}><legend>Opção {index+1}</legend><div className="agenda-form-grid"><label>Início<input name={`start-${index}`} type="datetime-local" required/></label><label>Fim<input name={`end-${index}`} type="datetime-local" required/></label></div></fieldset>)}
+        <div className="response-actions"><Button type="button" disabled={optionCount>=30} onClick={()=>setOptionCount(c=>c+1)}>Adicionar horário</Button><Button type="button" disabled={optionCount<=2} onClick={()=>setOptionCount(c=>c-1)}>Retirar último horário</Button></div>
+        <AgendaPeoplePicker members={members}/><Button variant="primary">Abrir votação</Button>
+      </form></details>}
+      {!polls.length&&<EmptyState title="Nenhuma votação">As votações dirigidas a você aparecerão aqui.</EmptyState>}
+      {polls.map(poll=>{
+        const max=Math.max(...poll.options.map(o=>Number(o.votes))),leaders=poll.options.filter(o=>Number(o.votes)===max);
+        return <article className="workflow-card" key={poll.id}><h3>{poll.title}</h3><Badge tone={poll.closedAt?'neutral':poll.open?'active':'waiting'}>{poll.closedAt?'Reunião convocada':poll.open?'Votação aberta':'Prazo encerrado'}</Badge>{poll.description&&<p>{poll.description}</p>}{poll.deadline&&<p>Prazo: {dateTime(poll.deadline)}</p>}
+          <form className="agenda-form" key={poll.votedAt??'not-voted'} onSubmit={event=>submit(event,data=>votePoll(poll.id,data.getAll('optionIds').map(String),Boolean(data.get('noneWorks'))),'Voto registrado.')}>
+            <fieldset className="participant-picker" disabled={!poll.open||!poll.invited}><legend>Selecione todos os horários em que pode comparecer</legend>{poll.options.map(option=><label key={option.id}><input type="checkbox" name="optionIds" value={option.id} defaultChecked={Boolean(option.selected)}/><span>{dateTime(option.startsAt)}–{dateTime(option.endsAt)} · {option.votes} votos</span></label>)}<label><input type="checkbox" name="noneWorks" defaultChecked={poll.noneWorks}/><span>Nenhuma opção funciona</span></label></fieldset>
+            {poll.open&&poll.invited&&<Button>{poll.votedAt?'Alterar voto':'Salvar voto'}</Button>}
+          </form>
+          {poll.canManage&&poll.participants&&<p>{poll.participants.filter(p=>p.votedAt).length} de {poll.participants.length} participantes responderam. {poll.participants.filter(p=>p.noneWorks).length} sem horário adequado.</p>}
+          {poll.canManage&&!poll.closedAt&&<form className="agenda-form" onSubmit={event=>submit(event,data=>closePoll(poll.id,String(data.get('winner')||'')||undefined),'Reunião convocada; votos vencedores confirmados.')}>
+            {leaders.length>1&&max>0&&<label>Desempate<select name="winner" required defaultValue=""><option value="" disabled>Escolha entre os horários empatados</option>{leaders.map(o=><option key={o.id} value={o.id}>{dateTime(o.startsAt)}</option>)}</select></label>}
+            {!max&&<p>Sem votos válidos: não é possível convocar.</p>}
+            <label className="checkbox-label"><input type="checkbox" required/>Confirmo o encerramento e a convocação no horário vencedor.</label><Button disabled={!max}>Encerrar e convocar</Button>
+          </form>}
+        </article>;
+      })}
+      {canManage&&<details><summary>Criar turno</summary><form className="agenda-form" onSubmit={event=>submit(event,data=>createShift(shiftData(data)),'Turno criado.')}><ShiftFields spaces={spaces}/><Button variant="primary">Criar turno</Button></form></details>}
+      {!shifts.length&&<EmptyState title="Nenhum turno">Turnos dos seus espaços e reservas aparecerão aqui.</EmptyState>}
+      {shifts.map(shift=><article className="workflow-card" key={`${shift.id}-${shift.revision}`}><h3>{shift.title}</h3><p>{shift.workspace} · {dateTime(shift.startsAt)}–{dateTime(shift.endsAt)}</p>{shift.location&&<p>{shift.location}</p>}{shift.description&&<p>{shift.description}</p>}
+        <Badge tone={shift.cancelledAt?'neutral':shift.minimumReached?'active':'waiting'}>{shift.cancelledAt?'Cancelado':`${shift.confirmed} confirmados · ${shift.reserved} reservas · ${shift.remaining} vagas`}</Badge>
+        {!shift.cancelledAt&&<p>{shift.minimumCapacity==null?'Sem equipe mínima definida':`Equipe mínima: ${shift.minimumCapacity}${shift.minimumReached?' · Atingida':' · Ainda incompleta'}`}</p>}
+        {shift.ownStatus&&<p>Sua participação: <strong>{statusLabel[shift.ownStatus]}</strong></p>}
+        {!shift.cancelledAt&&<div className="response-actions">
+          {shift.ownStatus==='pending'&&<><Button onClick={()=>participate(shift,'accept')}>Aceitar reserva</Button><Button onClick={()=>participate(shift,'decline')}>Recusar reserva</Button></>}
+          {shift.ownStatus==='confirmed'&&<Button onClick={()=>openConfirmation({title:'Desistir do turno',text:'Sua vaga será liberada e o responsável será notificado.',work:()=>participateShift(shift.id,{action:'withdraw'})})}>Desistir</Button>}
+          {shift.canVolunteer&&!['confirmed','pending'].includes(shift.ownStatus??'')&&<Button disabled={shift.remaining<=0} onClick={()=>participate(shift,'volunteer')}>Inscrever-me</Button>}
+        </div>}
+        <ul className="shift-participants">{shift.participants.map(p=><li key={p.membershipId}><span>{p.displayName} · {statusLabel[p.status]}</span>{shift.canManage&&!shift.cancelledAt&&['pending','confirmed'].includes(p.status)&&<Button onClick={()=>openConfirmation({title:'Remover participação',text:'A vaga será liberada e a pessoa será notificada.',work:()=>participateShift(shift.id,{action:'remove',membershipId:p.membershipId})})}>Remover</Button>}</li>)}</ul>
+        {shift.canManage&&!shift.cancelledAt&&<details><summary>Gerenciar turno</summary>
+          <form className="agenda-form" onSubmit={event=>{event.preventDefault();participate(shift,'assign',String(new FormData(event.currentTarget).get('membershipId')));}}><label>Atribuir reserva<select name="membershipId" required defaultValue=""><option value="" disabled>Selecione uma pessoa</option>{members.map(m=><option key={m.id} value={m.id}>{m.displayName}</option>)}</select></label><Button>Reservar vaga</Button></form>
+          <form className="agenda-form" onSubmit={event=>submit(event,data=>updateShift(shift.id,{...shiftData(data),expectedRevision:shift.revision}),'Turno atualizado. Mudanças de horário exigem novo aceite.')}><ShiftFields spaces={spaces} shift={shift}/><Button>Salvar turno</Button></form>
+          <Button onClick={()=>openConfirmation({title:'Cancelar turno',text:'Todas as participações serão canceladas e os horários liberados. O histórico será preservado.',work:()=>cancelShift(shift.id)})}>Cancelar turno</Button>
+        </details>}
+        {shift.canManage&&<Button onClick={()=>{rememberFocus();void shiftHistory(shift.id).then(setHistory).catch(error=>setMessage(error instanceof Error?error.message:'Não foi possível carregar o histórico.'));}}>Ver histórico</Button>}
+      </article>)}
+    </fieldset>
+    {confirmation&&<Dialog title={confirmation.title} returnFocus={opener.current} onClose={()=>setConfirmation(null)}><p>{confirmation.text}</p><Button disabled={busy} variant="primary" onClick={()=>void run(confirmation.work,'Operação confirmada.').then(saved=>{if(saved)setConfirmation(null);})}>Confirmar e prosseguir</Button></Dialog>}
+    {history&&<Dialog title="Histórico do turno" returnFocus={opener.current} onClose={()=>setHistory(undefined)}><ol className="shift-history">{history.map(h=><li key={h.id}><strong>{actionLabel[h.action]??h.action}</strong><p>{h.actor} · {dateTime(h.createdAt)}</p>{typeof h.data.status==='string'&&<p>{typeof h.data.previousStatus==='string'?`${statusLabel[h.data.previousStatus]} → `:''}{statusLabel[h.data.status]}</p>}{h.data.rescheduled===true&&<p>Horário alterado; participações voltaram a pendente.</p>}{h.data.conflictConfirmed===true&&<p>Conflito aceito conscientemente.</p>}</li>)}</ol></Dialog>}
+  </section>;
+}

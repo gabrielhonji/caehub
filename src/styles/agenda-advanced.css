@@ -1,0 +1,21 @@
+.advanced-agenda{margin-bottom:22px;min-width:0}.advanced-agenda>details{margin:14px 0;border-top:1px solid var(--line)}.advanced-agenda summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:var(--accent-strong)}.agenda-workflow-item{padding:16px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}.agenda-workflow-item h3{margin:0 0 8px}.agenda-workflow-item ul{padding-left:18px}.occupancy-slots{max-height:460px;overflow:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.occupancy-slots article{padding:12px;border:1px solid var(--line)}.occupancy-slots li{margin:6px 0;font-size:12px}.advanced-agenda .agenda-form{margin-top:12px}.agenda-notifications li{grid-template-columns:auto minmax(0,1fr) auto auto}.agenda-form input,.agenda-form select,.agenda-form textarea{min-width:0;max-width:100%}.agenda-form{grid-template-columns:repeat(2,minmax(0,1fr))}@media(max-width:720px){.occupancy-slots{grid-template-columns:1fr}.agenda-notifications li{grid-template-columns:auto minmax(0,1fr)}.agenda-form{grid-template-columns:minmax(0,1fr)}}
+.workflow-controls { border: 0; padding: 0; margin: 0; min-width: 0; }
+.agenda-operations .workflow-card { margin-block: 1rem; padding-block: 1rem; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.agenda-operations .workflow-controls>details { margin-block: 1rem; border-top: 1px solid var(--line); }
+.agenda-form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .75rem; }
+.agenda-operations .agenda-form>fieldset,.agenda-operations .agenda-form>.agenda-form-grid,.agenda-operations .agenda-form>p,.agenda-operations .agenda-form>.response-actions,.agenda-operations .agenda-form>.checkbox-label { grid-column: 1/-1; }
+.agenda-operations .response-actions .button { min-height: 44px; font-size: 12px; padding: 8px 12px; }
+@media(max-width:720px) { .agenda-form-grid { grid-template-columns: minmax(0,1fr); } }
+.agenda-operations form { display: grid; gap: .8rem; margin-block: 1rem; }
+.agenda-operations label { display: grid; gap: .4rem; }
+.agenda-operations label.checkbox-label { display: flex; align-items: center; }
+.agenda-operations fieldset { min-width: 0; }
+.agenda-operations .participant-picker label { display: flex; }
+.agenda-operations input:not([type="checkbox"]), .agenda-operations select, .agenda-operations textarea { width: 100%; min-width: 0; box-sizing: border-box; }
+.agenda-operations .response-actions { flex-wrap: wrap; }
+.shift-participants { list-style: none; padding: 0; }
+.shift-participants li { display: flex; justify-content: space-between; gap: .5rem; align-items: center; flex-wrap: wrap; margin-block: .5rem; }
+.event-shift { border-inline-start: 3px solid var(--accent); }
+.shift-pending { border-inline-start-style: dashed; }
+.shift-history { padding-inline-start: 1.2rem; }
+.shift-history pre { white-space: pre-wrap; overflow-wrap: anywhere; }

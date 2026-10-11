@@ -7,6 +7,9 @@ import { KanbanService } from './kanban.js';
 import { AgendaService } from './agenda.js';
 import { extractTimetable } from './timetable.js';
 import { TimetableService } from './timetable-service.js';
+import { AvailabilityRequests } from './availability-requests.js';
+import { MeetingPolls } from './meeting-polls.js';
+import { Shifts, ScheduleConflict } from './shifts.js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -19,11 +22,14 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   const kanban = new KanbanService(service.db, service);
   const agenda = new AgendaService(service.db, service);
   const timetables = new TimetableService(service.db, service);
+  const availabilityRequests = new AvailabilityRequests(service.db,service,agenda);
+  const polls = new MeetingPolls(service.db,service,agenda), shifts = new Shifts(service.db,service,agenda);
   app.addContentTypeParser('application/pdf', { parseAs: 'buffer', bodyLimit: 5 * 1024 * 1024 }, (_request, body, done) => done(null, body));
   app.setErrorHandler((error, _request, reply) => {
     if ((error as { code?: string }).code === 'FST_ERR_CTP_BODY_TOO_LARGE') return reply.code(413).send({ error: 'payload_too_large', message: 'O arquivo ou formulário excede o tamanho permitido.' });
     if (error instanceof Forbidden) return reply.code(403).send({ error: 'forbidden', message: error.message });
     if (error instanceof NotFound) return reply.code(404).send({ error: 'not_found', message: error.message });
+    if (error instanceof ScheduleConflict) return reply.code(409).send({error:'schedule_conflict',message:error.message});
     if (error instanceof Conflict) return reply.code(409).send({ error: 'conflict', message: error.message });
     if (error instanceof z.ZodError) return reply.code(400).send({ error: 'invalid_request', issues: error.issues });
     return reply.code(500).send({ error: 'internal_error' });
@@ -87,13 +93,20 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.delete('/api/availability/me/:id',async(request,reply)=>{await agenda.deleteAvailability(await actor(request),id.parse((request.params as {id:string}).id));return reply.code(204).send();});
   app.get('/api/availability/collective',async request=>{const query=z.object({from:z.string().datetime(),to:z.string().datetime(),membershipIds:z.string().optional(),departmentId:id.optional(),offsetMinutes:z.coerce.number().int().min(-840).max(840).optional()}).refine(value=>new Date(value.from)<new Date(value.to),{message:'invalid interval'}).parse(request.query);return agenda.collective(await actor(request),{...query,membershipIds:query.membershipIds?.split(',').filter(Boolean).map(value=>id.parse(value))});});
   app.get('/api/availability/options',async request=>agenda.options(await actor(request)));
+  app.get('/api/availability/week',async request=>{
+    const query=z.object({from:z.string().datetime(),to:z.string().datetime(),membershipIds:z.string().optional(),departmentIds:z.string().optional(),slotMinutes:z.coerce.number().int().min(15).max(240).default(60),offsetMinutes:z.coerce.number().int().min(-840).max(840).optional()}).refine(value=>Date.parse(value.to)>Date.parse(value.from)&&Date.parse(value.to)-Date.parse(value.from)<=7*86400000,{message:'Selecione até uma semana.'}).parse(request.query);
+    return agenda.collective(await actor(request),{...query,membershipIds:query.membershipIds?.split(',').filter(Boolean).map(value=>id.parse(value)),departmentIds:query.departmentIds?.split(',').filter(Boolean).map(value=>id.parse(value))});
+  });
+  app.get('/api/availability/requests',async request=>availabilityRequests.list(await actor(request)));
+  app.post('/api/availability/requests',async request=>availabilityRequests.create(await actor(request),z.object({title:z.string().trim().min(1).max(200),workspaceId:id.optional(),from:z.string().datetime(),to:z.string().datetime(),deadline:z.string().datetime().optional(),participantIds:z.array(id).min(1).max(100)}).parse(request.body)));
+  app.post('/api/availability/requests/:id/review',async request=>availabilityRequests.review(await actor(request),id.parse((request.params as {id:string}).id),z.object({kind:z.enum(['unchanged','updated'])}).parse(request.body).kind));
   const agendaQuery=z.object({from:z.string().datetime(),to:z.string().datetime(),scope:z.enum(['personal','general','workspace']).default('personal'),workspaceId:id.optional(),offsetMinutes:z.coerce.number().int().min(-840).max(840).optional()}).refine(value=>new Date(value.from)<new Date(value.to),{message:'invalid interval'});
   app.get('/api/agenda',async request=>agenda.calendar(await actor(request),agendaQuery.parse(request.query)));
   app.get('/api/agenda/foundation',async request=>{
     const current=await actor(request),query=agendaQuery.parse(request.query),membership=await service.requireMember(current);
     const canManage=current.owner||['president','vice_president','counselor','director'].includes(membership.role);
-    const [calendar,availability,members,departments,notifications]=await Promise.all([agenda.calendar(current,query),agenda.myAvailability(current),canManage?agenda.options(current):Promise.resolve([]),service.departments(),agenda.notifications(current)]);
-    return {calendar,availability,members,departments,notifications,session:{membership:{id:membership.id,role:membership.role},owner:current.owner}};
+    const [calendar,availability,members,departments,notifications,requests,meetingPolls,operationalShifts]=await Promise.all([agenda.calendar(current,query),agenda.myAvailability(current),canManage?agenda.options(current):Promise.resolve([]),service.departments(),agenda.notifications(current),availabilityRequests.list(current),polls.list(current),shifts.list(current)]);
+    return {calendar,availability,members,departments,notifications,requests,polls:meetingPolls,shifts:operationalShifts,session:{membership:{id:membership.id,role:membership.role},owner:current.owner}};
   });
   const meetingInput=z.object({title:z.string().trim().min(1).max(200),description:z.string().max(10000).optional(),location:z.string().trim().max(255).optional(),workspaceId:id.optional(),startsAt:z.string().datetime(),endsAt:z.string().datetime(),participantIds:z.array(id).max(100).default([])});
   app.post('/api/meetings',async(request,reply)=>reply.code(201).send(await agenda.createMeeting(await actor(request),meetingInput.parse(request.body))));
@@ -101,6 +114,20 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.patch('/api/meetings/:id',async request=>agenda.updateMeeting(await actor(request),id.parse((request.params as {id:string}).id),meetingUpdate.parse(request.body)));
   app.post('/api/meetings/:id/response',async request=>{const body=z.object({response:z.enum(['confirmed','maybe','declined'])}).parse(request.body);return agenda.respond(await actor(request),id.parse((request.params as {id:string}).id),body.response);});
   app.get('/api/agenda/notifications',async request=>agenda.notifications(await actor(request)));
+  app.post('/api/agenda/notifications/:id/read',async request=>agenda.readNotification(await actor(request),id.parse((request.params as {id:string}).id)));
+  const interval=z.object({startsAt:z.string().datetime(),endsAt:z.string().datetime()});
+  app.get('/api/meeting-polls',async request=>polls.list(await actor(request)));
+  app.post('/api/meeting-polls',async(request,reply)=>reply.code(201).send(await polls.create(await actor(request),z.object({title:z.string().trim().min(1).max(200),description:z.string().max(10000).optional(),location:z.string().max(255).optional(),workspaceId:id.optional(),deadline:z.string().datetime().optional(),participantIds:z.array(id).min(1).max(100),options:z.array(interval).min(2).max(30)}).parse(request.body))));
+  app.put('/api/meeting-polls/:id/vote',async request=>{const body=z.object({optionIds:z.array(id).max(30),noneWorks:z.boolean().default(false)}).parse(request.body);return polls.vote(await actor(request),id.parse((request.params as {id:string}).id),body.optionIds,body.noneWorks);});
+  app.post('/api/meeting-polls/:id/close',async request=>{const body=z.object({confirmed:z.literal(true),optionId:id.optional()}).parse(request.body);return polls.close(await actor(request),id.parse((request.params as {id:string}).id),body.confirmed,body.optionId);});
+  const shiftInput=z.object({title:z.string().trim().min(1).max(200),description:z.string().max(10000).optional(),location:z.string().max(255).optional(),workspaceId:id,relatedMeetingId:id.nullable().optional(),startsAt:z.string().datetime(),endsAt:z.string().datetime(),minimumCapacity:z.number().int().min(0).max(1000).nullable().optional(),maximumCapacity:z.number().int().min(1).max(1000),priorityWindowHours:z.number().int().min(0).max(8760).optional()});
+  app.get('/api/shifts',async request=>shifts.list(await actor(request)));
+  app.get('/api/shifts/related-meetings',async request=>shifts.relatedMeetings(await actor(request),z.object({workspaceId:id}).parse(request.query).workspaceId));
+  app.post('/api/shifts',async(request,reply)=>reply.code(201).send(await shifts.create(await actor(request),shiftInput.parse(request.body))));
+  app.put('/api/shifts/:id',async request=>shifts.update(await actor(request),id.parse((request.params as {id:string}).id),shiftInput.extend({expectedRevision:z.number().int().positive()}).parse(request.body)));
+  app.post('/api/shifts/:id/participation',async request=>shifts.participate(await actor(request),id.parse((request.params as {id:string}).id),z.object({action:z.enum(['volunteer','assign','accept','decline','withdraw','remove']),membershipId:id.optional(),confirmConflict:z.boolean().optional(),offsetMinutes:z.number().int().min(-840).max(840).optional()}).parse(request.body)));
+  app.post('/api/shifts/:id/cancel',async request=>shifts.cancel(await actor(request),id.parse((request.params as {id:string}).id)));
+  app.get('/api/shifts/:id/history',async request=>shifts.history(await actor(request),id.parse((request.params as {id:string}).id)));
   app.get('/assets/:file',async(request,reply)=>{
     const file=(request.params as {file:string}).file;
     if(!/^[A-Za-z0-9._-]+$/.test(file))return reply.code(404).send();

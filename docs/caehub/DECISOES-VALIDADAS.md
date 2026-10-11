@@ -18,6 +18,7 @@ Origem: pedido aprovado de preparação do CAEHUB em 08/10/2026. Este documento 
 
 - Diretores/administração criam reuniões e votações; membros podem votar em vários horários. Vence o mais votado, com desempate do organizador; votantes do horário vencedor são confirmados. Disponibilidade poderá ser manual e, depois, importada de PDF UTFPR, preservando privacidade de descrições.
 - Reservas de escala atribuídas diretamente são provisórias até aceite/recusa; voluntários ocupam vagas disponíveis. Capacidade máxima é rígida, mínima opcional. Conflitos avisam e exigem confirmação consciente registrada; cancelamento libera vagas. Mudança de data/horário exige nova confirmação. Expiração configurável fica posterior.
+- Desistências de turnos geram aviso prioritário quando faltarem até 2 horas para o início. Esse é o padrão inicial; o diretor pode alterar a janela.
 - Estoque físico é central e compartilhado; limites por lojinha nunca excedem o estoque global. Encomendas de camisetas/moletons pertencem exclusivamente à campanha de origem. Comercial não entra no primeiro MVP.
 
 ## Segurança

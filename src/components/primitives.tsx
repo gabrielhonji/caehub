@@ -9,9 +9,25 @@ export function EmptyState({ title, children }: { title: string; children: React
 export function ErrorState({ onRetry }: { onRetry: () => void }) { return <section className="state" role="alert"><Eyebrow>INDISPONÍVEL</Eyebrow><h2>Não foi possível carregar este conteúdo.</h2><p>Tente novamente. Se persistir, volte mais tarde.</p><Button onClick={onRetry}>Tentar novamente</Button></section>; }
 export function AccessDeniedState() { return <section className="state" role="alert"><Eyebrow>ACESSO RESTRITO</Eyebrow><h2>Esta consulta não está disponível para o seu perfil.</h2><p>As informações protegidas não foram exibidas. Se precisar desse acesso, procure a direção responsável.</p></section>; }
 
-export function Dialog({ title, children, onClose, closeLabel = 'Fechar' }: { title: string; children: ReactNode; onClose: () => void; closeLabel?: string }) {
+export function Dialog({ title, children, onClose, closeLabel = 'Fechar', returnFocus }: { title: string; children: ReactNode; onClose: () => void; closeLabel?: string; returnFocus?:HTMLElement|null }) {
   const closeButton = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
-  useEffect(() => { previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; closeButton.current?.focus(); const closeWithEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); }; addEventListener('keydown', closeWithEscape); return () => { removeEventListener('keydown', closeWithEscape); previousFocus.current?.focus(); }; }, [onClose]);
+  const close=useRef(onClose);close.current=onClose;
+  useEffect(() => {
+    previousFocus.current = returnFocus??(document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    closeButton.current?.focus();
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close.current();
+      if(event.key==='Tab') {
+        const dialog=closeButton.current?.closest('[role="dialog"]');
+        const controls=Array.from(dialog?.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')??[]).filter(element=>element.offsetParent!==null);
+        const first=controls[0],last=controls.at(-1);
+        if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+        else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+      }
+    };
+    addEventListener('keydown',keyboard);
+    return () => { removeEventListener('keydown',keyboard); previousFocus.current?.focus(); };
+  }, []);
   return <div className="dialog-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" onPointerDown={event => event.stopPropagation()}><header><h2 id="dialog-title">{title}</h2><Button ref={closeButton} onClick={onClose} aria-label="Fechar diálogo">{closeLabel} <span aria-hidden="true">×</span></Button></header><div className="dialog-content">{children}</div></section></div>;
 }

@@ -4,17 +4,20 @@
 
 Objetivo: Agenda Avançada, reuniões coletivas e escalas. Branch local:
 `feat/agenda-avancada`, base `e97e004` com incrementos 01–03 presentes.
-Primeira etapa validada localmente nos arquivos `src/server/timetable*`, Agenda/API,
-`src/components/TimetableImport.tsx`, serviço React, estilos, Dockerfiles e
-documentação pertinente. O cliente HTTP compartilhado também foi corrigido:
-requisições sem corpo não enviam Content-Type JSON. Commit e push da branch
-fazem parte do encerramento deste incremento; merge e deploy não estão autorizados.
+Agenda Avançada implementada: grade UTFPR, consulta semanal por pessoas/vários
+departamentos, solicitações de revisão, votações e escalas contextualizadas.
+Reutiliza Agenda/API, notificações e componentes locais. Janela prioritária de
+desistência: 2 horas, configurável pela direção. O usuário autorizou commit,
+push, integração e deploy da versão 1.4.0 pelo canal oficial.
 
-Evidência: 15 testes de backend passaram em MySQL descartável; TypeScript e
+Evidência: 18 testes de backend passaram em MySQL descartável; TypeScript e
 build Vite em modo de produção passaram. Chromium verificou upload/prévia real
 sem persistência, confirmação obrigatória, erro de PDF inválido, cadastro
 fictício, exceção/restauração/remoção e teclado. Revisão visual e ausência de
-overflow em 1440/390 px nos dois temas; nenhuma exceção JavaScript.
+overflow em 1440/390 px nos dois temas; nenhuma exceção JavaScript. A ampliação
+também validou votação/convocação, confirmação consciente de conflito, histórico,
+configuração da janela, desistência e cancelamento. Testes cobrem concorrência,
+limites de capacidade, reconfirmação, privacidade e autorização contextual.
 O exemplar UTFPR anexado foi extraído com início/fim impressos reconhecidos;
 nenhum documento ou dado pessoal foi adicionado ao repositório. Teste sintético
 cobre o formato de duas colunas de horários, sem separador.
@@ -27,8 +30,10 @@ para validação por container/banco descartáveis na rede
 repetiu fora do sandbox: host, container, daemon e BuildKit resolveram o
 registry; pull das bases e `docker compose -f compose.dev.yml --progress plain
 build --pull` passaram. Nenhuma configuração de DNS ou proxy foi alterada.
-Próximo incremento funcional: disponibilidade coletiva ampliada e solicitações
-“Organizando reunião”.
+Publicação usa a origem já registrada `main`, `build-app` e `deploy-app`, com
+healthcheck e rollback do canal. Não modifica DNS, proxy ou credenciais.
+Entrada real autenticada depende da sessão Honji do usuário; fixtures não são
+evidência dessa sessão. O gate público verifica portão real e rejeição sem sessão.
 
 ## Execução simples como padrão
 

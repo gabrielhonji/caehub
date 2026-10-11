@@ -1,13 +1,14 @@
 import { api } from './spaces';
+import type { ReviewRequest, MeetingPoll, OperationalShift } from './agenda-advanced';
 
-export type CalendarItem = { id:string;type:'meeting'|'unavailable';title:string;description?:string;location?:string;workspaceId?:string;workspace?:string;startsAt:string;endsAt:string;response?:'pending'|'confirmed'|'maybe'|'declined';revision?:number;organizer?:string;recurring?:boolean;canManage?:boolean;participantIds?:string[] };
+export type CalendarItem = { id:string;type:'meeting'|'unavailable'|'shift';title:string;description?:string;location?:string;workspaceId?:string;workspace?:string;startsAt:string;endsAt:string;response?:'pending'|'confirmed'|'maybe'|'declined';revision?:number;organizer?:string;recurring?:boolean;canManage?:boolean;participantIds?:string[] };
 export type AvailabilityBlock = { id:string;kind:'weekly'|'date';weekday?:number;date?:string;startTime:string;endTime:string;note?:string;term?:string;validFrom?:string;validTo?:string;excludedDates?:string[]|string|null };
 export type CollectiveAvailability = { membershipId:string;displayName:string;status:'free'|'busy'|'unknown' };
 export type MemberOption = { id:string;displayName:string;role:string;departmentIds?:string[] };
 export type DepartmentOption = { id:string;name:string };
 export type Session = { membership:null|{id:string;role:string};owner:boolean };
-export type AgendaNotification = { id:string;meetingId:string;title:string;kind:'invited'|'rescheduled'|'removed';createdAt:string;readAt?:string };
-export type AgendaFoundation={calendar:CalendarItem[];availability:AvailabilityBlock[];members:MemberOption[];departments:DepartmentOption[];notifications:AgendaNotification[];session:Session};
+export type AgendaNotification = { id:string;meetingId?:string;resourceType?:string;resourceId?:string;title:string;kind:string;priority?:'normal'|'high';createdAt:string;readAt?:string };
+export type AgendaFoundation={calendar:CalendarItem[];availability:AvailabilityBlock[];members:MemberOption[];departments:DepartmentOption[];notifications:AgendaNotification[];requests:ReviewRequest[];polls:MeetingPoll[];shifts:OperationalShift[];session:Session};
 
 export const getSession=()=>api<Session>('/me');
 export const getAvailabilityOptions=()=>api<MemberOption[]>('/availability/options');

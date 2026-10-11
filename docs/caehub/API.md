@@ -1,4 +1,4 @@
-# API institucional, Kanban e Agenda — Incrementos 01 a 03
+# API institucional, Kanban e Agenda — Incrementos 01 a 04
 
 Base: `/api`. JSON; erros usam `{ error, message }` e retornam `400`, `403`, `404` ou `409`. `GET /health` expõe também a versão e o identificador de release no formato `DDMMAAAA-HHMMSS`.
 
@@ -71,7 +71,38 @@ recebem 409 e confirmação ausente recebe 400. O exemplar real fornecido foi
 verificado na extração e na prévia, sem persistir dados pessoais. A revisão
 Chromium cobriu o fluxo completo com dados fictícios. O build Compose com
 `--pull` passou depois de host, container, daemon e BuildKit resolverem o
-registry; o timeout anterior foi transitório. Não há deploy desta etapa.
+registry; o timeout anterior foi transitório. Evidência da primeira etapa;
+a publicação da Agenda Avançada utiliza o mesmo extrator.
+
+### Agenda Avançada — rotas sob `/api`
+
+| Método e rota | Operação |
+| --- | --- |
+| `GET /availability/week` | até sete dias; `slotMinutes` de 15 a 240; seleções CSV `membershipIds` e `departmentIds` combinadas por união; sem descrições |
+| `GET, POST /availability/requests` | solicitações `{title,from,to,participantIds,deadline?,workspaceId?}` |
+| `POST /availability/requests/:id/review` | convidado registra `kind: unchanged ou updated`; atraso não bloqueia |
+| `GET, POST /meeting-polls` | título, descrição/local/espaço opcionais, participantes, duas a trinta opções `{startsAt,endsAt}` e prazo opcional |
+| `PUT /meeting-polls/:id/vote` | `{optionIds,noneWorks}` substitui votos enquanto aberta |
+| `POST /meeting-polls/:id/close` | `{confirmed:true,optionId?}`; empate exige líder; sem votos válidos retorna 409; finalização idempotente retorna a mesma `meetingId` |
+| `GET, POST /shifts` | turnos acessíveis/criação contextual; espaço, intervalo e `maximumCapacity` obrigatórios; mínimo opcional |
+| `GET /shifts/related-meetings?workspaceId=...` | reuniões ativas do espaço para associação opcional `relatedMeetingId` |
+| `PUT /shifts/:id` | campos completos e `expectedRevision`; `priorityWindowHours` padrão 2, configurável pela direção |
+| `POST /shifts/:id/participation` | `action: volunteer, assign, accept, decline, withdraw ou remove`; atribuição/remoção exigem `membershipId` e direção contextual |
+| `POST /shifts/:id/cancel` | cancelamento idempotente pela direção, preservando histórico |
+| `GET /shifts/:id/history` | histórico restrito à direção do espaço |
+| `POST /agenda/notifications/:id/read` | marca somente notificação do titular como lida |
+
+Participação aceita `offsetMinutes` e `confirmConflict:true` após HTTP 409
+`schedule_conflict`. A decisão fica no histórico; nunca supera capacidade nem
+substitui aceite de atribuição. Reservas ocupam capacidade e aparecem
+diferenciadas no calendário. Somente confirmações contam para o mínimo.
+Alteração temporal redefine estados ativos para pendente, preserva os anteriores
+no histórico e notifica. Desistência dentro da janela gera prioridade `high`.
+
+`/agenda/foundation` inclui `requests`, `polls` e `shifts` autorizados.
+Notificações possuem `resourceType`, `resourceId`, `priority`, título e leitura.
+Votantes ativos do horário vencedor recebem `confirmed` na reunião única;
+demais convidados começam `pending`. Nenhum canal externo foi introduzido.
 
 ### Contrato central existente
 

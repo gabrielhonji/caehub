@@ -1,5 +1,6 @@
 import mysql, { type Pool, type RowDataPacket } from 'mysql2/promise';
 import { migrateTimetables } from './timetable-migration.js';
+import { migrateAdvancedAgenda } from './agenda-advanced-migration.js';
 
 export type DbConfig = { host: string; port: number; user: string; password: string; database: string };
 export const configFromEnv = (env: NodeJS.ProcessEnv): DbConfig => ({
@@ -11,8 +12,9 @@ export class Database {
   async one<T extends RowDataPacket>(sql: string, values: any[] = []): Promise<T | undefined> { const [rows] = await this.pool.query<T[]>(sql, values); return rows[0]; }
   async many<T extends RowDataPacket>(sql: string, values: any[] = []): Promise<T[]> { const [rows] = await this.pool.query<T[]>(sql, values); return rows; }
   async run(sql: string, values: any[] = []): Promise<void> { await this.pool.execute(sql, values); }
-  async transaction<T>(work: (db: Database) => Promise<T>): Promise<T> {
+  async transaction<T>(work: (db: Database) => Promise<T>, isolation?: 'READ COMMITTED'): Promise<T> {
     const connection = await this.pool.getConnection();
+    if(isolation) await connection.query('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
     await connection.beginTransaction();
     try {
       const value = await work(new Database(connection as unknown as Pool));
@@ -60,6 +62,7 @@ export async function migrate(db: Database): Promise<void> {
   await db.run(`CREATE TABLE IF NOT EXISTS meeting_participants (meeting_id char(36) not null, membership_id char(36) not null, response enum('pending','confirmed','maybe','declined') not null default 'pending', response_revision int unsigned not null default 1, responded_at datetime(3) null, invited_at datetime(3) not null default current_timestamp(3), removed_at datetime(3) null, active_membership_id char(36) GENERATED ALWAYS AS (IF(removed_at IS NULL,membership_id,NULL)) STORED, unique key active_meeting_participant (meeting_id,active_membership_id), index participant_calendar (membership_id,removed_at), constraint fk_meeting_participant_meeting foreign key (meeting_id) references meetings(id), constraint fk_meeting_participant_membership foreign key (membership_id) references memberships(id))`);
   await db.run(`CREATE TABLE IF NOT EXISTS agenda_notifications (id char(36) primary key, membership_id char(36) not null, meeting_id char(36) not null, kind enum('invited','rescheduled','removed') not null, created_at datetime(3) not null default current_timestamp(3), read_at datetime(3) null, index agenda_notification_inbox (membership_id,read_at,created_at), constraint fk_agenda_notification_membership foreign key (membership_id) references memberships(id), constraint fk_agenda_notification_meeting foreign key (meeting_id) references meetings(id))`);
   await migrateTimetables(db);
+  await migrateAdvancedAgenda(db);
   await seed(db);
   await db.run(`INSERT INTO boards (id,workspace_id,name,created_by_membership_id) SELECT UUID(),w.id,'Quadro principal',w.creator_membership_id FROM workspaces w WHERE NOT EXISTS (SELECT 1 FROM boards b WHERE b.workspace_id=w.id)`);
   for (const [position, name, completion] of [['0','Ideias','0'],['1','Planejado','0'],['2','Em andamento','0'],['3','Aguardando','0'],['4','Concluído','1']] as const) await db.run(`INSERT INTO board_columns (id,board_id,name,position,is_completion) SELECT UUID(),b.id,?,?,? FROM boards b WHERE NOT EXISTS (SELECT 1 FROM board_columns c WHERE c.board_id=b.id AND c.position=?)`, [name, Number(position), Number(completion), Number(position)]);
