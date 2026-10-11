@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { confirmTimetable, previewTimetable, setAvailabilityException, type AvailabilityBlock, type TimetablePreviewRow } from '../services/agenda';
-import { Badge, Button, Eyebrow } from './primitives';
+import { Badge, Button } from './primitives';
+import { AgendaSummary, AgendaWorkflow } from './AgendaWorkflow';
 
 const days = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 type EditableRow = TimetablePreviewRow & { key: number };
@@ -11,10 +12,13 @@ export function TimetableImport({ onSaved }: { onSaved: () => Promise<void> }) {
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [open,setOpen]=useState(false);
   const nextKey = useRef(0);
   const update = (key: number, patch: Partial<EditableRow>) => setRows(current => current.map(row => row.key === key ? { ...row, ...patch } : row));
   const manual = () => { const key = nextKey.current++; setMessage(''); setPreview(true); setRows(current => [...current, { key, weekday: 1, code: 'Manual', startTime: null, endTime: null, needsReview: true }]); };
-  return <article className="agenda-panel"><Eyebrow>GRADE ACADÊMICA · UTFPR</Eyebrow><h2>Importe e confira suas aulas.</h2>
+  return <><AgendaSummary eyebrow="GRADE ACADÊMICA · UTFPR" title="Grade acadêmica" description="Importe suas aulas, confira os horários e mantenha sua disponibilidade atualizada."><Button onClick={()=>setOpen(true)}>Importar grade</Button></AgendaSummary>
+    <AgendaWorkflow busy={busy} title="Importar grade acadêmica" open={open} onClose={()=>setOpen(false)}>
+    <p>1. Envie o PDF ou preencha manualmente. 2. Confira os horários e o período. 3. Confirme para salvar.</p>
     <p>PDF de até 5 MB. A extração lê texto e posições das dez primeiras páginas; documentos escaneados precisam de preenchimento manual.</p>
     <form className="agenda-form" onSubmit={async event => {
       event.preventDefault(); const file = new FormData(event.currentTarget).get('pdf');
@@ -32,17 +36,17 @@ export function TimetableImport({ onSaved }: { onSaved: () => Promise<void> }) {
       finally { setBusy(false); }
     }}><div className="wide-field" role="status">{warnings.map(warning => <p key={warning}>{warning}</p>)}</div>
       <label>Período letivo<input name="term" required maxLength={80} placeholder="2026/2" disabled={busy}/></label><label>Primeiro dia<input type="date" name="validFrom" required disabled={busy}/></label><label>Último dia<input type="date" name="validTo" required disabled={busy}/></label>
-      <div className="wide-field">{rows.map(row => <fieldset className="agenda-form" key={row.key} disabled={busy}><legend>{row.code} <Badge tone="waiting">Conferir</Badge></legend><label>Dia<select value={row.weekday} onChange={event => update(row.key, { weekday: Number(event.target.value) })}>{days.map((day, index) => <option key={day} value={index}>{day}</option>)}</select></label><label>Início<input type="time" required value={row.startTime ?? ''} onChange={event => update(row.key, { startTime: event.target.value })}/></label><label>Fim<input type="time" required value={row.endTime ?? ''} onChange={event => update(row.key, { endTime: event.target.value })}/></label><Button type="button" onClick={() => setRows(current => current.filter(item => item.key !== row.key))}>Remover aula</Button></fieldset>)}</div>
+      <div className="wide-field">{rows.map(row => <fieldset className="agenda-form timetable-row" key={row.key} disabled={busy}><legend>{row.code} <Badge tone="waiting">Conferir</Badge></legend><label>Dia<select value={row.weekday} onChange={event => update(row.key, { weekday: Number(event.target.value) })}>{days.map((day, index) => <option key={day} value={index}>{day}</option>)}</select></label><label>Início<input type="time" required value={row.startTime ?? ''} onChange={event => update(row.key, { startTime: event.target.value })}/></label><label>Fim<input type="time" required value={row.endTime ?? ''} onChange={event => update(row.key, { endTime: event.target.value })}/></label><Button type="button" onClick={() => setRows(current => current.filter(item => item.key !== row.key))}>Remover aula</Button></fieldset>)}</div>
       {!rows.length && <p className="wide-field">Nenhuma aula detectada. Adicione os intervalos usando seu PDF.</p>}
       <Button type="button" onClick={manual} disabled={busy}>Adicionar aula</Button>
       <fieldset className="participant-picker"><legend>Revisão da grade</legend><label><input type="checkbox" required disabled={busy}/><span>Conferi todos os dias e horários. Ao reimportar o mesmo período, a nova grade substitui a grade importada anterior; blocos manuais são preservados.</span></label></fieldset>
       <Button variant="primary" disabled={busy || !rows.length}>{busy ? 'Salvando…' : 'Confirmar e salvar grade'}</Button>
     </form>}
     {message && <p className="form-feedback" role="status">{message}</p>}
-  </article>;
+  </AgendaWorkflow></>;
 }
 
-export function AvailabilityExceptions({ block, act }: { block: AvailabilityBlock; act: (work: () => Promise<unknown>, message: string) => Promise<void> }) {
+export function AvailabilityExceptions({ block, act }: { block: AvailabilityBlock; act: (work: () => Promise<unknown>, message: string) => Promise<unknown> }) {
   const excluded: string[] = (typeof block.excludedDates === 'string' ? JSON.parse(block.excludedDates) : block.excludedDates) ?? [];
   const [busy, setBusy] = useState(false);
   const change = async (date: string, value: boolean) => { setBusy(true); try { await act(() => setAvailabilityException(block.id, date, value), value ? 'Ocorrência liberada.' : 'Ocorrência restaurada.'); } finally { setBusy(false); } };

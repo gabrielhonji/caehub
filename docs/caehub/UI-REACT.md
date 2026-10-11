@@ -35,3 +35,18 @@ As telas não redefinem controles base. Um componente de cartão pode exibir atr
 ## Aceite UI-001
 
 Antes de concluir: comprovar reutilização ou justificar responsabilidade nova; conferir DESIGN; verificar estados e interação alterados; avaliar consumidores impactados por mudança compartilhada. Não exigir um teste automatizado que apenas replique classes CSS. Interações críticas e regressões precisam de evidência apropriada, conforme ENG-001.
+
+## Composição de fluxos da Agenda (1.5.0)
+
+`AgendaSummary` compõe `Eyebrow` e ações existentes como entrada compacta;
+`AgendaWorkflow` compõe `Dialog` para isolar formulários e resultados sem
+expandir a página. A responsabilidade de domínio é manter o rascunho em memória
+quando o fluxo fecha; recarregar a página descarta o rascunho. Não há nova
+biblioteca, persistência de documentos ou componente base duplicado.
+
+O `Dialog` compartilhado usa o elemento nativo no topo da página, título único,
+fundo inerte e bloqueio de rolagem. A variante `wide` acomoda fluxos de revisão;
+o cabeçalho permanece visível e o conteúdo tem rolagem limitada à viewport.
+Escape fecha o diálogo superior; Tab fica no diálogo e fechar restaura o foco.
+A composição mantém a variante padrão usada pelo Kanban. Layout, teclado e
+formulários longos são verificados em Chromium, 1440/390 px e nos dois temas.

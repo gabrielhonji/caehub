@@ -3,6 +3,7 @@ import type { Space } from '../domain/types';
 import type { MemberOption } from '../services/agenda';
 import { cancelShift, closePoll, createPoll, createShift, participateShift, relatedShiftMeetings, shiftHistory, updateShift, votePoll, type MeetingPoll, type OperationalShift } from '../services/agenda-advanced';
 import { AgendaPeoplePicker } from './AvailabilityPlanning';
+import { AgendaWorkflow } from './AgendaWorkflow';
 import { Badge, Button, Dialog, EmptyState, Eyebrow } from './primitives';
 
 const localInput=(value:string)=>{const date=new Date(value);return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);};
@@ -34,12 +35,17 @@ function shiftData(data:FormData) {
 export function AgendaOperations({polls,shifts,members,spaces,canManage,onSaved}:{polls:MeetingPoll[];shifts:OperationalShift[];members:MemberOption[];spaces:Space[];canManage:boolean;onSaved:()=>Promise<void>}) {
   const [busy,setBusy]=useState(false),[message,setMessage]=useState('');
   const [optionCount,setOptionCount]=useState(2);
+  const [view,setView]=useState<'polls'|'shifts'>('polls'),[archived,setArchived]=useState(false);
+  const [task,setTask]=useState<'newPoll'|'newShift'|'poll'|'shift'|null>(null);
+  const [selectedId,setSelectedId]=useState('');
+  const visiblePolls=polls.filter(p=>archived||!p.closedAt);
+  const visibleShifts=shifts.filter(s=>archived||(!s.cancelledAt&&new Date(s.endsAt)>=new Date()));
   const [confirmation,setConfirmation]=useState<{title:string;text:string;work:()=>Promise<unknown>} | null>(null);
   const [history,setHistory]=useState<Awaited<ReturnType<typeof shiftHistory>>>();
   const opener=useRef<HTMLElement|null>(null);
   const rememberFocus=()=>{opener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;};
   const openConfirmation=(value:NonNullable<typeof confirmation>)=>{rememberFocus();setConfirmation(value);};
-  const run:Run=async(work,success)=>{if(!confirmation&&!history)rememberFocus();setBusy(true);setMessage('');try {await work();await onSaved();setMessage(success);return true;}catch(error){setMessage(error instanceof Error?error.message:'Não foi possível salvar.');return false;}finally{setBusy(false);}};
+  const run:Run=async(work,success)=>{if(busy)return false;if(!confirmation&&!history)rememberFocus();setBusy(true);setMessage('');try {await work();await onSaved();setMessage(success);return true;}catch(error){setMessage(error instanceof Error?error.message:'Não foi possível salvar.');return false;}finally{setBusy(false);}};
   const participate=(shift:OperationalShift,action:string,membershipId?:string)=>void run(async()=>{
     try {await participateShift(shift.id,{action,membershipId});}
     catch(error) {
@@ -47,23 +53,27 @@ export function AgendaOperations({polls,shifts,members,spaces,canManage,onSaved}
       setConfirmation({title:'Conflito de horário',text:'Há sobreposição com aulas, reuniões ou outros turnos. Ao prosseguir, sua decisão será registrada. A reserva atribuída ainda exige aceite.',work:()=>participateShift(shift.id,{action,membershipId,confirmConflict:true})});
     }
   },'Operação processada.');
-  const submit=(event:FormEvent<HTMLFormElement>,work:(data:FormData)=>Promise<unknown>,success:string)=>{event.preventDefault();const data=new FormData(event.currentTarget);void run(()=>work(data),success);};
-  return <section className="agenda-panel advanced-agenda agenda-operations" aria-busy={busy}>
-    <Eyebrow>REUNIÕES E ESCALAS</Eyebrow><h2>Votações e turnos.</h2>
+  const submit=(event:FormEvent<HTMLFormElement>,work:(data:FormData)=>Promise<unknown>,success:string)=>{event.preventDefault();const form=event.currentTarget,data=new FormData(form);void run(()=>work(data),success).then(saved=>{if(saved&&(task==='newPoll'||task==='newShift')){setTask(null);form.reset();}});};
+  return <section className="advanced-agenda agenda-operations" aria-busy={busy}>
+    <div className="agenda-section-heading"><Eyebrow>CONVITES E PARTICIPAÇÕES</Eyebrow><h2>Votações e turnos</h2><p>Consulte o que precisa da sua resposta e abra um item para participar ou gerenciar.</p></div>
+    <fieldset disabled={busy} className="workflow-controls agenda-operations-toolbar"><div role="group" aria-label="Tipo de participação"><Button aria-pressed={view==='polls'} onClick={()=>setView('polls')}>Votações ({polls.filter(p=>!p.closedAt).length})</Button><Button aria-pressed={view==='shifts'} onClick={()=>setView('shifts')}>Turnos ({shifts.filter(s=>!s.cancelledAt&&new Date(s.endsAt)>=new Date()).length})</Button></div>{canManage&&<Button variant="primary" onClick={()=>setTask(view==='polls'?'newPoll':'newShift')}>{view==='polls'?'Criar votação de horários':'Criar turno'}</Button>}</fieldset>
+    <label className="agenda-archive-toggle"><input type="checkbox" checked={archived} onChange={e=>setArchived(e.target.checked)}/>Mostrar encerrados e cancelados</label>
     <p role="status" aria-live="polite">{message}</p>
     <fieldset disabled={busy} className="workflow-controls">
-      {canManage&&<details><summary>Criar votação de horários</summary><form className="agenda-form" onSubmit={event=>submit(event,data=>createPoll({title:String(data.get('title')),description:String(data.get('description')||''),location:String(data.get('location')||''),workspaceId:String(data.get('workspaceId')||'')||undefined,deadline:data.get('deadline')?instant(data.get('deadline')):undefined,participantIds:data.getAll('participantIds').map(String),options:Array.from({length:optionCount},(_,index)=>({startsAt:instant(data.get(`start-${index}`)),endsAt:instant(data.get(`end-${index}`))}))}),'Votação criada; participantes notificados.')}>
+      {canManage&&<AgendaWorkflow busy={busy} title="Criar votação de horários" open={task==='newPoll'} onClose={()=>setTask(null)}><p role="status">{message}</p><form className="agenda-form" onSubmit={event=>submit(event,data=>createPoll({title:String(data.get('title')),description:String(data.get('description')||''),location:String(data.get('location')||''),workspaceId:String(data.get('workspaceId')||'')||undefined,deadline:data.get('deadline')?instant(data.get('deadline')):undefined,participantIds:data.getAll('participantIds').map(String),options:Array.from({length:optionCount},(_,index)=>({startsAt:instant(data.get(`start-${index}`)),endsAt:instant(data.get(`end-${index}`))}))}),'Votação criada; participantes notificados.')}>
         <label>Título<input name="title" required maxLength={200}/></label><label>Descrição<textarea name="description" maxLength={10000}/></label><label>Local<input name="location" maxLength={255}/></label>
         <label>Espaço<select name="workspaceId"><option value="">Institucional</option>{spaces.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
         <label>Prazo (opcional)<input name="deadline" type="datetime-local"/></label>
         {Array.from({length:optionCount},(_,index)=><fieldset key={index}><legend>Opção {index+1}</legend><div className="agenda-form-grid"><label>Início<input name={`start-${index}`} type="datetime-local" required/></label><label>Fim<input name={`end-${index}`} type="datetime-local" required/></label></div></fieldset>)}
         <div className="response-actions"><Button type="button" disabled={optionCount>=30} onClick={()=>setOptionCount(c=>c+1)}>Adicionar horário</Button><Button type="button" disabled={optionCount<=2} onClick={()=>setOptionCount(c=>c-1)}>Retirar último horário</Button></div>
         <AgendaPeoplePicker members={members}/><Button variant="primary">Abrir votação</Button>
-      </form></details>}
-      {!polls.length&&<EmptyState title="Nenhuma votação">As votações dirigidas a você aparecerão aqui.</EmptyState>}
+      </form></AgendaWorkflow>}
+      {view==='polls'&&!visiblePolls.length&&<EmptyState title="Nenhuma votação">As votações dirigidas a você aparecerão aqui.</EmptyState>}
       {polls.map(poll=>{
         const max=Math.max(...poll.options.map(o=>Number(o.votes))),leaders=poll.options.filter(o=>Number(o.votes)===max);
-        return <article className="workflow-card" key={poll.id}><h3>{poll.title}</h3><Badge tone={poll.closedAt?'neutral':poll.open?'active':'waiting'}>{poll.closedAt?'Reunião convocada':poll.open?'Votação aberta':'Prazo encerrado'}</Badge>{poll.description&&<p>{poll.description}</p>}{poll.deadline&&<p>Prazo: {dateTime(poll.deadline)}</p>}
+        return <div key={poll.id}>
+          {view==='polls'&&visiblePolls.some(p=>p.id===poll.id)&&<article className="agenda-list-row"><div><h3>{poll.title}</h3><p>{poll.deadline?`Prazo: ${dateTime(poll.deadline)}`:'Sem prazo definido'}</p><Badge tone={poll.closedAt?'neutral':poll.votedAt?'active':'waiting'}>{poll.closedAt?'Convocada':poll.votedAt?'Voto registrado':poll.invited?'Aguardando seu voto':'Acompanhando respostas'}</Badge></div><Button onClick={()=>{setSelectedId(poll.id);setTask('poll');}}>Abrir votação</Button></article>}
+          <AgendaWorkflow busy={busy} title={poll.title} open={task==='poll'&&selectedId===poll.id} onClose={()=>setTask(null)}><p role="status">{message}</p><article className="workflow-card"><Badge tone={poll.closedAt?'neutral':poll.open?'active':'waiting'}>{poll.closedAt?'Reunião convocada':poll.open?'Votação aberta':'Prazo encerrado'}</Badge>{poll.description&&<p>{poll.description}</p>}{poll.deadline&&<p>Prazo: {dateTime(poll.deadline)}</p>}
           <form className="agenda-form" key={poll.votedAt??'not-voted'} onSubmit={event=>submit(event,data=>votePoll(poll.id,data.getAll('optionIds').map(String),Boolean(data.get('noneWorks'))),'Voto registrado.')}>
             <fieldset className="participant-picker" disabled={!poll.open||!poll.invited}><legend>Selecione todos os horários em que pode comparecer</legend>{poll.options.map(option=><label key={option.id}><input type="checkbox" name="optionIds" value={option.id} defaultChecked={Boolean(option.selected)}/><span>{dateTime(option.startsAt)}–{dateTime(option.endsAt)} · {option.votes} votos</span></label>)}<label><input type="checkbox" name="noneWorks" defaultChecked={poll.noneWorks}/><span>Nenhuma opção funciona</span></label></fieldset>
             {poll.open&&poll.invited&&<Button>{poll.votedAt?'Alterar voto':'Salvar voto'}</Button>}
@@ -74,11 +84,13 @@ export function AgendaOperations({polls,shifts,members,spaces,canManage,onSaved}
             {!max&&<p>Sem votos válidos: não é possível convocar.</p>}
             <label className="checkbox-label"><input type="checkbox" required/>Confirmo o encerramento e a convocação no horário vencedor.</label><Button disabled={!max}>Encerrar e convocar</Button>
           </form>}
-        </article>;
+        </article></AgendaWorkflow></div>;
       })}
-      {canManage&&<details><summary>Criar turno</summary><form className="agenda-form" onSubmit={event=>submit(event,data=>createShift(shiftData(data)),'Turno criado.')}><ShiftFields spaces={spaces}/><Button variant="primary">Criar turno</Button></form></details>}
-      {!shifts.length&&<EmptyState title="Nenhum turno">Turnos dos seus espaços e reservas aparecerão aqui.</EmptyState>}
-      {shifts.map(shift=><article className="workflow-card" key={`${shift.id}-${shift.revision}`}><h3>{shift.title}</h3><p>{shift.workspace} · {dateTime(shift.startsAt)}–{dateTime(shift.endsAt)}</p>{shift.location&&<p>{shift.location}</p>}{shift.description&&<p>{shift.description}</p>}
+      {canManage&&<AgendaWorkflow busy={busy} title="Criar turno" open={task==='newShift'} onClose={()=>setTask(null)}><p role="status">{message}</p><form className="agenda-form" onSubmit={event=>submit(event,data=>createShift(shiftData(data)),'Turno criado.')}><ShiftFields spaces={spaces}/><Button variant="primary">Criar turno</Button></form></AgendaWorkflow>}
+      {view==='shifts'&&!visibleShifts.length&&<EmptyState title="Nenhum turno">Turnos dos seus espaços e reservas aparecerão aqui.</EmptyState>}
+      {shifts.map(shift=><div key={shift.id}>
+        {view==='shifts'&&visibleShifts.some(s=>s.id===shift.id)&&<article className="agenda-list-row"><div><h3>{shift.title}</h3><p>{shift.workspace} · {dateTime(shift.startsAt)}</p><Badge tone={shift.cancelledAt?'neutral':shift.ownStatus==='pending'?'waiting':shift.ownStatus==='confirmed'?'active':'neutral'}>{shift.cancelledAt?'Cancelado':shift.ownStatus==='pending'?'Sua reserva está pendente':shift.ownStatus==='confirmed'?'Você está confirmado':`${shift.remaining} vagas disponíveis`}</Badge></div><Button onClick={()=>{setSelectedId(shift.id);setTask('shift');}}>Ver turno</Button></article>}
+        <AgendaWorkflow busy={busy} title={shift.title} open={task==='shift'&&selectedId===shift.id} onClose={()=>setTask(null)}><p role="status">{message}</p><article className="workflow-card" key={shift.revision}><p>{shift.workspace} · {dateTime(shift.startsAt)}–{dateTime(shift.endsAt)}</p>{shift.location&&<p>{shift.location}</p>}{shift.description&&<p>{shift.description}</p>}
         <Badge tone={shift.cancelledAt?'neutral':shift.minimumReached?'active':'waiting'}>{shift.cancelledAt?'Cancelado':`${shift.confirmed} confirmados · ${shift.reserved} reservas · ${shift.remaining} vagas`}</Badge>
         {!shift.cancelledAt&&<p>{shift.minimumCapacity==null?'Sem equipe mínima definida':`Equipe mínima: ${shift.minimumCapacity}${shift.minimumReached?' · Atingida':' · Ainda incompleta'}`}</p>}
         {shift.ownStatus&&<p>Sua participação: <strong>{statusLabel[shift.ownStatus]}</strong></p>}
@@ -94,7 +106,7 @@ export function AgendaOperations({polls,shifts,members,spaces,canManage,onSaved}
           <Button onClick={()=>openConfirmation({title:'Cancelar turno',text:'Todas as participações serão canceladas e os horários liberados. O histórico será preservado.',work:()=>cancelShift(shift.id)})}>Cancelar turno</Button>
         </details>}
         {shift.canManage&&<Button onClick={()=>{rememberFocus();void shiftHistory(shift.id).then(setHistory).catch(error=>setMessage(error instanceof Error?error.message:'Não foi possível carregar o histórico.'));}}>Ver histórico</Button>}
-      </article>)}
+      </article></AgendaWorkflow></div>)}
     </fieldset>
     {confirmation&&<Dialog title={confirmation.title} returnFocus={opener.current} onClose={()=>setConfirmation(null)}><p>{confirmation.text}</p><Button disabled={busy} variant="primary" onClick={()=>void run(confirmation.work,'Operação confirmada.').then(saved=>{if(saved)setConfirmation(null);})}>Confirmar e prosseguir</Button></Dialog>}
     {history&&<Dialog title="Histórico do turno" returnFocus={opener.current} onClose={()=>setHistory(undefined)}><ol className="shift-history">{history.map(h=><li key={h.id}><strong>{actionLabel[h.action]??h.action}</strong><p>{h.actor} · {dateTime(h.createdAt)}</p>{typeof h.data.status==='string'&&<p>{typeof h.data.previousStatus==='string'?`${statusLabel[h.data.previousStatus]} → `:''}{statusLabel[h.data.status]}</p>}{h.data.rescheduled===true&&<p>Horário alterado; participações voltaram a pendente.</p>}{h.data.conflictConfirmed===true&&<p>Conflito aceito conscientemente.</p>}</li>)}</ol></Dialog>}

@@ -1,6 +1,24 @@
 # Coordenação de agentes
 
-## Atividade atual — Agente 04, 11/10/2026
+## Atividade atual — UX da Agenda, 11/10/2026
+
+Incremento `feat/agenda-ux`, sobre `main` em `a98bf06`, versão 1.5.0.
+Calendário, quatro cards de ações com alturas consistentes e listas resumidas
+substituem a grade de formulários expansíveis. Importação, disponibilidade,
+reuniões, planejamento, notificações, votações e turnos abrem em diálogos com
+rolagem própria. Planejamento semanal filtra por dia e horários livres;
+votações/turnos separam itens ativos de encerrados/cancelados. Rascunhos ficam
+em memória ao fechar/reabrir; falha de salvamento preserva os campos.
+
+Validação: 18 testes de servidor passaram em MySQL descartável; TypeScript e
+Vite passaram. Chromium verificou quatro cards com altura igual, 30 opções de
+votação e 24 aulas sem ampliar a página, rascunhos, teclado, histórico
+sobreposto, criação/voto, disponibilidade e edição de reunião. Revisão visual
+em desktop/mobile e temas claro/escuro. Dados de revisão são fictícios. Sem
+alterações em autorização, contratos de API ou infraestrutura de produção.
+Publicação segue `build-app`/`deploy-app` após integração validada em `main`.
+
+## Entrega anterior — Agente 04, 11/10/2026
 
 Objetivo: Agenda Avançada, reuniões coletivas e escalas. Branch local:
 `feat/agenda-avancada`, base `e97e004` com incrementos 01–03 presentes.
