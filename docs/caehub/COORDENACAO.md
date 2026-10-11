@@ -118,3 +118,39 @@ Handoff: resultado; arquivos/áreas alterados; critérios atendidos; verificaç�
 **R:** na implementação, manter um único estado curto com objetivo, marco atual, decisões novas, andamento, bloqueios/dependências, próxima tarefa e evidência. Fonte de verdade de regra continua no módulo; não duplicar em status. Criar arquivos extras apenas quando volume ou coordenação justificar.
 
 O coordenador aplica a revisão proporcional por tarefa e o gate completo por marco/release. Não declarar pronto com base apenas em resumos de agentes quando ainda falta integração ou verificação. Componentes e regras comuns têm um responsável por rodada de edição.
+
+## Entrega validada — Agente 05, 11/10/2026
+
+Branch `feat/catalogo-inventario`, base `3369fae` limpa e integrada. Escopo:
+`src/server/commercial*`, migração/database e rotas/app, tela Comercial e sua
+composição, testes de integração, documentação Comercial/ENG/coordenação.
+Sem reservas concorrentes identificadas nestes caminhos.
+
+Aceite observável: administração/direção de Produtos cadastra catálogo e
+variações P/M independentes; entrada 50, saída 8, recusa de 43 e ajuste +3
+justificado resultam em 45, com histórico/ator; baixas concorrentes não deixam
+saldo negativo; membro comum e direção de outro departamento recebem 403;
+campanha exclusiva não pode ser trocada/reutilizada; reconexão mantém saldos.
+UI real em desktop/mobile e ambos os temas, feedback de erro/sucesso, gate
+completo antes de commit/push, integração main e deploy oficial autorizados
+pelo pedido Agente 05. Sem checkout, pedidos, pagamentos ou reservas.
+
+Evidência: 23 testes completos de servidor em MySQL descartável; TypeScript,
+Vite e `npm audit --omit=dev --audit-level=high` passaram (zero vulnerabilidades).
+Gate de metadados confirmou 1.7.0. Chromium percorreu cadastro/campanha,
+variações independentes, edição, entradas/saídas/ajuste, recusa sem perder
+rascunho, histórico, busca/vazio e recarga. Revisão final em 1440/768/390 px,
+claro/escuro, campos compartilhados de 44 px/16 px, teclado/foco, sem overflow
+ou exceções. Reinício real do servidor manteve saldo 45 e histórico intacto.
+
+Preparação visual encontrou EACCES em bind mount temporário; instalação e
+capturas passaram ao filesystem interno do container, sem alterar permissões,
+labels ou infraestrutura do host. Timeout de seletor visual foi corrigido;
+teste aguardou aplicação pronta. Nenhuma falha de código/gate permanece.
+Escopo ampliado somente para alias `form-fields` do padrão existente, README,
+UI-REACT/ACEITE/decisões; não altera estilos anteriores. Dados são fictícios e
+não versionados. Publicação usa origem oficial já cadastrada em main,
+`build-app caehub-gabriel 1.7.0` e `deploy-app` com healthcheck/rollback.
+Resultado Git/publicação é informado separadamente no relatório deste chat;
+validação autenticada de produção depende da sessão real do usuário, enquanto
+o gate público verifica acesso Honji e recusa sem sessão.

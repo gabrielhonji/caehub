@@ -1,6 +1,7 @@
 import mysql, { type Pool, type RowDataPacket } from 'mysql2/promise';
 import { migrateTimetables } from './timetable-migration.js';
 import { migrateAdvancedAgenda } from './agenda-advanced-migration.js';
+import { migrateCommercial } from './commercial-migration.js';
 
 export type DbConfig = { host: string; port: number; user: string; password: string; database: string };
 export const configFromEnv = (env: NodeJS.ProcessEnv): DbConfig => ({
@@ -63,6 +64,7 @@ export async function migrate(db: Database): Promise<void> {
   await db.run(`CREATE TABLE IF NOT EXISTS agenda_notifications (id char(36) primary key, membership_id char(36) not null, meeting_id char(36) not null, kind enum('invited','rescheduled','removed') not null, created_at datetime(3) not null default current_timestamp(3), read_at datetime(3) null, index agenda_notification_inbox (membership_id,read_at,created_at), constraint fk_agenda_notification_membership foreign key (membership_id) references memberships(id), constraint fk_agenda_notification_meeting foreign key (meeting_id) references meetings(id))`);
   await migrateTimetables(db);
   await migrateAdvancedAgenda(db);
+  await migrateCommercial(db);
   await seed(db);
   await db.run(`INSERT INTO boards (id,workspace_id,name,created_by_membership_id) SELECT UUID(),w.id,'Quadro principal',w.creator_membership_id FROM workspaces w WHERE NOT EXISTS (SELECT 1 FROM boards b WHERE b.workspace_id=w.id)`);
   for (const [position, name, completion] of [['0','Ideias','0'],['1','Planejado','0'],['2','Em andamento','0'],['3','Aguardando','0'],['4','Concluído','1']] as const) await db.run(`INSERT INTO board_columns (id,board_id,name,position,is_completion) SELECT UUID(),b.id,?,?,? FROM boards b WHERE NOT EXISTS (SELECT 1 FROM board_columns c WHERE c.board_id=b.id AND c.position=?)`, [name, Number(position), Number(completion), Number(position)]);

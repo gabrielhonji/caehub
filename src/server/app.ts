@@ -10,6 +10,7 @@ import { TimetableService } from './timetable-service.js';
 import { AvailabilityRequests } from './availability-requests.js';
 import { MeetingPolls } from './meeting-polls.js';
 import { Shifts, ScheduleConflict } from './shifts.js';
+import { CommercialService, productInput, productFields, variantInput, movementInput } from './commercial.js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -35,6 +36,17 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
     return reply.code(500).send({ error: 'internal_error' });
   });
   const actor = async (request: import("fastify").FastifyRequest) => { const value = await identity.current(request); if (!value) throw new Forbidden('Honji identity integration is unavailable'); if (!value.projectAccess) throw new Forbidden('project.access is required'); if(value.debugView&&value.debugView.mode!=='real'&&!['GET','HEAD'].includes(request.method))throw new Forbidden('debug profiles are read-only'); return value; };
+  const commercial=new CommercialService(service.db,service);
+  const paramId=(request:import('fastify').FastifyRequest)=>id.parse((request.params as {id:string}).id);
+  app.get('/api/commercial',async request=>commercial.catalog(await actor(request)));
+  app.post('/api/commercial/campaigns',async(request,reply)=>reply.code(201).send(await commercial.createCampaign(await actor(request),z.object({name:z.string().trim().min(1).max(160)}).strict().parse(request.body).name)));
+  app.post('/api/commercial/products',async(request,reply)=>reply.code(201).send(await commercial.create(await actor(request),productInput.parse(request.body))));
+  app.patch('/api/commercial/products/:id',async request=>commercial.update(await actor(request),paramId(request),productFields.extend({status:z.enum(['active','archived']),version:z.number().int().positive()}).strict().parse(request.body)));
+  app.post('/api/commercial/products/:id/variants',async(request,reply)=>reply.code(201).send(await commercial.variant(await actor(request),paramId(request),variantInput.parse(request.body))));
+  app.patch('/api/commercial/products/:id/variants/:variantId',async request=>{const input=variantInput.extend({status:z.enum(['active','archived'])}).strict().parse(request.body);return commercial.variant(await actor(request),paramId(request),input,id.parse((request.params as {variantId:string}).variantId),input.status);});
+  app.post('/api/commercial/products/:id/campaigns',async request=>commercial.link(await actor(request),paramId(request),z.object({campaignId:id}).strict().parse(request.body).campaignId));
+  app.post('/api/commercial/variants/:id/movements',async(request,reply)=>reply.code(201).send(await commercial.move(await actor(request),paramId(request),movementInput.parse(request.body))));
+  app.get('/api/commercial/variants/:id/movements',async request=>commercial.history(await actor(request),paramId(request)));
   app.get('/health', async (request) => ({ ok: true, version: manifest.version, release: manifest.release }));
   app.get('/api/me', async (request) => { const current = await actor(request); const membership = await service.membership(current); return { subject: current.subject, displayName: current.displayName, projectAccess: current.projectAccess, owner: current.owner, csrfToken:(request as any).caehubCsrf??'', membership: membership ? { id: membership.id, role: membership.role, status: membership.status } : null, integration: 'honji-bff', debugView:current.debugView }; });
   app.get('/api/organization', async (request) => { await actor(request); return service.organization(); });

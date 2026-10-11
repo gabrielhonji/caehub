@@ -1,34 +1,84 @@
-# Comercial — fase futura
+# Comercial — catálogo e inventário (Agente 05)
 
-Entrada: BASE.md + este documento; dependências seletivas: autorização contextual, DESIGN/UI-001 e critérios C em ACEITE.md.
+Pedido de 11/10/2026 aprova catálogo, variações, unidades inteiras, saldo não
+negativo, histórico, entradas/saídas/ajustes e vínculo exclusivo de encomendas.
+BASE + autorização contextual + DESIGN/UI-001 continuam aplicáveis.
 
-## Invariantes confirmadas
+## Contrato implementado
 
-**C:** estoque físico é central. Encomendas são exclusivas por lojinha. Não criar estoques físicos independentes por loja como fonte de verdade; não misturar encomendas entre lojinhas por haver estoque compartilhado.
+Produtos têm UUID, nome, descrição, SKU único na organização, categoria textual,
+preço de referência opcional em centavos, tipo físico/encomenda e situação
+ativa/arquivada. Variações têm UUID, nome único no produto, SKU único e situação.
+Todo produto começa com pelo menos uma variação (Única quando não houver
+opções); o saldo sempre pertence à variação e começa em zero. Tipo e campanha
+de origem são imutáveis: nova campanha de encomenda exige novo produto.
+Alterações de produto usam versão esperada; edições obsoletas são recusadas.
 
-Estoque compartilhado não implica catálogo, preço, acesso a compradores ou encomendas compartilhados. O vínculo da encomenda com sua lojinha deve ser preservado e validado em toda operação.
+Inventário físico central, inclusive sobras recebidas de encomendas. Nenhum
+pedido futuro é contado. `physicalQuantity` e `availableQuantity` coincidem;
+`reservedQuantity=0` e `reservationsImplemented=false` explicitam a ausência de
+reservas reais. Reservas, limites de venda e pedidos são trabalho futuro.
 
-## Modelo conceitual proposto
+Movimentações transacionais bloqueiam produto e variação, verificam saldo e
+persistem alteração/histórico atomicamente. Entrada/saída recebem quantidade
+positiva; ajuste recebe diferença inteira positiva/negativa. Justificativa é
+obrigatória em todas; referência operacional é opcional. Histórico registra
+delta assinado, saldo resultante, ator confiável/nome e timestamp do banco.
+Não existem edição/exclusão de movimentações: corrigir por ajuste compensatório.
+Produto/variação arquivado preserva saldo/histórico e impede movimentação até
+reativação. Não há campo para sobrescrever saldo pelo frontend.
 
-| Conceito | Estado | Responsabilidade |
-| --- | --- | --- |
-| Estoque físico central | C | Fonte central de quantidade física |
-| Lojinha | C/P | Contexto exclusivo de encomendas; gestão e catálogo ainda pendentes |
-| Item/variante | R | Identificação daquilo que se conta fisicamente |
-| Movimentação | R | Rastrear entrada, saída ou ajuste com motivo e ator |
-| Encomenda | C/P | Pertence à lojinha; significado operacional e campos pendentes |
-| Reserva | R/P | Separar comprometimento de quantidade física, somente se aprovado |
+## Política de acesso
 
-Não tratar encomenda como retirada física automática. Não definir uma encomenda como compra de item já disponível ou como pré-venda sem confirmação. Nenhum contrato de pagamento, gateway ou endpoint faz parte deste plano.
+Consulta e manutenção administrativas requerem `project.access`, vínculo
+institucional ativo e administração institucional existente (Owner central,
+presidência, vice, conselho) ou papel institucional diretor com vínculo ativo
+de direção do departamento Produtos. Filiação simples a Produtos ou direção de
+outro departamento não concede acesso. A política é aplicada em cada rota pelo
+backend com ator da sessão Honji/BFF; não aceita identidade/papel do navegador.
+Perfis de debug continuam somente leitura. Consulta pública/compradores fica
+para o próximo incremento, com política própria.
 
-## Regras a decidir (P-06)
+## API efetiva
 
-Definir: catálogo/variações, unidade de contagem, poderes sobre estoque central, saldo negativo, reserva e liberação, disponibilidade, ciclo de encomenda, cancelamento, pagamento, retirada/entrega, devolução e reconciliação. Decidir também quem pode ver cada lojinha e se há operações administrativas entre elas.
+Todas as rotas abaixo usam o BFF e proteção CSRF existentes nas mutações.
 
-**R:** distinguir quantidade física, reservada e disponível quando houver reserva aprovada; validar concorrência de reservas/baixas na camada confiável para evitar consumo duplicado. Fórmula e momento de baixa não são definidos aqui.
+| Método e caminho | Resultado |
+| --- | --- |
+| GET `/api/commercial` | Produtos, variações/saldos, campanhas e capacidade administrativa |
+| POST `/api/commercial/campaigns` | Campanha mínima: UUID, organização e nome |
+| POST `/api/commercial/products` | Produto e primeiras variações atomicamente |
+| PATCH `/api/commercial/products/:id` | Metadados/situação com versão esperada |
+| POST `/api/commercial/products/:id/variants` | Nova variação com saldo zero |
+| PATCH `/api/commercial/products/:id/variants/:variantId` | Nome, SKU e situação |
+| POST `/api/commercial/products/:id/campaigns` | Vínculo sem duplicar estoque; recusa outra campanha para encomenda |
+| POST `/api/commercial/variants/:id/movements` | Entrada, saída ou ajuste e saldo resultante |
+| GET `/api/commercial/variants/:id/movements` | Histórico preservado |
 
-## Segurança e aceite futuro
+Migração idempotente `migrateCommercial`, integrada ao boot/migrate existente:
+`commercial_campaigns`, `commercial_products`, `commercial_variants`,
+`commercial_campaign_products`, `commercial_movements`. FKs, unicidade e CHECKs
+complementam validação estrita do servidor. Vínculos a campanhas físicas
+referenciam o mesmo produto/variações centrais. Campanhas ainda não são lojas
+operacionais; não há checkout, vendas, limites próprios ou gestão de pedidos.
 
-Consultar, editar ou exportar encomenda requer autorização na lojinha de origem. Usuário autorizado na lojinha A não ganha acesso à B. Eventual administrador transversal requer regra explícita; não inferir essa exceção.
+## Interface e aceite
 
-A futura fase deve demonstrar que duas lojinhas usam a mesma fonte de estoque físico e que suas encomendas permanecem isoladas, inclusive por ID direto e exportação. Testar concorrência e reconciliação depois de aprovar o fluxo operacional. Não implementar contabilidade, emissão fiscal ou pagamento por antecipação.
+Comercial compõe AppShell, Eyebrow, Button, Badge, Dialog, LoadingState,
+EmptyState, ErrorState e AccessDeniedState existentes, com tokens Honji.
+Catálogo pesquisável inclui arquivados, formulário de produto, variações,
+campanha mínima, movimentação e histórico. Códigos duplicados/saldo insuficiente
+preservam formulário; salvamento desabilita envios repetidos e atualiza saldo.
+
+Aceite: entrada 50 → saída 8 → recusa 43 → ajuste +3 = 45, histórico com três
+operações; duas saídas concorrentes de 30 aceitam só uma a partir de 45.
+Variação B fica em zero. Sem permissão recebe 403. Campanha 2027 não pode usar o
+produto sob encomenda 2026. Nova conexão e reinício do servidor mantêm saldo.
+Fixtures e capturas usam somente dados fictícios em banco descartável.
+
+## Próximo incremento
+
+Lojinhas podem consumir os vínculos de campanha e os UUIDs de produtos/variações,
+sem copiar saldos. Definir autorização de compradores, limites, reservas,
+pedidos, produção, cancelamento, pagamento, retirada e reconciliação antes de
+implementar. Estoque central não compartilha encomendas/acessos entre lojas.

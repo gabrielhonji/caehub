@@ -35,4 +35,4 @@ docker compose -f compose.dev.yml run --rm web npm run api
 
 As variáveis usam o contrato `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` e `DB_PASSWORD`. O Compose local usa MySQL sem senha exclusivamente na rede Docker interna e sem publicar portas; produção recebe credenciais pela infraestrutura. Para testar localmente outra identidade fixa, configure no processo do servidor `NODE_ENV=development`, `CAEHUB_DEV_ACTOR_ID` e, quando necessário, `CAEHUB_DEV_OWNER=true`. Essa identidade não vem de requisição HTTP e é recusada em produção.
 
-Veja os contratos em [`docs/caehub/API.md`](docs/caehub/API.md). O Kanban faz parte deste incremento; Agenda e Comercial permanecem demonstrativos e fora do escopo funcional.
+Veja os contratos em [`docs/caehub/API.md`](docs/caehub/API.md). Kanban, Agenda e catálogo/inventário Comercial são funcionais. O Comercial mantém estoque central, variações, histórico e campanhas exclusivas; checkout, pedidos e reservas continuam fora do escopo. Consulte `docs/caehub/COMERCIAL.md`.

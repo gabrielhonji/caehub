@@ -31,3 +31,14 @@ Origem: pedido aprovado de preparação do CAEHUB em 08/10/2026. Este documento 
 - O pacote marca detalhes de Gestão, Agenda e ativos como pendentes. As confirmações acima resolvem somente os mesmos requisitos, preservando as demais pendências de contrato, persistência, matriz final de autorização e integração.
 - O ativo Giro canônico está disponível no checkout Honji e foi reutilizado sem redesenho em `public/assets/honji-symbol.svg`. Não há pacote compartilhado de componentes disponível; a camada local é declaradamente compatível com o contrato visual, não o Design System central oficial.
 - A preferência Tailwind/Vite conflita apenas no nível técnico sugerido: adotou-se Vite com CSS local, por não haver Tailwind instalado/compartilhado e para evitar introduzir dependência não necessária à fundação.
+
+## Catálogo e inventário — pedido Agente 05, 11/10/2026
+
+Incremento Comercial autorizado: catálogo, variações independentes, quantidades
+inteiras, estoque central não negativo, movimentos transacionais rastreáveis e
+campanha exclusiva de encomendas, sem checkout/pedidos/reservas. A administração
+reutiliza Owner central e administradores institucionais, além da direção ativa
+de Produtos; associação simples ao departamento não concede operação.
+Consulta administrativa segue a mesma política, sem liberar catálogo público.
+Commit, push, integração em main e deploy oficiais expressamente autorizados,
+condicionados ao aceite, revisão visual e gate completo. Contratos em COMERCIAL.

@@ -66,3 +66,12 @@ operações da agenda, ao abrir e ao retornar à janela; respostas antigas não
 sobrescrevem a consulta mais recente. Filtros usam grupos de botões com
 `aria-pressed`; detalhes opcionais ficam recolhidos. Nenhum controle base ou
 biblioteca foi duplicado. Revisão em 1440/768/390 px e ambos os temas.
+
+## Comercial (1.7.0)
+
+`CommercialPage` compõe controles, diálogos e feedbacks existentes para catálogo,
+variações e movimentos; não cria biblioteca visual. A classe compartilhada
+`form-fields` reutiliza os estilos de campos já consolidados nos diálogos da
+Agenda (rótulos, superfície, 16 px, altura mínima 44 px, largura limitada).
+Não altera estilos dos consumidores anteriores. Resultado de histórico que
+chega depois de fechar/trocar diálogo é ignorado para preservar o contexto.

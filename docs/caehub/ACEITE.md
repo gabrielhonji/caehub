@@ -67,3 +67,11 @@ Critérios C/H verificam decisões/preferências; critérios R/P dependem de apr
 Formato curto por critério: ID; cenário/escopo; resultado (passou/falhou/pendente); evidência; limitação. “Tela montada com mock” não satisfaz SEC-01. P aberto não satisfaz o critério que depende dele.
 
 Aceite de tarefa usa verificações proporcionais. Aceite de marco/release exige gate completo ENG-001, revisão dos critérios aplicáveis e pendências bloqueantes fechadas. Definir responsável pela aprovação em cada marco; não presumir aceite por ausência de resposta.
+
+## Comercial — Agente 05 (11/10/2026)
+
+Catálogo/variações administrativos, entradas/saídas/ajustes justificados,
+concorrência e saldo não negativo, histórico persistente e campanha exclusiva
+são escopo aprovado pelo pedido Agente 05. Aceite observável e contratos
+implementados estão em COMERCIAL.md; reservas/pedidos/pagamentos permanecem
+futuros. Validação real usa MySQL descartável e Chromium com dados fictícios.
