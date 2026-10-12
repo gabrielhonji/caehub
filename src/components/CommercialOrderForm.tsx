@@ -4,10 +4,10 @@ import { Button } from './primitives';
 
 export function CommercialOrderForm({catalog,campaignId,draft,onChange,onSubmit,busy,buyers,refresh}:{catalog:SaleCatalog;campaignId:string;draft:OrderDraft;onChange:(draft:OrderDraft)=>void;onSubmit:()=>void;busy:boolean;buyers?:{id:string;name:string}[];refresh:()=>void}){
   const campaign=catalog.campaigns.find(c=>c.id===campaignId);
-  const variants=catalog.variants.filter(v=>v.status==='active'&&catalog.products.some(p=>p.id===v.productId&&p.status==='active'&&p.saleCents!==null&&catalog.links.some(l=>l.productId===p.id&&l.campaignId===campaignId)));
+  const variants=catalog.variants.filter(v=>v.status==='active'&&catalog.products.some(p=>p.id===v.productId&&p.status==='active'&&p.saleCents!==null&&(buyers!==undefined||p.mode==='physical'||campaign?.stage==='orders')&&catalog.links.some(l=>l.productId===p.id&&l.campaignId===campaignId)));
   const selected=draft.items.map(line=>{const v=variants.find(v=>v.id===line.variantId),p=catalog.products.find(p=>p.id===v?.productId);return {v,p,quantity:Number(line.quantity),preorder:p?.mode==='preorder'&&campaign?.stage==='orders'};});
   const total=selected.reduce((n,row)=>n+(row.p?.saleCents??0)*row.quantity,0);
-  const valid=selected.every(row=>row.p&&row.v&&Number.isInteger(row.quantity)&&row.quantity>0&&row.quantity<=1000000&&(row.preorder||row.quantity<=row.v.availableQuantity));
+  const valid=selected.length>0&&selected.every(row=>row.p&&row.v&&Number.isInteger(row.quantity)&&row.quantity>0&&row.quantity<=1000000&&(row.preorder||row.quantity<=row.v.availableQuantity));
   const missingReservation=catalog.reservationMinutes===null&&selected.some(row=>row.p&&!row.preorder);
   const updateLine=(index:number,patch:Partial<OrderDraft['items'][number]>)=>onChange({...draft,items:draft.items.map((line,i)=>i===index?{...line,...patch}:line)});
   return <form className="form-fields commercial-form" onSubmit={e=>{e.preventDefault();onSubmit();}}><fieldset disabled={busy}>

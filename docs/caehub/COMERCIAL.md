@@ -161,8 +161,11 @@ reembolso manual. Produção iniciada/retirada impedem cancelamento simples;
 ocorrência administrativa documenta exceção sem fingir estorno/devolução.
 Correções físicas usam movimentos. Não há exclusão de pedidos/histórico.
 
-Na etapa 2, pedido novo de modelo exclusivo vende somente físico livre, com
-fulfillment=stock; pedidos antigos conservam preorder. Campanha arquivada não
+Na operação administrativa da etapa 2, pedido novo de modelo exclusivo pode
+usar físico livre, com fulfillment=stock; pedidos antigos conservam preorder.
+Desde 1.13, a loja/compra própria não anuncia nem vende esses modelos na etapa
+2: somente as encomendas próprias registradas aparecem para acompanhamento.
+Campanha arquivada não
 recebe pedidos novos. Criação usa requestKey UUID + hash; repetição com dados
 diferentes é recusada. Pagamento/recebimento/retirada repetidos não repetem efeitos.
 
@@ -285,8 +288,9 @@ armazenado. Seleção não reserva estoque. Backend recalcula preço, saldo e et
 com expectedPriceCents e requestKey dos contratos existentes. Falha temporária
 mantém a chave para repetir; envio simultâneo é bloqueado imediatamente.
 
-Etapa 2 preserva os modelos para consulta e vende apenas estoque livre, sem
-novas encomendas. Conta com vínculo ativo compra para si; externos sem vínculo
+Etapa 2 preserva modelos nos pedidos pessoais e vende apenas produtos físicos
+do catálogo, sem novas encomendas nem recompra de modelos exclusivos.
+Conta com vínculo ativo compra para si; externos sem vínculo
 não recebem acesso institucional. Não altera Keycloak/BFF central ou cria login.
 Área pessoal, Pix, histórico, produção e retirada reutilizam CommercialOrders e
 CommercialOrderDetail com ownOnly, sem operações administrativas. `/auth/login`

@@ -94,3 +94,14 @@ complementa os testes comerciais existentes. Chromium usa dados fictícios e
 inspeciona o bundle real. Autosserviço externo, imagens/eventos/local de retirada
 sem contrato e smoke transacional com sessão pessoal de produção permanecem
 pendências explícitas; não são declarados validados por fixtures.
+
+## Refinamento de compras e retirada — 1.13.0
+
+Confirmado pelo usuário: encomendas continuam na etapa de vendas; na retirada,
+modelos exclusivos só aparecem nos pedidos próprios, com quantidade registrada.
+Teste real de banco: membro encomendou 3, outro 7, lote recebeu 12; vitrine/IDs
+exclusivos ocultos e recompra própria recusada mesmo com sobra física. Replay
+do pedido original continua idempotente. Lista própria retorna somente 3;
+ready/collected preservam quantidade; consulta da outra identidade retorna 404.
+Revisão real integra portal, navbar interno, lista própria, notificações,
+variantes/carrinho e encomenda na etapa 1, com desktop/mobile e ambos os temas.

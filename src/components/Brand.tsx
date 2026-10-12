@@ -1,6 +1,6 @@
-export function Brand() {
+export function Brand({href='#/'}:{href?:string}) {
   return (
-    <a className="brand" href="#/" aria-label="CAEHUB, início">
+    <a className="brand" href={href} aria-label="CAECOMP / CAEHUB, início">
       <span className="cae-mark" aria-hidden="true" />
       <span className="brand-copy">
         <strong>CAEHUB</strong>

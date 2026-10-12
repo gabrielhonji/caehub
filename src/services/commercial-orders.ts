@@ -1,7 +1,8 @@
 import type { Campaign, Product, Variant } from './commercial';
 
 export type SaleCatalog={campaigns:Campaign[];products:Pick<Product,'id'|'name'|'description'|'sku'|'category'|'mode'|'campaignId'|'saleCents'|'status'>[];variants:Pick<Variant,'id'|'productId'|'name'|'attributes'|'status'|'availableQuantity'>[];links:{campaignId:string;productId:string}[];reservationMinutes?:number|null};
-export type OrderSummary={id:string;campaignId:string;campaignName:string;buyerName:string;totalCents:number;status:string;paymentStatus:string;deliveryStatus:string;createdAt:string;version:number;openIssues?:number};
+export type PurchasedItem={id:string;productName:string;variantName:string;quantity:number;unitPriceCents:number;fulfillment:string;productionStatus:string;allocatedQuantity:number};
+export type OrderSummary={id:string;campaignId:string;campaignName:string;buyerName:string;totalCents:number;status:string;paymentStatus:string;deliveryStatus:string;createdAt:string;version:number;openIssues?:number;items?:PurchasedItem[]};
 export type OrderList={orders:OrderSummary[];canManage:boolean;total:number;page:number;pageSize:number;pages:number;summary:{total:number;paymentPending:number;review:number;ready:number;completed:number;refunds:number}};
 export type OrderItem={id:string;variant_id:string;product_name:string;variant_name:string;quantity:number;unit_price_cents:number;fulfillment:string;allocation_status:string;allocated_quantity:number;expires_at:string|null;production_status:string};
 export type Incident={id:string;status:'open'|'resolved';note:string;actor:string;resolution:string|null;resolvedBy:string|null;createdAt:string;resolvedAt:string|null};
@@ -14,6 +15,20 @@ export const newRequestKey=()=>{const bytes=crypto.getRandomValues(new Uint8Arra
 export const orderLabels:Record<string,string>={pending:'Pendente',confirmed:'Confirmado',expired:'Reserva vencida',review:'Revisão administrativa',cancelled:'Cancelado',completed:'Concluído',problem:'Problema no pagamento',paid:'Pago',refund_required:'Reembolso manual pendente',refunded:'Reembolso comprovado',waiting:'Aguardando',ready:'Pronto para retirada',collected:'Retirado',none:'Sem alocação',provisional:'Reserva provisória',committed:'Alocado',released:'Liberado',consumed:'Entregue',in_production:'Em produção',received:'Recebido',not_needed:'Estoque físico'};
 export const actionLabels:Record<string,string>={pay:'Confirmar Pix recebido',payment_problem:'Registrar problema no Pix',allocate:'Regularizar alocação e usar sobras',ready:'Marcar pronto para retirada',collect:'Registrar retirada',cancel:'Cancelar pedido',refund:'Registrar reembolso comprovado',exception:'Abrir pendência administrativa',resolve_exception:'Resolver pendência'};
 export const orderTime=(v:string)=>new Date(v).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+export function commercialOrderFailure(error:unknown){
+  if(error instanceof TypeError||(error as {code?:string})?.code==='internal_error')return 'Não foi possível concluir a operação. Tente novamente.';
+  return (error as Error).message;
+}
+export function buyerOrderLabel(o:Pick<OrderSummary,'status'|'paymentStatus'|'deliveryStatus'>){
+  if(o.deliveryStatus==='collected'||o.status==='completed')return 'Já retirado';
+  if(o.status==='cancelled')return 'Cancelado';
+  if(o.status==='expired')return 'Reserva vencida';
+  if(o.status==='review')return 'Aguardando regularização';
+  if(o.deliveryStatus==='ready')return 'Para retirada';
+  if(o.paymentStatus==='pending')return 'Aguardando pagamento';
+  if(o.paymentStatus==='problem')return 'Pagamento com pendência';
+  return 'Preparando seu pedido';
+}
 export function orderEventLabel(action:string){const names:Record<string,string>={'order.created':'Pedido registrado','reservation.expired':'Reserva vencida','payment.confirmed':'Pix conferido','payment.confirmed_late':'Pix conferido após vencimento — revisar alocação','production.started':'Produção iniciada','production.received':'Mercadoria recebida','administrative.exception':'Pendência administrativa aberta','administrative.resolved':'Pendência administrativa resolvida'};return names[action]??actionLabels[action.replace('order.','')]??'Operação registrada';}
 export function nextOrderStep(detail:OrderDetail){
   const o=detail.order;

@@ -35,7 +35,7 @@ test('public portal projects sale fields only, shares inventory and preserves bu
     const detail=(await f.apps.member.inject(`/api/commercial/my-orders/${order.json().id}`)).json();assert.equal(detail.order.payment_status,'pending');assert.equal(detail.order.campaignName,'Campanha pública fictícia A');assert.equal(detail.canManage,false);assert.deepEqual(detail.availableActions,[]);
     assert.equal((await f.apps.other.inject(`/api/commercial/my-orders/${order.json().id}`)).statusCode,404);
     const c=(await send('GET','/api/commercial')).json().campaigns.find((c:any)=>c.id===c1);await send('PATCH',`/api/commercial/campaigns/${c1}`,{name:c.name,description:c.description,semester:c.semester,stage:'collection',status:'active',version:c.version});
-    assert.ok((await anonymous.inject('/api/public/catalog')).json().products.some((p:any)=>p.id===pre));
+    assert.ok(!(await anonymous.inject('/api/public/catalog')).json().products.some((p:any)=>p.id===pre));
     assert.equal((await f.apps.member.inject({method:'POST',url:'/api/commercial/my-orders',payload:{campaignId:c1,requestKey:randomUUID(),items:[{variantId:preVariant,quantity:1,expectedPriceCents:600}]}})).statusCode,409);
     const p=(await send('GET','/api/commercial')).json().products.find((p:any)=>p.id===stock);await send('PATCH',`/api/commercial/products/${stock}`,{name:p.name,categoryId:category,costCents:123,saleCents:500,status:'archived',version:p.version});
     const archived=(await anonymous.inject('/api/public/catalog')).json();assert.ok(!archived.products.some((p:any)=>p.id===stock));assert.ok(!archived.variants.some((v:any)=>v.id===variant));

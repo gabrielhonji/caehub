@@ -45,3 +45,10 @@ de pedidos e consulta Pix, produção e retirada próprios. Externos sem víncul
 continuam atendidos pela operação administrativa, sem acesso institucional novo.
 `/#/espacos` e os demais hashes preservam a gestão protegida. Imagens de produtos,
 eventos públicos e local de retirada aguardam contratos de cadastro/publicação.
+
+Pedidos próprios estão em `/#/meus-pedidos`, acessíveis no navbar interno;
+notificações de retirada abrem `/#/meus-pedidos/<id>` com verificação de titular.
+A lojinha interna usa a mesma experiência do portal. Na etapa de retirada,
+encomendas aparecem apenas nos pedidos do próprio comprador com quantidade e
+estado registrados; modelos exclusivos não ficam disponíveis para recompra.
+Novas encomendas permanecem habilitadas durante a etapa de vendas.

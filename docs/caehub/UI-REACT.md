@@ -109,3 +109,17 @@ CommercialOrderForm, CommercialOrders e CommercialOrderDetail. Sua responsabilid
 visual, cálculos/reservas do servidor ou acompanhamento pós-compra. CSS local
 usa tokens e composição Comercial existentes, temas e geometria de campos.
 Placeholder textual substitui imagens ausentes, sem criar ativos de marca.
+
+## Compras e retirada — 1.13.0
+
+ThemeToggle extrai o controle existente do AppShell: mesmo ícone e geometria de
+44 px, título/nome acessível e tokens no portal e na área interna. Brand recebe
+href e preserva o ativo oficial CAECOMP. CommercialShop compõe PublicPortal em
+modo interno, reutilizando a mesma seleção/formulário e impedindo divergência
+entre telas. Âncoras locais mantêm o contexto da rota interna.
+BuyerOrdersPage usa CommercialOrders com consulta própria, itens e quantidades
+registrados, situação legível, filtros recolhidos e paginação proporcional.
+Não mostra alocação/estoque global como quantidade comprada. Na retirada, esses
+pedidos precedem a vitrine física. Troca de campanha com seleção pede decisão
+explícita sem perder itens. Notificações de pedido levam ao detalhe pessoal;
+a API revalida a titularidade, inclusive no link direto.

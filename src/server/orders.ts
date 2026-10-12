@@ -39,9 +39,9 @@ export class OrderService {
   async buy(actor:Actor,input:z.infer<typeof purchaseInput>){
     const member=await this.institution.requireMember(actor);
     if(actor.debugView&&actor.debugView.mode!=='real')throw new Forbidden('Perfis de consulta não fazem compras.');
-    return this.persistOrder(actor,{...input,buyerPersonId:member.person_id,buyerContact:''});
+    return this.persistOrder(actor,{...input,buyerPersonId:member.person_id,buyerContact:''},true);
   }
-  private async persistOrder(actor:Actor,input:z.infer<typeof orderInput>){
+  private async persistOrder(actor:Actor,input:z.infer<typeof orderInput>,selfService=false){
     return this.db.transaction(async db=>{
       await lockCommercial(db);await this.expire(db);
       const items=[...input.items].sort((a,b)=>a.variantId.localeCompare(b.variantId)),hash=requestHash({...input,items});
@@ -57,6 +57,7 @@ export class OrderService {
       for(const item of [...input.items].sort((a,b)=>a.variantId.localeCompare(b.variantId))){
         const v=await db.one<RowDataPacket>(`SELECT v.*,p.name AS product_name,p.sale_cents,p.mode,p.campaign_id FROM commercial_variants v JOIN commercial_products p ON p.id=v.product_id JOIN commercial_campaign_products l ON l.product_id=p.id WHERE v.id=? AND p.organization_id=? AND l.campaign_id=? AND p.status='active' AND v.status='active' FOR UPDATE`,[item.variantId,org,input.campaignId]);
         if(!v||v.sale_cents===null)throw new Conflict('Produto indisponível nesta campanha ou preço ainda não definido.');
+        if(selfService&&v.mode==='preorder'&&campaign.stage!=='orders')throw new Conflict('As encomendas encerraram. Consulte a quantidade do seu pedido em Meus pedidos para acompanhar a retirada.');
         if(item.expectedPriceCents!==undefined&&item.expectedPriceCents!==Number(v.sale_cents))throw new Conflict('O preço de um item mudou. Atualize o catálogo e confira o total antes de registrar.');
         if(v.mode==='preorder'&&v.campaign_id!==input.campaignId)throw new Conflict('Encomenda de outra campanha.');
         const fulfillment=v.mode==='preorder'&&campaign.stage==='orders'?'preorder':'stock';
@@ -78,9 +79,9 @@ export class OrderService {
   }
   async publicCatalog(){
     const campaigns=await this.db.many<RowDataPacket>("SELECT id,name,description,semester,stage,status,version FROM commercial_campaigns WHERE organization_id=? AND status='active' ORDER BY semester DESC,name",[org]);
-    const products=await this.db.many<RowDataPacket>(`SELECT DISTINCT p.id,p.name,p.description,p.sku,p.category,p.mode,p.campaign_id AS campaignId,p.sale_cents AS saleCents,p.status FROM commercial_products p JOIN commercial_campaign_products l ON l.product_id=p.id JOIN commercial_campaigns c ON c.id=l.campaign_id WHERE p.organization_id=? AND p.status='active' AND p.sale_cents IS NOT NULL AND c.status='active' ORDER BY p.name`,[org]);
-    const variants=await this.db.many<RowDataPacket>(`SELECT v.id,v.product_id AS productId,v.name,v.status,v.attributes,CAST(v.physical_quantity-COALESCE(r.quantity,0) AS SIGNED) AS availableQuantity FROM commercial_variants v JOIN commercial_products p ON p.id=v.product_id LEFT JOIN (SELECT variant_id,SUM(allocated_quantity) AS quantity FROM commercial_order_items WHERE allocation_status='committed' OR (allocation_status='provisional' AND expires_at>NOW(3)) GROUP BY variant_id) r ON r.variant_id=v.id WHERE p.organization_id=? AND p.status='active' AND p.sale_cents IS NOT NULL AND v.status='active' AND EXISTS(SELECT 1 FROM commercial_campaign_products l JOIN commercial_campaigns c ON c.id=l.campaign_id WHERE l.product_id=p.id AND c.status='active') ORDER BY v.name`,[org]);
-    const links=await this.db.many<RowDataPacket>(`SELECT l.campaign_id AS campaignId,l.product_id AS productId FROM commercial_campaign_products l JOIN commercial_campaigns c ON c.id=l.campaign_id JOIN commercial_products p ON p.id=l.product_id WHERE c.organization_id=? AND c.status='active' AND p.status='active' AND p.sale_cents IS NOT NULL`,[org]);
+    const products=await this.db.many<RowDataPacket>(`SELECT DISTINCT p.id,p.name,p.description,p.sku,p.category,p.mode,p.campaign_id AS campaignId,p.sale_cents AS saleCents,p.status FROM commercial_products p JOIN commercial_campaign_products l ON l.product_id=p.id JOIN commercial_campaigns c ON c.id=l.campaign_id WHERE p.organization_id=? AND p.status='active' AND p.sale_cents IS NOT NULL AND c.status='active' AND (p.mode='physical' OR c.stage='orders') ORDER BY p.name`,[org]);
+    const variants=await this.db.many<RowDataPacket>(`SELECT v.id,v.product_id AS productId,v.name,v.status,v.attributes,CAST(v.physical_quantity-COALESCE(r.quantity,0) AS SIGNED) AS availableQuantity FROM commercial_variants v JOIN commercial_products p ON p.id=v.product_id LEFT JOIN (SELECT variant_id,SUM(allocated_quantity) AS quantity FROM commercial_order_items WHERE allocation_status='committed' OR (allocation_status='provisional' AND expires_at>NOW(3)) GROUP BY variant_id) r ON r.variant_id=v.id WHERE p.organization_id=? AND p.status='active' AND p.sale_cents IS NOT NULL AND v.status='active' AND EXISTS(SELECT 1 FROM commercial_campaign_products l JOIN commercial_campaigns c ON c.id=l.campaign_id WHERE l.product_id=p.id AND c.status='active' AND (p.mode='physical' OR c.stage='orders')) ORDER BY v.name`,[org]);
+    const links=await this.db.many<RowDataPacket>(`SELECT l.campaign_id AS campaignId,l.product_id AS productId FROM commercial_campaign_products l JOIN commercial_campaigns c ON c.id=l.campaign_id JOIN commercial_products p ON p.id=l.product_id WHERE c.organization_id=? AND c.status='active' AND (p.mode='physical' OR c.stage='orders') AND p.status='active' AND p.sale_cents IS NOT NULL`,[org]);
     const config=await this.db.one<RowDataPacket>('SELECT reservation_minutes FROM commercial_operations WHERE organization_id=?',[org]);
     return {campaigns,products,variants,links,reservationMinutes:config?.reservation_minutes??null};
   }
@@ -100,6 +101,11 @@ export class OrderService {
     const count=await this.db.one<RowDataPacket>(`SELECT COUNT(*) AS total ${from}`,values);
     const rows=await this.db.many<RowDataPacket>(`SELECT o.id,o.campaign_id AS campaignId,c.name AS campaignName,o.buyer_name AS buyerName,o.total_cents AS totalCents,o.status,o.payment_status AS paymentStatus,o.delivery_status AS deliveryStatus,o.created_at AS createdAt,o.version ${canManage?",(SELECT COUNT(*) FROM commercial_order_incidents x WHERE x.order_id=o.id AND x.status='open') AS openIssues":''} ${from} ORDER BY o.created_at DESC,o.id DESC LIMIT ? OFFSET ?`,[...values,q.pageSize,(q.page-1)*q.pageSize]);
     const summary=await this.db.one<RowDataPacket>(`SELECT COUNT(*) AS total,COALESCE(SUM(o.payment_status IN ('pending','problem') AND o.status NOT IN ('cancelled','completed')),0) AS paymentPending,COALESCE(SUM(o.status='review'),0) AS review,COALESCE(SUM(o.delivery_status='ready'),0) AS ready,COALESCE(SUM(o.status='completed'),0) AS completed,COALESCE(SUM(o.payment_status='refund_required'),0) AS refunds FROM commercial_orders o JOIN commercial_campaigns c ON c.id=o.campaign_id WHERE ${scoped}`,scopeValues);
+    if(!canManage||q.mine){
+      const ids=rows.map(row=>row.id);
+      const items=ids.length?await this.db.many<RowDataPacket>(`SELECT id,order_id AS orderId,product_name AS productName,variant_name AS variantName,quantity,unit_price_cents AS unitPriceCents,fulfillment,production_status AS productionStatus,allocated_quantity AS allocatedQuantity FROM commercial_order_items WHERE order_id IN (${ids.map(()=>'?').join(',')}) ORDER BY product_name,variant_name`,ids):[];
+      for(const row of rows)row.items=items.filter(item=>item.orderId===row.id).map(({orderId,...item})=>item);
+    }
     return {orders:rows,canManage:canManage&&!q.mine,total:Number(count!.total),page:q.page,pageSize:q.pageSize,pages:Math.max(1,Math.ceil(Number(count!.total)/q.pageSize)),summary};
   }
   async order(db:Database,id:string){const o=await db.one<RowDataPacket>('SELECT o.* FROM commercial_orders o JOIN commercial_campaigns c ON c.id=o.campaign_id WHERE o.id=? AND c.organization_id=? FOR UPDATE',[id,org]);if(!o)throw new NotFound('Pedido não encontrado.');return o;}

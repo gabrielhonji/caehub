@@ -1,4 +1,17 @@
 # Decisões validadas após o pacote
+## Compras e retirada — refinamento aprovado, 12/10/2026
+
+Pedido do usuário corrige tema/marca, UX de compras e integração à área interna.
+Resposta explícita confirmou: manter novas encomendas na etapa de vendas.
+Na etapa de retirada, modelos exclusivos saem da vitrine pública e interna de
+compra e não aceitam novas compras pelo autosserviço, mesmo havendo sobras.
+Cada comprador consulta somente seus itens/quantidades registrados em pedidos;
+Para retirada depende do estado ready real, e Já retirado de collected.
+Produção/pagamento pendentes continuam apresentados conforme o estado real.
+Não reescreve inventário, máquina de estados ou operação administrativa de
+pedidos; não libera acesso externo nem confirma retirada pelo comprador.
+Pedidos próprios recebem entrada no navbar e link nas notificações existentes.
+
 ## Refinamento Comercial — 12/10/2026
 
 Pedido atual autoriza melhorar a implementação e completar elementos faltantes

@@ -7,6 +7,7 @@ import { WorkspacePeople } from '../components/WorkspacePeople';
 import { AgendaPage as FunctionalAgendaPage } from '../components/AgendaPage';
 import { CommercialPage } from "../components/CommercialPage";
 import { CommercialShop } from '../components/CommercialShop';
+import { BuyerOrdersPage } from '../components/BuyerOrdersPage';
 import { DepartmentsPage } from '../components/DepartmentsPage';
 import type { Board, BoardCard, Space, TaskPreview } from '../domain/types';
 import { api, addChecklistItem, addColumn, addComment, createCard, decideTransfer, deleteColumn, getArchivedCards, getCardDetail, getFoundation, getTaskPreviews, moveCard, renameColumn, requestTransfer, toggleChecklistItem, updateCard, volunteer } from '../services/spaces';
@@ -117,6 +118,7 @@ export function App() {
   else if (data.status === 'error') content = <ErrorState onRetry={data.load} />;
   else if (!parts.length) content = <Dashboard spaces={data.spaces} tasks={data.tasks} boards={data.boards} />;
   else if (parts[0] === 'agenda' && !parts[1]) content = <FunctionalAgendaPage spaces={data.spaces} />;
+  else if (parts[0] === 'meus-pedidos' && !parts[2]) content = <BuyerOrdersPage orderId={parts[1]}/>;
   else if (parts[0] === 'comercial' && !parts[1]) content = <CommercialPage />;
   else if (parts[0] === 'comercial' && parts[1] === 'comprar' && !parts[2]) content = <CommercialShop />;
   else if (parts[0] === 'departamentos') content = <DepartmentsPage active={parts[1]} />;

@@ -1,4 +1,48 @@
 # Coordenação de agentes
+## Validado, publicação em andamento — Compras e retirada, 12/10/2026
+
+Base limpa `db88d3f`, branch `fix/compras-retirada-ux`, Codex deste chat.
+Reserva: Brand/ThemeToggle/AppShell, PublicPortal/CommercialShop/CommercialOrders,
+CommercialOrderDetail/Form, App, projeção/lista/criação de compras em orders,
+AgendaNotifications (link para pedido próprio), DTO/CSS/testes comerciais,
+documentação e release. Sem disputa identificada;
+reservas anteriores encerradas. Reutilizar controles e pedidos já existentes.
+Aceite: tema igual ao restante da aplicação e logo CAECOMP original; pedidos
+próprios acessíveis no navbar e área interna; resumo com produtos/variações/
+quantidades próprias e estado de retirada; etapa 2 sem encomendas na vitrine,
+sem recompra de modelo exclusivo e sem mostrar quantidades de outros usuários;
+compra física e encomendas na etapa de vendas preservadas conforme resposta
+expressa do usuário; clareza de navegação/seleção e desktop/mobile/temas/teclado.
+Gate completo, commit/push/main e deploy oficiais seguem autorização vigente.
+
+1.13.0 implementa ThemeToggle compartilhado, marca CAECOMP original no navbar
+público, mesma seleção/checkout no portal e interno, entrada Meus pedidos,
+detalhe pessoal por ID e link nas notificações de retirada. Lista própria
+traz itens e quantidades por consulta em lote, sem buscar um detalhe por item.
+Pedidos de retirada precedem a vitrine física, com Para retirada/Já retirado
+derivados de ready/collected. Encomendas na etapa 2 ficam só nos pedidos próprios;
+compra própria de exclusivo é recusada no servidor mesmo havendo sobra física.
+Replay preserva o pedido já registrado. Administração conserva seus contratos.
+Troca de campanha preserva seleção até confirmação; controles/filtros/métricas/
+paginação, mensagens de falha e retorno de foco foram refinados.
+
+Gate: 32/32 testes de servidor em Node 22/MySQL descartável, auditoria sem
+vulnerabilidades, TypeScript/build final (394 kB) e teste pontual dos metadados
+1.13.0/release `12102026-234053`. Caso novo: membro 3, outro 7, lote 12;
+exclusivo/variações/vínculos ocultos na retirada, recompra recusada, replay
+idempotente, quantidades próprias intactas em ready/collected e outro ID 404.
+Chromium 1440/768/390, ambos os temas, portal anônimo/autenticado, loja interna
+e Meus pedidos: logo/tema 44 px, somente 3 para retirada + 1 já retirado,
+sem 7 de terceiros, encomenda nova na etapa 1, Pix, seleção/variações, troca
+de campanha sem perda, navegação/âncora interna sem sair do contexto, link de
+notificação ao pedido pessoal inclusive repetido, filtros/refresh, teclado/
+foco, erro/recuperação e vazio. Sem overflow/exceções. Seletor de alerta foi
+corrigido para considerar o botão de recuperação no mesmo elemento; falha
+temporária agora tem mensagem amigável compartilhada. Fixtures/capturas fora
+do Git. Nenhuma alteração de infraestrutura, migração, identidade externa ou
+máquina de estados. Main remota conferida sem avanço concorrente. Smoke com
+sessão pessoal de produção continua pendente; publicação e reservas em andamento.
+
 ## Publicado — Agente 07, 12/10/2026
 
 Base limpa `cec469b`, dependências 06/1.11 integradas; branch
