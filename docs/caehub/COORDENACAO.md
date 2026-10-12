@@ -196,4 +196,10 @@ Implementado e validado por Codex /root: `src/app/App.tsx`, `src/components/Work
 participantes/direção nos detalhes; edição contextual e encaminhamento ao
 departamento no Honji. 25 testes de servidor, TypeScript/build e Chromium
 (0/1/2/3/7 espaços, cinco perfis, 1440/390 px e ambos os temas) aprovados.
-Auditoria de produção sem vulnerabilidades. Publicação pendente neste incremento.
+Auditoria de produção sem vulnerabilidades. Publicado em 12/10/2026 pela origem
+autoritativa: fonte `d5abe6a`, imagem `honji/caehub-gabriel:1.8.2`, container
+Healthy, health e bundle HTTPS 200, API de espaços anônima 403. Metadados
+editoriais do package continuam em 1.8.0; a tag de imagem identifica este deploy.
+Portal contextual `e2a4383`, release `20261012-023654`. Capturas/fluxos visuais
+usam fixtures fictícias; não houve smoke com sessão autenticada de produção.
+Incremento concluído e reservas liberadas.
