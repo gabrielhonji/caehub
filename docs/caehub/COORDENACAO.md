@@ -24,7 +24,14 @@ Fonte de regras: D-59 e ARQUITETURA-SEGURANCA. A primeira edição no Honji ativ
 a autoridade central; cargos/vínculos locais passam a ser projeção, e espaços
 departamentais usam somente a participação herdada. Espaços gerais preservam
 vínculos próprios. Não altera Keycloak, segredos, infraestrutura ou a XII.
-Commit/push são registrados no Git; esta tarefa não autoriza deploy.
+Commit/push são registrados no Git. Gabriel autorizou posteriormente deploy e
+registro de instruções nos AGENTS.md. Publicado CAEHUB 1.8.0, fonte `8106a58`,
+imagem `honji/caehub-gabriel:1.8.0`, com healthcheck Healthy e HTTPS confirmando
+versão/release. IAM 1.4.0 (`c09ea44`) ficou Healthy antes dos consumidores;
+Portal 0.8.0 publicado na release `20261011-221511`, com painel confirmado no
+bundle público. APIs anônimas foram recusadas; não foi usada sessão pessoal
+para testar a hierarquia em produção. A primeira edição no Honji ativa a
+estrutura central. Regras duráveis adicionadas aos AGENTS.md dos dois projetos.
 
 ## Atividade atual — Cards da Agenda, 11/10/2026
 
