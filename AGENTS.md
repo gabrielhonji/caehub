@@ -32,6 +32,19 @@ atualize somente o estado afetado, sem duplicar especificações.
 
 ## Produção Honji e Keycloak
 
+### Hierarquia e espaços
+
+- Siga a seção D-59 de `docs/caehub/ARQUITETURA-SEGURANCA.md`. Cargos e
+  departamentos ativados no Honji são autoridade central; não mantenha edição
+  local paralela. Departamentos e ferramentas referenciam IDs estáveis, não nomes.
+- Membros herdam espaços do departamento; diretores administram seus espaços.
+  Presidente/vice acumulam direção. Conselheiro visualiza com abrangência da
+  presidência, mas edição depende de outra função autorizada no contexto.
+- Preserve revogação ao remover vínculos/trocar direção e a privacidade da
+  Agenda. Consulta ampla não concede organização, inscrição ou edição.
+- Verifique backend e UI juntos, inclusive negações, projeção idempotente,
+  revisões antigas e suspensão. Novos departamentos recebem espaço/quadro.
+
 - A app de infraestrutura é `caehub-gabriel`; o `integrationId` de autorização
   permanece `caehub`. Não trate os dois nomes como intercambiáveis.
 - O domínio `caehub-gabriel.honji.com.br` opera em `proxy-root`. Não crie outra

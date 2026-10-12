@@ -1,7 +1,7 @@
 {
   "name": "caehub",
-  "version": "1.7.0",
-  "release": "11102026-170000",
+  "version": "1.8.0",
+  "release": "11102026-230000",
   "private": true,
   "type": "module",
   "scripts": {
