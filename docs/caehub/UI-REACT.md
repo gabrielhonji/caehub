@@ -75,3 +75,16 @@ variações e movimentos; não cria biblioteca visual. A classe compartilhada
 Agenda (rótulos, superfície, 16 px, altura mínima 44 px, largura limitada).
 Não altera estilos dos consumidores anteriores. Resultado de histórico que
 chega depois de fechar/trocar diálogo é ignorado para preservar o contexto.
+
+## Campanhas e cadastro Comercial (1.9.0)
+
+`CommercialPage` navega por campanhas, catálogo geral ou itens sem vínculo.
+Cards compactos resumem categoria, venda, estoque e número de variações;
+`ProductDetail` concentra custo/venda/margem e seletor de variação com ações.
+`CommercialForms` compõe `form-fields`, Button e controles nativos existentes
+para cadastro, categoria e seleção em lote. `OptionPicker` combina os valores
+selecionados sem exigir novos cadastros de produto. `CategoryEditor` persiste
+opções reutilizáveis na categoria; alterações não recriam variantes existentes.
+São responsabilidades de domínio, sem nova biblioteca ou controle base.
+Campanha selecionada pré-preenche o cadastro. Mutações só aparecem com
+`canManage`; perfis de debug e consulta ampla continuam somente leitura.

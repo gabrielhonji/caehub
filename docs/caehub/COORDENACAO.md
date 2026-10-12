@@ -203,3 +203,47 @@ editoriais do package continuam em 1.8.0; a tag de imagem identifica este deploy
 Portal contextual `e2a4383`, release `20261012-023654`. Capturas/fluxos visuais
 usam fixtures fictícias; não houve smoke com sessão autenticada de produção.
 Incremento concluído e reservas liberadas.
+
+## Entrega validada — Comercial/campanhas, 12/10/2026
+
+Base limpa `50fe2e9`, branch `feat/comercial-campanhas-cadastro`. Escopo reservado:
+Comercial (migração, serviço, rotas, formulários e catálogo, CSS e testes),
+documentação Comercial/coordenação e metadados de release. Preservar D-59/D-60.
+Aceite: campanhas existentes navegáveis; produto físico vinculado sem copiar
+estoque; categoria obrigatória/criável; códigos automáticos CAM-001/ADS-002
+sem colisão concorrente; custo/venda separados; um cadastro gera combinações
+de tamanho/modelo/cor com estoque independente; opções reutilizáveis por
+categoria; dados e movimentos antigos preservados; catálogo compacto com
+filtros/detalhes; permissões, desktop/mobile/temas e gate completo.
+Estrutura das duas lojinhas aguardando preferência do usuário; categorias,
+cadastro e catálogo avançam independentemente. Checkout/pedidos fora do escopo.
+
+Preferência confirmada: uma campanha semestral com duas etapas, mantendo a
+origem das encomendas. Categorias e custo/venda obrigatórios no cadastro novo;
+preço de referência antigo preservado apenas como legado, sem inferir valores.
+Debug/consulta ampla somente leitura, conforme D-59/D-60 atuais. Nenhum estoque
+antigo foi atribuído a campanha presumida.
+
+Implementação 1.9.0 concluída: campanhas navegáveis com duas etapas, edição e
+vínculos; categoria obrigatória/criável com opções reutilizáveis; códigos
+automáticos; custo/venda; cadastro em lote de combinações e catálogo compacto.
+Migração preserva códigos, UUIDs, saldos, movimentos e preço legado, sem criar
+custo/venda fictícios. Documentação e decisão atualizadas somente no CAEHUB.
+
+Validação: `NODE_ENV=development npm run test:server` em container/MySQL isolado,
+26/26 aprovados; TypeScript/Vite e auditoria de produção, zero vulnerabilidades.
+Testes incluem códigos concorrentes, seis combinações, cor, categorias,
+exclusividade, troca de etapa, versões antigas, estoque e migração idempotente.
+Chromium real criou campanha/produtos/categoria/Cor, seis combinações em um só
+produto, edição, vínculo físico entre campanhas sem copiar saldo, histórico e
+recarga. Revisão final 1440/768/390, claro/escuro, cards alinhados, duas etapas,
+regra da retirada, foco/teclado, vazio e erro com rascunho preservado. Reinício
+real manteve 50 unidades e sete variações fictícias; não houve dados reais.
+
+Falhas investigadas: deadlock do contador corrigido por aquisição exclusiva no
+upsert; teste de hierarquia requer desenvolvimento explicitamente; servidor
+visual aguardado por readiness; seletores de option usam estado/propriedade
+nativos. Gate final aprovado sem mudanças de host, permissões ou infraestrutura.
+Publicação segue main integrada, `build-app`/`deploy-app caehub-gabriel 1.9.0`,
+healthcheck e gate público. Resultados Git/deploy são reportados neste chat.
+Sem alteração de Keycloak, checkout, pedidos ou pagamentos.

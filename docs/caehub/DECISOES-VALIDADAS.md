@@ -42,3 +42,15 @@ de Produtos; associação simples ao departamento não concede operação.
 Consulta administrativa segue a mesma política, sem liberar catálogo público.
 Commit, push, integração em main e deploy oficiais expressamente autorizados,
 condicionados ao aceite, revisão visual e gate completo. Contratos em COMERCIAL.
+
+## Refinamento Comercial — 12/10/2026
+
+Pedido deste chat: todos os produtos novos são vendidos em campanhas; campanha
+semestral tem duas etapas (Vendas/encomendas e Retirada/vendas de estoque),
+confirmado explicitamente pelo usuário. Categorias obrigatórias com criação e
+opções reutilizáveis; códigos automáticos simples para produto/variação;
+custo/venda separados; cadastro único gera tamanhos/modelos/cores; catálogo
+compacto e navegação por campanhas. Códigos/saldos/histórico existentes são
+preservados. Detalhes e contratos atualizados em COMERCIAL.md. Não amplia
+checkout, pedidos, pagamentos ou autorização Honji. Autorização de integração
+e deploy deste incremento continua vigente no pedido Agente 05 do mesmo chat.
