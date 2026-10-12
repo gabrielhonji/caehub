@@ -1,4 +1,47 @@
 # Coordenação de agentes
+## Validado, publicação em andamento — Agente 07, 12/10/2026
+
+Base limpa `cec469b`, dependências 06/1.11 integradas; branch
+`feat/portal-publico-compras`, Codex deste chat. Reserva: portal React público,
+roteamento de entrada, projeção pública do catálogo em orders/app,
+nome da campanha nos detalhes/DTO de pedidos, testes
+públicos, CSS próprio, documentação e release. Reservas anteriores liberadas.
+Aceite: landing anônima; campanhas/produtos ativos sem custos/dados privados;
+variações, quantidade, remoção e total estimado por campanha; etapa 2 apenas
+estoque livre; servidor revalida preço/saldo e deduplica a criação existente;
+Pix pendente permanece pendente; consulta própria e retirada sem ações
+administrativas; desktop/mobile, claro/escuro, teclado, vazio/erro/loading;
+gate completo, commit/push/main e deploy com smoke público.
+Externos sem vínculo confiável não compram; não altera identidade central.
+Imagens, eventos públicos e instruções/local de retirada não têm contratos de
+publicação configurados: usar placeholder e somente informações existentes.
+
+Implementação 1.12.0: raiz pública, campanhas/catálogo ativos, detalhes com
+atributos reais e placeholder, seleção por campanha com quantidades/remoção,
+subtotal/total, persistência temporária sem dados pessoais, checkout existente
+com chave idempotente preservada em falhas e trava imediata de envio. Pedido
+registrado abre Pix e atualiza consulta própria. Detalhes/histórico mostram
+campanha; produção e retirada usam estados reais, sem ações do comprador.
+
+Gate final: 31/31 testes em Node 22/MySQL descartável, TypeScript/build de
+produção (391 kB) e auditoria sem vulnerabilidades. Teste público inclui
+anonimato, campo de venda permitido, ausência de custo/Pix/dados privados,
+externo sem vínculo negado, estoque compartilhado após reserva, etapa 2,
+arquivamento, compra própria/replay, outra identidade negada e suspensão.
+Chromium real: 1440/768/390, claro/escuro, sem overflow/exceções, seleção
+preservada na recarga, quantidades/variações, pedido/Pix/lista imediata,
+conferência administrativa fictícia→pago→pronto→retirado, sem controles
+administrativos no comprador; teclado/foco e estados controlados vazio/erro/
+loading. Falha de refresh conserva detalhes e permite recuperação.
+Revisão corrigiu atualização da lista após compra; fixture de categoria e
+seletor nativo foram diagnosticados antes de repetir. Build inicial em mount
+read-only recebeu EROFS; cópia gravável dentro do container resolveu sem
+alterar permissões. Capturas e fixtures ficam fora do Git.
+Main remota conferida sem avanço concorrente; origem oficial é main do
+repositório Honji e domínio preserva proxy-root. Reservas mantidas até concluir
+publicação. Smoke com sessão pessoal/transação real continua pendente; este
+gate não presume identidade externa nem configuração Pix/prazo de produção.
+
 ## Publicado — Refinamento Comercial, 12/10/2026
 
 Pedido atual: melhorar os elementos implementados e completar lacunas do ciclo.

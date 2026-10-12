@@ -264,3 +264,35 @@ Inicializações usam lock de sessão por schema em conexão dedicada, com liber
 em finally, porque DDL pode encerrar transações. Referência operacional:
 [MySQL 8.4 — locking functions](https://dev.mysql.com/doc/refman/8.4/en/locking-functions.html).
 Teste com dois pools/schema novo valida startup concorrente e liberação.
+
+## Portal público — Agente 07, 1.12.0
+
+`/` apresenta Honji/CAEHUB e CAECOMP, campanhas e produtos ativos com preço de
+venda configurado. Esse estado ativo é a publicação comercial neste incremento;
+produtos/campanhas arquivados e variações inativas são omitidos. GET
+`/api/public/catalog` reutiliza a projeção de venda do OrderService sem exigir
+identidade: somente campos públicos, disponibilidade central descontando
+reservas válidas e prazo configurado; nunca Pix, custo, estoque detalhado ou
+compradores. GET `/api/public/buyer-status` informa apenas elegibilidade atual;
+a criação e consulta própria continuam protegidas pelas APIs 1.11.
+
+Detalhes de produto compõem Dialog e campos existentes, selecionando IDs reais
+com atributos e quantidade. Seleção contém uma campanha, pode editar/remover
+itens e mostra subtotais/total estimado; troca de campanha reinicia os itens.
+IDs, quantidades e chave idempotente ficam em sessionStorage durante a sessão
+do navegador para sobreviver à ida ao login; nenhum campo pessoal ou token é
+armazenado. Seleção não reserva estoque. Backend recalcula preço, saldo e etapa,
+com expectedPriceCents e requestKey dos contratos existentes. Falha temporária
+mantém a chave para repetir; envio simultâneo é bloqueado imediatamente.
+
+Etapa 2 preserva os modelos para consulta e vende apenas estoque livre, sem
+novas encomendas. Conta com vínculo ativo compra para si; externos sem vínculo
+não recebem acesso institucional. Não altera Keycloak/BFF central ou cria login.
+Área pessoal, Pix, histórico, produção e retirada reutilizam CommercialOrders e
+CommercialOrderDetail com ownOnly, sem operações administrativas. `/auth/login`
+mantém OIDC/PKCE existente; rotas hash `#/...` mantêm a aplicação interna.
+
+Não existe contrato de imagem de produto, evento público ou local/instruções de
+retirada no cadastro atual. Usam-se placeholder textual, ausência de eventos e
+orientação existente para combinar retirada com a equipe. Pix/prazo reais ainda
+precisam de configuração administrativa; não se presume chave, local ou horário.

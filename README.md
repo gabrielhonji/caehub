@@ -36,3 +36,12 @@ docker compose -f compose.dev.yml run --rm web npm run api
 As variáveis usam o contrato `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` e `DB_PASSWORD`. O Compose local usa MySQL sem senha exclusivamente na rede Docker interna e sem publicar portas; produção recebe credenciais pela infraestrutura. Para testar localmente outra identidade fixa, configure no processo do servidor `NODE_ENV=development`, `CAEHUB_DEV_ACTOR_ID` e, quando necessário, `CAEHUB_DEV_OWNER=true`. Essa identidade não vem de requisição HTTP e é recusada em produção.
 
 Veja os contratos em [`docs/caehub/API.md`](docs/caehub/API.md). Kanban, Agenda e Comercial são funcionais. Comercial inclui compra própria por membros Honji, pedidos administrativos externos, reservas com vencimento, Pix manual, produção/recebimento, retiradas e pendências rastreáveis, preservando o inventário central. Configure prazo e instruções reais de Pix antes das vendas físicas. Consulte `docs/caehub/COMERCIAL.md`.
+
+## Portal público e compras
+
+A raiz `/` é pública: campanhas ativas, catálogo, detalhes e seleção temporária
+por campanha. Conta Honji com vínculo ativo no CAECOMP conclui pelo mesmo serviço
+de pedidos e consulta Pix, produção e retirada próprios. Externos sem vínculo
+continuam atendidos pela operação administrativa, sem acesso institucional novo.
+`/#/espacos` e os demais hashes preservam a gestão protegida. Imagens de produtos,
+eventos públicos e local de retirada aguardam contratos de cadastro/publicação.

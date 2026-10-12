@@ -82,3 +82,15 @@ concorrência e saldo não negativo, histórico persistente e campanha exclusiva
 são escopo aprovado pelo pedido Agente 05. Aceite observável e contratos
 implementados estão em COMERCIAL.md; reservas/pedidos/pagamentos permanecem
 futuros. Validação real usa MySQL descartável e Chromium com dados fictícios.
+
+## Portal público — Agente 07 (12/10/2026)
+
+Aceite observável antecipado em COORDENACAO: landing anônima, catálogo público
+sem custo/dados privados, seleção por campanha e variação, etapa 2 sem novas
+encomendas, saldo compartilhado, compra própria revalidada/idempotente, Pix
+manual pendente, consulta própria/retirada sem controles administrativos,
+responsividade/temas/teclado/estados. Teste público com MySQL real descartável
+complementa os testes comerciais existentes. Chromium usa dados fictícios e
+inspeciona o bundle real. Autosserviço externo, imagens/eventos/local de retirada
+sem contrato e smoke transacional com sessão pessoal de produção permanecem
+pendências explícitas; não são declarados validados por fixtures.

@@ -40,6 +40,13 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   const actor = async (request: import("fastify").FastifyRequest) => { const value = await identity.current(request); if (!value) throw new Forbidden('Honji identity integration is unavailable'); if (!value.projectAccess) throw new Forbidden('project.access is required'); if(value.debugView&&value.debugView.mode!=='real'&&!['GET','HEAD'].includes(request.method))throw new Forbidden('debug profiles are read-only'); return value; };
   const commercial=new CommercialService(service.db,service);
   const orders=new OrderService(service.db,service);
+  app.get('/api/public/catalog',async(_request,reply)=>{reply.header('cache-control','no-store');return orders.publicCatalog();});
+  app.get('/api/public/buyer-status',async(request,reply)=>{
+    reply.header('cache-control','no-store');
+    const current=await identity.current(request);
+    if(!current?.projectAccess||(current.debugView&&current.debugView.mode!=='real'))return {canBuy:false};
+    try{await service.requireMember(current);return {canBuy:true};}catch(error){if(error instanceof Forbidden)return {canBuy:false};throw error;}
+  });
   const paramId=(request:import('fastify').FastifyRequest)=>id.parse((request.params as {id:string}).id);
   app.get('/api/commercial/orders',async request=>orders.list(await actor(request),undefined,orderListInput.parse(request.query)));
   app.get('/api/commercial/shop',async request=>orders.shop(await actor(request)));
@@ -177,6 +184,6 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
       throw error;
     }
   });
-  app.get('/',async(request,reply)=>{if(!await identity.current(request))return reply.redirect('/acesso');return reply.type('text/html').send(await readFile(resolve('dist/index.html')));});
+  app.get('/',async(_request,reply)=>reply.type('text/html').send(await readFile(resolve('dist/index.html'))));
   return app;
 }

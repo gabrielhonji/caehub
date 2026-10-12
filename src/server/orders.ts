@@ -74,12 +74,15 @@ export class OrderService {
   }
   async shop(actor:Actor){
     await this.institution.requireMember(actor);
+    return this.publicCatalog();
+  }
+  async publicCatalog(){
     const campaigns=await this.db.many<RowDataPacket>("SELECT id,name,description,semester,stage,status,version FROM commercial_campaigns WHERE organization_id=? AND status='active' ORDER BY semester DESC,name",[org]);
     const products=await this.db.many<RowDataPacket>(`SELECT DISTINCT p.id,p.name,p.description,p.sku,p.category,p.mode,p.campaign_id AS campaignId,p.sale_cents AS saleCents,p.status FROM commercial_products p JOIN commercial_campaign_products l ON l.product_id=p.id JOIN commercial_campaigns c ON c.id=l.campaign_id WHERE p.organization_id=? AND p.status='active' AND p.sale_cents IS NOT NULL AND c.status='active' ORDER BY p.name`,[org]);
     const variants=await this.db.many<RowDataPacket>(`SELECT v.id,v.product_id AS productId,v.name,v.status,v.attributes,CAST(v.physical_quantity-COALESCE(r.quantity,0) AS SIGNED) AS availableQuantity FROM commercial_variants v JOIN commercial_products p ON p.id=v.product_id LEFT JOIN (SELECT variant_id,SUM(allocated_quantity) AS quantity FROM commercial_order_items WHERE allocation_status='committed' OR (allocation_status='provisional' AND expires_at>NOW(3)) GROUP BY variant_id) r ON r.variant_id=v.id WHERE p.organization_id=? AND p.status='active' AND p.sale_cents IS NOT NULL AND v.status='active' AND EXISTS(SELECT 1 FROM commercial_campaign_products l JOIN commercial_campaigns c ON c.id=l.campaign_id WHERE l.product_id=p.id AND c.status='active') ORDER BY v.name`,[org]);
     const links=await this.db.many<RowDataPacket>(`SELECT l.campaign_id AS campaignId,l.product_id AS productId FROM commercial_campaign_products l JOIN commercial_campaigns c ON c.id=l.campaign_id JOIN commercial_products p ON p.id=l.product_id WHERE c.organization_id=? AND c.status='active' AND p.status='active' AND p.sale_cents IS NOT NULL`,[org]);
     const config=await this.db.one<RowDataPacket>('SELECT reservation_minutes FROM commercial_operations WHERE organization_id=?',[org]);
-    return {campaigns,products,variants,links,reservationMinutes:config!.reservation_minutes};
+    return {campaigns,products,variants,links,reservationMinutes:config?.reservation_minutes??null};
   }
   async list(actor:Actor,campaignId?:string,query?:z.infer<typeof orderListInput>){
     const member=await this.institution.requireMember(actor),canManage=await this.canManage(actor);
@@ -104,7 +107,7 @@ export class OrderService {
     const member=await this.institution.requireMember(actor),canManage=!ownOnly&&await this.canManage(actor);
     return this.db.transaction(async db=>{
     await lockCommercial(db);await this.expire(db);
-    const o=await db.one<RowDataPacket>('SELECT o.*,c.stage AS campaignStage FROM commercial_orders o JOIN commercial_campaigns c ON c.id=o.campaign_id WHERE o.id=? AND c.organization_id=?',[id,org]);
+    const o=await db.one<RowDataPacket>('SELECT o.*,c.name AS campaignName,c.stage AS campaignStage FROM commercial_orders o JOIN commercial_campaigns c ON c.id=o.campaign_id WHERE o.id=? AND c.organization_id=?',[id,org]);
     if(!o||(!canManage&&o.buyer_person_id!==member.person_id))throw new NotFound('Pedido não encontrado.');
     const items=await db.many<RowDataPacket>('SELECT * FROM commercial_order_items WHERE order_id=? ORDER BY product_name,variant_name',[id]);
     const events=await db.many<RowDataPacket>(`SELECT id,action,actor_name AS actor,note,created_at AS createdAt FROM commercial_order_events WHERE order_id=? ${canManage?'':"AND action NOT IN ('administrative.exception','administrative.resolved')"} ORDER BY created_at,id`,[id]);

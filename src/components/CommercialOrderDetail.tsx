@@ -10,7 +10,7 @@ export function CommercialOrderDetail({detail,busy,refresh,onAction}:{detail:Ord
   const requiresAcknowledgement=['pay','refund','cancel','collect'].includes(action);
   const acknowledgement:Record<string,string>={pay:'Conferi o recebimento real do Pix, além do comprovante enviado.',refund:'Conferi a comprovação de que o reembolso manual foi realizado.',cancel:o.payment_status==='paid'?'Entendo que o cancelamento libera os itens e deixa o reembolso manual pendente.':'Conferi o pedido e autorizo liberar a reserva.',collect:'Conferi todos os itens e a entrega efetiva ao comprador.'};
   return <>
-    <p className="commercial-order-id">Pedido {o.id}</p><h3>{o.buyer_name}</h3>{o.buyer_contact&&<p>{o.buyer_contact}</p>}
+    <p>{o.campaignName}</p><p className="commercial-order-id">Pedido {o.id}</p><h3>{o.buyer_name}</h3>{o.buyer_contact&&<p>{o.buyer_contact}</p>}
     <div className="card-actions"><Badge>{orderLabels[o.status]}</Badge><Badge>{orderLabels[o.payment_status]}</Badge><Badge>{orderLabels[o.delivery_status]}</Badge></div>
     <p className="commercial-next-step" role="status">{nextOrderStep(detail)}</p>
     <p>Total registrado: <strong>{money(Number(o.total_cents))}</strong></p>{o.paid_at&&<p>Pagamento conferido em {orderTime(o.paid_at)}.</p>}{o.collected_at&&<p>Retirada em {orderTime(o.collected_at)}.</p>}

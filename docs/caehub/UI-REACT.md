@@ -100,3 +100,12 @@ opções reutilizáveis na categoria; alterações não recriam variantes existe
 São responsabilidades de domínio, sem nova biblioteca ou controle base.
 Campanha selecionada pré-preenche o cadastro. Mutações só aparecem com
 `canManage`; perfis de debug e consulta ampla continuam somente leitura.
+
+## Portal público — 1.12.0
+
+PublicPortal compõe HonjiBrand, Button/Badge/Eyebrow, Dialog, estados de feedback,
+CommercialOrderForm, CommercialOrders e CommercialOrderDetail. Sua responsabilidade
+é a entrada anônima e seleção temporária por campanha; não duplica a biblioteca
+visual, cálculos/reservas do servidor ou acompanhamento pós-compra. CSS local
+usa tokens e composição Comercial existentes, temas e geometria de campos.
+Placeholder textual substitui imagens ausentes, sem criar ativos de marca.
