@@ -204,7 +204,7 @@ Portal contextual `e2a4383`, release `20261012-023654`. Capturas/fluxos visuais
 usam fixtures fictícias; não houve smoke com sessão autenticada de produção.
 Incremento concluído e reservas liberadas.
 
-## Entrega validada — Comercial/campanhas, 12/10/2026
+## Concluído — Comercial/campanhas, 12/10/2026
 
 Base limpa `50fe2e9`, branch `feat/comercial-campanhas-cadastro`. Escopo reservado:
 Comercial (migração, serviço, rotas, formulários e catálogo, CSS e testes),
@@ -247,3 +247,15 @@ nativos. Gate final aprovado sem mudanças de host, permissões ou infraestrutur
 Publicação segue main integrada, `build-app`/`deploy-app caehub-gabriel 1.9.0`,
 healthcheck e gate público. Resultados Git/deploy são reportados neste chat.
 Sem alteração de Keycloak, checkout, pedidos ou pagamentos.
+
+Publicação confirmada em 12/10/2026: código `7273f63` integrado em main e
+confirmado em origin/honji; imagem oficial `honji/caehub-gabriel:1.9.0`,
+source_commit verificado, container Healthy e deploy ok. HTTPS confirmou health
+1.9.0/release `12102026-113902` e bundles novos 200; página Honji e OIDC/PKCE
+reais; leitura/escrita de Comercial/categorias/campanhas anônimas 403.
+Nenhuma movimentação real de produção, nem sessão autenticada de usuário
+exercitada. Revisão automática inicial do deploy não reconheceu a autorização;
+reavaliação pelo mesmo canal aceitou as linhas 9/458 do pedido original anexado.
+Não houve canal alternativo ou mudança de permissões. Containers/rede fictícios
+encerrados. Incremento concluído e reservas liberadas. Registro documental
+posterior não altera código/runtime da imagem publicada.
