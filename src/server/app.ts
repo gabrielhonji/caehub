@@ -116,9 +116,9 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.get('/api/agenda',async request=>agenda.calendar(await actor(request),agendaQuery.parse(request.query)));
   app.get('/api/agenda/foundation',async request=>{
     const current=await actor(request),query=agendaQuery.parse(request.query),membership=await service.requireMember(current);
-    const canManage=current.owner||['president','vice_president','counselor','director'].includes(membership.role);
-    const [calendar,availability,members,departments,notifications,requests,meetingPolls,operationalShifts]=await Promise.all([agenda.calendar(current,query),agenda.myAvailability(current),canManage?agenda.options(current):Promise.resolve([]),service.departments(),agenda.notifications(current),availabilityRequests.list(current),polls.list(current),shifts.list(current)]);
-    return {calendar,availability,members,departments,notifications,requests,polls:meetingPolls,shifts:operationalShifts,session:{membership:{id:membership.id,role:membership.role},owner:current.owner}};
+    const canManage=await service.isAdmin(current,membership)||await service.isDirector(membership.id);const canReadAll=await service.canViewAll(current,membership);
+    const [calendar,availability,members,departments,notifications,requests,meetingPolls,operationalShifts]=await Promise.all([agenda.calendar(current,query),agenda.myAvailability(current),canManage||canReadAll?agenda.options(current):Promise.resolve([]),service.departments(),agenda.notifications(current),availabilityRequests.list(current),polls.list(current),shifts.list(current)]);
+    return {calendar,availability,members,departments,notifications,requests,polls:meetingPolls,shifts:operationalShifts,session:{membership:{id:membership.id,role:membership.role},owner:current.owner,canManage,canReadAll}};
   });
   const meetingInput=z.object({title:z.string().trim().min(1).max(200),description:z.string().max(10000).optional(),location:z.string().trim().max(255).optional(),workspaceId:id.optional(),startsAt:z.string().datetime(),endsAt:z.string().datetime(),participantIds:z.array(id).max(100).default([])});
   app.post('/api/meetings',async(request,reply)=>reply.code(201).send(await agenda.createMeeting(await actor(request),meetingInput.parse(request.body))));

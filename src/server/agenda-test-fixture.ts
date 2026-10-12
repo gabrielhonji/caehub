@@ -15,5 +15,6 @@ export async function agendaFixture() {
     if(response.statusCode!==201)throw new Error(`Fixture failed: ${response.statusCode}`);ids[name]=response.json().id;
   }
   ids.owner=(await apps.owner.inject({method:'GET',url:'/api/me'})).json().membership.id;
+  await service.joinDepartment(actors.owner,'1a4e0bd0-5f4a-4d10-8000-000000000104',ids.director,'director');
   return {db,service,actors,apps,ids,close:async()=>{await Promise.all(Object.values(apps).map(app=>app.close()));await db.close();}};
 }

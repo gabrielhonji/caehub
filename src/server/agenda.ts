@@ -21,15 +21,15 @@ export class AgendaService {
   async mayOrganize(actor: Actor, membership: RowDataPacket, workspaceId?: string): Promise<boolean> {
     if (workspaceId && !await this.db.one<RowDataPacket>("SELECT id FROM workspaces WHERE id=? AND organization_id=? AND status='active'",[workspaceId,CAECOMP_ORGANIZATION_ID])) return false;
     if (await this.institutional.isAdmin(actor, membership as never)) return true;
-    if (membership.role !== 'director') return false;
+    if (!await this.institutional.isDirector(membership.id)) return false;
     if (!workspaceId) return true;
     const workspace = await this.db.one<RowDataPacket>('SELECT department_id AS departmentId FROM workspaces WHERE id=? AND organization_id=? AND status=\'active\'', [workspaceId, CAECOMP_ORGANIZATION_ID]);
     return Boolean(workspace && workspace.departmentId && await this.institutional.managesDepartment(membership.id, workspace.departmentId));
   }
 
-  async mayReadWorkspace(actor: Actor, membership: RowDataPacket, workspaceId: string): Promise<boolean> {
-    if (await this.institutional.isAdmin(actor, membership as never)) return true;
-    const row = await this.db.one<RowDataPacket>(`SELECT w.id FROM workspaces w WHERE w.id=? AND w.organization_id=? AND w.status='active' AND (EXISTS(SELECT 1 FROM workspace_participants wp WHERE wp.workspace_id=w.id AND wp.membership_id=?) OR EXISTS(SELECT 1 FROM department_memberships dm WHERE dm.department_id=w.department_id AND dm.membership_id=? AND dm.kind='director' AND dm.ended_at IS NULL))`, [workspaceId, CAECOMP_ORGANIZATION_ID, membership.id, membership.id]);
+  async mayReadWorkspace(actor: Actor, membership: RowDataPacket, workspaceId: string, participation=false): Promise<boolean> {
+    if (participation?await this.institutional.isAdmin(actor,membership as never):await this.institutional.canViewAll(actor, membership as never)) return true;
+    const row = await this.db.one<RowDataPacket>(`SELECT w.id FROM workspaces w WHERE w.id=? AND w.organization_id=? AND w.status='active' AND (EXISTS(SELECT 1 FROM workspace_participants wp WHERE wp.workspace_id=w.id AND wp.membership_id=?) OR EXISTS(SELECT 1 FROM department_memberships dm WHERE dm.department_id=w.department_id AND dm.membership_id=? AND dm.ended_at IS NULL))`, [workspaceId, CAECOMP_ORGANIZATION_ID, membership.id, membership.id]);
     return Boolean(row);
   }
 
@@ -74,10 +74,10 @@ export class AgendaService {
     let visibility = '';
     if (query.scope === 'personal') { visibility = 'AND (m.organizer_membership_id=? OR EXISTS(SELECT 1 FROM meeting_participants own WHERE own.meeting_id=m.id AND own.membership_id=? AND own.removed_at IS NULL))'; values.push(member.id, member.id); }
     if (query.scope === 'workspace') { visibility = 'AND m.workspace_id=?'; values.push(query.workspaceId); }
-    if (query.scope === 'general' && !await this.institutional.isAdmin(actor, member)) { visibility = `AND (m.workspace_id IS NULL OR m.organizer_membership_id=? OR EXISTS(SELECT 1 FROM meeting_participants own WHERE own.meeting_id=m.id AND own.membership_id=? AND own.removed_at IS NULL) OR EXISTS(SELECT 1 FROM workspace_participants wp WHERE wp.workspace_id=m.workspace_id AND wp.membership_id=?) OR EXISTS(SELECT 1 FROM workspaces wx JOIN department_memberships dm ON dm.department_id=wx.department_id WHERE wx.id=m.workspace_id AND dm.membership_id=? AND dm.kind='director' AND dm.ended_at IS NULL))`; values.push(member.id, member.id, member.id, member.id); }
+    if (query.scope === 'general' && !await this.institutional.canViewAll(actor, member)) { visibility = `AND (m.workspace_id IS NULL OR m.organizer_membership_id=? OR EXISTS(SELECT 1 FROM meeting_participants own WHERE own.meeting_id=m.id AND own.membership_id=? AND own.removed_at IS NULL) OR EXISTS(SELECT 1 FROM workspace_participants wp WHERE wp.workspace_id=m.workspace_id AND wp.membership_id=?) OR EXISTS(SELECT 1 FROM workspaces wx JOIN department_memberships dm ON dm.department_id=wx.department_id WHERE wx.id=m.workspace_id AND dm.membership_id=? AND dm.ended_at IS NULL))`; values.push(member.id, member.id, member.id, member.id); }
     const meetings = await this.db.many<RowDataPacket>(`SELECT m.id,m.title,m.description,m.location,m.workspace_id AS workspaceId,w.name AS workspace,m.starts_at AS startsAt,m.ends_at AS endsAt,m.revision,p.display_name AS organizer,(m.organizer_membership_id=?) AS canManage,(SELECT JSON_ARRAYAGG(mp2.membership_id) FROM meeting_participants mp2 WHERE mp2.meeting_id=m.id AND mp2.removed_at IS NULL) AS participantIds,COALESCE(mp.response,IF(m.organizer_membership_id=?,'confirmed',NULL)) AS response FROM meetings m JOIN memberships om ON om.id=m.organizer_membership_id JOIN people p ON p.id=om.person_id LEFT JOIN workspaces w ON w.id=m.workspace_id LEFT JOIN meeting_participants mp ON mp.meeting_id=m.id AND mp.membership_id=? AND mp.removed_at IS NULL WHERE m.organization_id=? AND m.cancelled_at IS NULL AND m.starts_at<? AND m.ends_at>? ${visibility} ORDER BY m.starts_at`, [member.id, member.id, member.id, ...values]);
     const items: object[] = [];
-    const admin=await this.institutional.isAdmin(actor,member);
+    const admin=await this.institutional.canViewAll(actor,member);
     for(const row of meetings) {
       const canManage=Boolean((row.canManage||admin)&&await this.mayOrganize(actor,member,row.workspaceId??undefined));
       items.push({...row,canManage,participantIds:canManage?(Array.isArray(row.participantIds)?row.participantIds:JSON.parse(row.participantIds??'[]')):undefined,type:'meeting'});
@@ -109,7 +109,7 @@ export class AgendaService {
 
   async collective(actor: Actor, query: { from: string; to: string; membershipIds?: string[]; departmentId?: string; departmentIds?:string[]; offsetMinutes?:number; slotMinutes?:number }) {
     const manager = await this.institutional.requireMember(actor);
-    if (!await this.institutional.isAdmin(actor, manager) && manager.role !== 'director') throw new Forbidden('director or institutional administrator required');
+    if (!await this.institutional.canViewAll(actor, manager) && !await this.institutional.isDirector(manager.id)) throw new Forbidden('director or institutional administrator required');
     const values: unknown[] = [CAECOMP_ORGANIZATION_ID]; let where = '';
     const selectors:string[]=[];
     if (query.membershipIds?.length) { selectors.push(`m.id IN (${query.membershipIds.map(() => '?').join(',')})`); values.push(...query.membershipIds); }
@@ -140,7 +140,7 @@ export class AgendaService {
 
   async options(actor:Actor) {
     const member=await this.institutional.requireMember(actor);
-    if(!await this.institutional.isAdmin(actor,member)&&member.role!=='director') throw new Forbidden('director or institutional administrator required');
+    if(!await this.institutional.canViewAll(actor,member)&&!await this.institutional.isDirector(member.id)) throw new Forbidden('director or institutional administrator required');
     return this.db.many<RowDataPacket>(`SELECT m.id,m.role,p.display_name AS displayName,COALESCE((SELECT JSON_ARRAYAGG(dm.department_id) FROM department_memberships dm WHERE dm.membership_id=m.id AND dm.ended_at IS NULL),JSON_ARRAY()) AS departmentIds FROM memberships m JOIN people p ON p.id=m.person_id WHERE m.organization_id=? AND m.status='active' ORDER BY p.display_name`,[CAECOMP_ORGANIZATION_ID]);
   }
 

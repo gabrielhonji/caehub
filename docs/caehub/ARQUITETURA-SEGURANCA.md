@@ -53,4 +53,26 @@ Pode avançar: componentes, layouts, estados de erro/acesso, modelo conceitual e
 
 ## Dados e rastreabilidade
 
+### Hierarquia integrada — D-59, 11/10/2026
+
+Honji mantém cargos institucionais e departamentos por projeto. A primeira
+edição no painel ativa a projeção central; antes disso, a configuração local
+existente continua disponível. Depois, cargos e vínculos são editados somente
+no Honji e recebidos pela decisão técnica autenticada de `project.access`.
+Administradores/presidência nomeiam diretores; diretores definem membros do
+próprio departamento. Presidente/vice acumulam direção. Conselheiro consulta
+com a mesma abrangência da presidência; edição exige outra função autorizada.
+
+Participação em espaço departamental é herdada do vínculo ativo e direção
+autoriza sua administração. Vínculos diretos paralelos desses espaços são
+substituídos pela projeção; espaços gerais mantêm participantes explícitos.
+Remoção, troca de direção e suspensão revogam o acesso, inclusive quadros,
+cartões, atribuições disponíveis e listagem de tarefas. IDs persistem ao
+renomear departamentos; a direção de Produtos preserva o acesso Comercial
+pelo ID estável, sem depender do nome. Agenda mantém privacidade dos blocos
+pessoais; visualização ampla não concede organização ou inscrição coletiva.
+
+Projetos têm estruturas independentes. O contrato permite novos consumidores,
+mas não migra as permissões específicas da XII nesta entrega.
+
 **H:** fixtures, capturas, testes e exemplos usam dados fictícios. **R:** registrar alterações sensíveis com ator confiável, ação, recurso/contexto e momento, sem segredos. Retenção, acesso aos registros, exclusão e dados pessoais necessários devem ser definidos antes de persistir dados reais.

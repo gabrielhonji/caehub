@@ -6,6 +6,8 @@ export type Actor = {
   displayName: string;
   projectAccess: boolean;
   owner: boolean;
+  institutionalAdmin?: boolean;
+  centralHierarchy?: boolean;
   realSubject?: string;
   debugView?: { available: boolean; mode: 'real' | 'admin' | 'events_director' | 'member' };
 };
@@ -13,9 +15,9 @@ export type Actor = {
 export type Membership = { id: string; role: InstitutionalRole; status: 'active' | 'suspended' | 'ended' };
 
 export function isInstitutionAdmin(actor: Actor, membership?: Membership): boolean {
-  return actor.owner || ['president', 'vice_president', 'counselor'].includes(membership?.role ?? 'member');
+  return membership?.status === 'active' && (actor.owner || actor.institutionalAdmin === true || ['president', 'vice_president'].includes(membership.role));
 }
 
 export function mayManageDepartment(actor: Actor, membership: Membership | undefined, isDirector: boolean): boolean {
-  return isInstitutionAdmin(actor, membership) || (membership?.status === 'active' && membership.role === 'director' && isDirector);
+  return isInstitutionAdmin(actor, membership) || (membership?.status === 'active' && isDirector);
 }

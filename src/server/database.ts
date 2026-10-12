@@ -37,6 +37,8 @@ export async function connect(config: DbConfig): Promise<Database> {
 }
 
 export async function migrate(db: Database): Promise<void> {
+  await db.run('CREATE TABLE IF NOT EXISTS honji_hierarchy_projection (organization_id CHAR(36) PRIMARY KEY, revision BIGINT NOT NULL, snapshot_hash CHAR(64) NULL)');
+  if(!await db.one<RowDataPacket>("SHOW COLUMNS FROM honji_hierarchy_projection LIKE 'snapshot_hash'"))await db.run('ALTER TABLE honji_hierarchy_projection ADD COLUMN snapshot_hash CHAR(64) NULL');
   await db.run(`CREATE TABLE IF NOT EXISTS caehub_sessions (session_hash char(64) primary key, subject varchar(255) null, display_name varchar(255) null, csrf_token varchar(64) not null, oauth_state_hash char(64) null, oauth_nonce_hash char(64) null, oauth_verifier varchar(128) null, created_at datetime(3) not null, last_activity_at datetime(3) not null, expires_at datetime(3) not null, index caehub_sessions_expiry(expires_at))`);
   const debugMode = await db.one<RowDataPacket>(`SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='caehub_sessions' AND column_name='debug_mode'`);
   if (!debugMode) await db.run("ALTER TABLE caehub_sessions ADD COLUMN debug_mode enum('real','admin','events_director','member') NOT NULL DEFAULT 'real'");

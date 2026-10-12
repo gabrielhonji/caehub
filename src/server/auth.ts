@@ -3,6 +3,7 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Actor } from './domain.js';
 import type { Database } from './database.js';
+import { synchronizeHierarchy } from './hierarchy.js';
 
 export interface IdentityGateway { current(request?: FastifyRequest): Promise<Actor | undefined>; register?(app: FastifyInstance): void; }
 export class UnavailableHonjiGateway implements IdentityGateway { async current(): Promise<Actor | undefined> { return undefined; } }
@@ -40,14 +41,17 @@ export class HonjiGateway implements IdentityGateway {
     const now=Date.now();if(now-new Date(session.lastActivity).getTime()>=3600000||now>=new Date(session.expiresAt).getTime()){await this.db.run('DELETE FROM caehub_sessions WHERE session_hash=?',[digest(sid)]);return;}
     const token=await this.serviceAccessToken();if(!token)return;
     const decision=await fetch(`${this.config.authorizationOrigin}/internal/authorization/decisions`,{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify({integrationId:'caehub',userId:session.subject,resource:{projectId:'CAECOMP'},action:'project.access'}),signal:AbortSignal.timeout(5000)});
-    if(!decision.ok||!(await decision.json() as any).allowed)return;
+    if(!decision.ok)return;
+    const authorization=await decision.json() as {allowed:boolean;hierarchy?:unknown;institutionalAdmin?:boolean};
+    if(!authorization.allowed)return;
+    if(authorization.hierarchy)await synchronizeHierarchy(this.db,authorization.hierarchy);
     if(request.method!=='GET'&&request.method!=='HEAD'&&(request.headers.origin!==this.config.publicOrigin||request.headers['x-csrf-token']!==session.csrfToken))return;
     const owner=session.subject===this.config.ownerId;
     if(owner&&!this.provisionedOwners.has(session.subject)){await this.db.run('INSERT IGNORE INTO people(id,honji_subject,display_name) VALUES(UUID(),?,?)',[session.subject,session.displayName]);await this.db.run("INSERT IGNORE INTO memberships(id,organization_id,person_id,role,status) SELECT UUID(),'1a4e0bd0-5f4a-4d10-8000-000000000001',id,'president','active' FROM people WHERE honji_subject=?",[session.subject]);this.provisionedOwners.add(session.subject);}
     if(now-new Date(session.lastActivity).getTime()>=60000)await this.db.run('UPDATE caehub_sessions SET last_activity_at=NOW(3) WHERE session_hash=?',[digest(sid)]);(request as any).caehubCsrf=session.csrfToken;
     const mode=session.debugMode??'real';const templates={admin:['caehub-debug-admin','Administração / Presidência'],events_director:['caehub-debug-events-director','Direção de Eventos'],member:['caehub-debug-member','Membro']} as const;
     const template=owner&&mode!=='real'?templates[mode as keyof typeof templates]:undefined;
-    return {subject:template?.[0]??session.subject,displayName:template?.[1]??session.displayName,projectAccess:true,owner:owner&&mode==='real',realSubject:session.subject,debugView:{available:owner,mode:owner?mode:'real'}};
+    return {subject:template?.[0]??session.subject,displayName:template?.[1]??session.displayName,projectAccess:true,owner:owner&&mode==='real',institutionalAdmin:!template&&authorization.institutionalAdmin===true,centralHierarchy:Boolean(authorization.hierarchy),realSubject:session.subject,debugView:{available:owner,mode:owner?mode:'real'}};
   }
   register(app:FastifyInstance){
     app.get('/acesso',async(request,reply)=>await this.current(request)?reply.redirect('/'):reply.type('text/html').send(accessPage));app.get('/honji-access.css',async(_request,reply)=>reply.type('text/css').send(accessCss2+accessBrandCss));app.get('/honji-access.js',async(_request,reply)=>reply.type('application/javascript').send(accessScript));app.get('/favicon.svg',async(_request,reply)=>reply.type('image/svg+xml').send(giroFavicon));

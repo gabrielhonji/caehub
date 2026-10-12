@@ -1,4 +1,31 @@
 # Coordenação de agentes
+## Entrega validada — Hierarquia institucional, 11/10/2026
+
+HIER-01, Codex deste chat. Integração com estrutura central Honji por projeto:
+cargos acumuláveis com direção; departamentos editáveis; conselheiro com
+consulta ampla e edição apenas por outra função autorizada. Vínculos herdam
+espaços/quadros; direção administra o departamento. Remoção/troca/suspensão
+revoga acesso, inclusive tarefas. Departamentos novos recebem espaço e quadro.
+Página de departamentos e panorama usam dados reais, sem listas fixas.
+Comercial preserva a direção responsável quando o departamento é renomeado.
+
+Validação: 24 testes de servidor em MySQL descartável, incluindo projeção,
+idempotência, revisões antigas, revogação e conselheiro com direção acumulada;
+TypeScript e Vite aprovados. IAM: 31 testes de política e uma integração de
+persistência/concorrência. Auditoria de dependências sem vulnerabilidades.
+Chromium validou cinco perfis no painel Honji, edição/criação de departamentos,
+gestão de membros, seleção de projeto e departamentos no CAEHUB; 1440/768/390 px,
+claro/escuro, sem overflow ou exceções. APIs visuais usam fixtures fictícias;
+isso não comprova sessão SSO real em produção. Servidor dev teve cache 504 no
+mount somente leitura; revisão final usa builds de produção em rede Docker
+privada, sem mudar permissões nem publicar portas.
+
+Fonte de regras: D-59 e ARQUITETURA-SEGURANCA. A primeira edição no Honji ativa
+a autoridade central; cargos/vínculos locais passam a ser projeção, e espaços
+departamentais usam somente a participação herdada. Espaços gerais preservam
+vínculos próprios. Não altera Keycloak, segredos, infraestrutura ou a XII.
+Commit/push são registrados no Git; esta tarefa não autoriza deploy.
+
 ## Atividade atual — Cards da Agenda, 11/10/2026
 
 Incremento `fix/agenda-card-times`, base `8eae416`, versão 1.6.1. Todos os cards

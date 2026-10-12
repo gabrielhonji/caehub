@@ -33,14 +33,14 @@ export class Shifts {
     if(!allowed)throw new Forbidden(manage?'Direção do espaço necessária.':'Acesso ao turno necessário.');
   }
   async list(actor:Actor) {
-    const member=await this.institutional.requireMember(actor),admin=await this.institutional.isAdmin(actor,member);
-    const rows=await this.db.many<RowDataPacket>(`SELECT s.*,w.name AS workspace FROM agenda_shifts s JOIN workspaces w ON w.id=s.workspace_id WHERE s.organization_id=? AND (? OR EXISTS(SELECT 1 FROM workspace_participants wp WHERE wp.workspace_id=s.workspace_id AND wp.membership_id=?) OR EXISTS(SELECT 1 FROM department_memberships dm WHERE dm.department_id=w.department_id AND dm.membership_id=? AND dm.kind='director' AND dm.ended_at IS NULL) OR EXISTS(SELECT 1 FROM agenda_shift_participants sp WHERE sp.shift_id=s.id AND sp.membership_id=?)) ORDER BY s.starts_at DESC LIMIT 100`,[CAECOMP_ORGANIZATION_ID,admin,member.id,member.id,member.id]);
+    const member=await this.institutional.requireMember(actor),admin=await this.institutional.canViewAll(actor,member);
+    const rows=await this.db.many<RowDataPacket>(`SELECT s.*,w.name AS workspace FROM agenda_shifts s JOIN workspaces w ON w.id=s.workspace_id WHERE s.organization_id=? AND (? OR EXISTS(SELECT 1 FROM workspace_participants wp WHERE wp.workspace_id=s.workspace_id AND wp.membership_id=?) OR EXISTS(SELECT 1 FROM department_memberships dm WHERE dm.department_id=w.department_id AND dm.membership_id=? AND dm.ended_at IS NULL) OR EXISTS(SELECT 1 FROM agenda_shift_participants sp WHERE sp.shift_id=s.id AND sp.membership_id=?)) ORDER BY s.starts_at DESC LIMIT 100`,[CAECOMP_ORGANIZATION_ID,admin,member.id,member.id,member.id]);
     const result=[];
     for(const row of rows) {
       const participants=await this.db.many<RowDataPacket>(`SELECT sp.membership_id AS membershipId,sp.status,p.display_name AS displayName FROM agenda_shift_participants sp JOIN memberships m ON m.id=sp.membership_id JOIN people p ON p.id=m.person_id WHERE sp.shift_id=?`,[row.id]);
       const canManage=await this.agenda.mayOrganize(actor,member,row.workspace_id);
       const confirmed=participants.filter(p=>p.status==='confirmed').length,reserved=participants.filter(p=>p.status==='pending').length;
-      result.push({id:row.id,title:row.title,description:row.description,location:row.location,workspaceId:row.workspace_id,workspace:row.workspace,relatedMeetingId:row.related_meeting_id,startsAt:row.starts_at,endsAt:row.ends_at,minimumCapacity:row.minimum_capacity,maximumCapacity:row.maximum_capacity,priorityWindowHours:row.priority_window_hours,revision:row.revision,cancelledAt:row.cancelled_at,canManage,canVolunteer:await this.agenda.mayReadWorkspace(actor,member,row.workspace_id),confirmed,reserved,remaining:Number(row.maximum_capacity)-confirmed-reserved,minimumReached:row.minimum_capacity==null||confirmed>=row.minimum_capacity,ownStatus:participants.find(p=>p.membershipId===member.id)?.status,participants:participants.filter(p=>canManage||occupied(p.status)||p.membershipId===member.id)});
+      result.push({id:row.id,title:row.title,description:row.description,location:row.location,workspaceId:row.workspace_id,workspace:row.workspace,relatedMeetingId:row.related_meeting_id,startsAt:row.starts_at,endsAt:row.ends_at,minimumCapacity:row.minimum_capacity,maximumCapacity:row.maximum_capacity,priorityWindowHours:row.priority_window_hours,revision:row.revision,cancelledAt:row.cancelled_at,canManage,canVolunteer:await this.agenda.mayReadWorkspace(actor,member,row.workspace_id,true),confirmed,reserved,remaining:Number(row.maximum_capacity)-confirmed-reserved,minimumReached:row.minimum_capacity==null||confirmed>=row.minimum_capacity,ownStatus:participants.find(p=>p.membershipId===member.id)?.status,participants:participants.filter(p=>canManage||occupied(p.status)||p.membershipId===member.id)});
     }return result;
   }
   async relatedMeetings(actor:Actor,workspaceId:string) {
@@ -68,7 +68,7 @@ export class Shifts {
       if(!shift)throw new NotFound('shift');
       await this.access(actor,member,shift,management);
       if(shift.cancelled_at)throw new Conflict('Turno cancelado.');
-      if(input.action==='volunteer'&&!await this.agenda.mayReadWorkspace(actor,member,shift.workspace_id))throw new Forbidden('Inscrição exige acesso ao espaço.');
+      if(input.action==='volunteer'&&!await this.agenda.mayReadWorkspace(actor,member,shift.workspace_id,true))throw new Forbidden('Inscrição exige acesso ao espaço.');
       const previous=await tx.one<RowDataPacket>('SELECT status FROM agenda_shift_participants WHERE shift_id=? AND membership_id=?',[id,target]);
       let status:string;
       if(input.action==='volunteer'||input.action==='assign') {

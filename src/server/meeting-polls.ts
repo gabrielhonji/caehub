@@ -24,7 +24,7 @@ export class MeetingPolls {
     });return {id};
   }
   async list(actor:Actor) {
-    const member=await this.institutional.requireMember(actor),admin=await this.institutional.isAdmin(actor,member);
+    const member=await this.institutional.requireMember(actor),admin=await this.institutional.canViewAll(actor,member);
     const polls=await this.db.many<RowDataPacket>(`SELECT p.id,p.title,p.description,p.location,p.workspace_id AS workspaceId,p.deadline,p.closed_at AS closedAt,p.resulting_meeting_id AS meetingId,p.organizer_membership_id AS organizerId FROM meeting_polls p WHERE p.organization_id=? AND (? OR p.organizer_membership_id=? OR EXISTS(SELECT 1 FROM meeting_poll_participants pp WHERE pp.poll_id=p.id AND pp.membership_id=?)) ORDER BY p.created_at DESC LIMIT 50`,[CAECOMP_ORGANIZATION_ID,admin,member.id,member.id]);
     for(const poll of polls) {
       poll.canManage=Boolean((admin||poll.organizerId===member.id)&&await this.agenda.mayOrganize(actor,member,poll.workspaceId??undefined));

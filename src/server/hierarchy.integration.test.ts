@@ -1,0 +1,53 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { connect,configFromEnv,migrate } from './database.js';
+import { synchronizeHierarchy } from './hierarchy.js';
+import { InstitutionalService } from './service.js';
+import { KanbanService } from './kanban.js';
+import type { Actor } from './domain.js';
+
+test('central hierarchy inherits spaces, revokes access and separates counselor read from write',async()=>{
+  assert.equal(process.env.NODE_ENV,'development');
+  const db=await connect({...configFromEnv(process.env),database:`gabriel_hierarchy_${randomUUID().replaceAll('-','')}`});
+  try{
+    await migrate(db);
+    const ids={owner:randomUUID(),director:randomUUID(),member:randomUUID(),counselor:randomUUID(),president:randomUUID()},departmentId=randomUUID();
+    const snapshot={revision:1,roles:{[ids.counselor]:'counselor',[ids.president]:'president'},departments:[{id:departmentId,name:'Departamento fictício',directorId:ids.director,memberIds:[ids.member]}],roster:Object.values(ids).map(id=>({id,name:'Pessoa fictícia'}))};
+    const actor=(name:keyof typeof ids):Actor=>({subject:ids[name],displayName:'Pessoa fictícia',projectAccess:true,owner:name==='owner',centralHierarchy:true});
+    await synchronizeHierarchy(db,snapshot);await synchronizeHierarchy(db,snapshot);
+    const service=new InstitutionalService(db),kanban=new KanbanService(db,service),owner=actor('owner'),director=actor('director'),member=actor('member'),counselor=actor('counselor');
+    const directorMembership=(await service.requireMember(director)).id;
+    const spaces=await service.listWorkspaces(member);assert.equal(spaces.length,1);const workspaceId=spaces[0].id;
+    assert.equal((await service.workspace(director,workspaceId)).canManage,true);
+    assert.equal((await service.workspace(counselor,workspaceId)).canManage,false);
+    assert.equal((await service.workspace(member,workspaceId)).participants.length,2);
+    assert.equal((await db.many('SELECT id FROM department_memberships WHERE department_id=? AND ended_at IS NULL',[departmentId])).length,2);
+    assert.equal((await db.many('SELECT id FROM department_memberships WHERE department_id=?',[departmentId])).length,2);
+    const board=await kanban.createBoard(director,workspaceId,'Quadro fictício');
+    const card=await kanban.createCard(director,board.id,{title:'Restrito',visibility:'directors'});
+    assert.equal((await kanban.detail(counselor,card.id)).permissions.edit,false);
+    assert.equal((await kanban.board(counselor,board.id)).canWrite,false);
+    assert.equal((await kanban.board(counselor,board.id)).columns.flatMap(c=>c.cards).length,1);
+    await assert.rejects(kanban.createCard(counselor,board.id,{title:'Não autorizado'}));
+    await assert.rejects(kanban.updateCard(counselor,card.id,{title:'Não autorizado'}));
+    await assert.rejects(service.manageWorkspace(counselor,workspaceId,{name:'Não autorizado'}));
+    await assert.rejects(service.joinDepartment(owner,departmentId,directorMembership,'director'));
+    snapshot.revision=2;snapshot.departments[0].name='Nome alterado';snapshot.departments[0].directorId=ids.president;
+    await synchronizeHierarchy(db,snapshot);
+    assert.equal((await service.listWorkspaces(director)).length,0);
+    assert.equal((await service.workspace(actor('president'),workspaceId)).canManage,true);
+    assert.equal((await service.listWorkspaces(member))[0].department,'Nome alterado');
+    snapshot.revision=3;snapshot.departments[0].memberIds=[];await synchronizeHierarchy(db,snapshot);
+    assert.equal((await service.listWorkspaces(member)).length,0);
+    await assert.rejects(kanban.board(member,board.id));
+    assert.deepEqual(await kanban.myTasks(member,{}),[]);
+    await synchronizeHierarchy(db,{...snapshot,revision:1});assert.equal((await service.listWorkspaces(member)).length,0);
+    snapshot.revision=4;snapshot.departments[0].directorId=ids.counselor;await synchronizeHierarchy(db,snapshot);
+    assert.equal((await service.requireMember(counselor)).role,'counselor');
+    assert.equal((await service.workspace(counselor,workspaceId)).canManage,true);
+    await kanban.updateCard(counselor,card.id,{title:'Edição pela direção acumulada'});
+    await synchronizeHierarchy(db,{...snapshot,roster:snapshot.roster.filter(u=>u.id!==ids.counselor)});
+    await assert.rejects(service.requireMember(counselor));
+  }finally{await db.close();}
+});

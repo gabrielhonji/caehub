@@ -23,10 +23,10 @@ export class AvailabilityRequests {
     return {id:requestId};
   }
   async list(actor:Actor) {
-    const member=await this.institutional.requireMember(actor), admin=await this.institutional.isAdmin(actor,member);
+    const member=await this.institutional.requireMember(actor), admin=await this.institutional.canViewAll(actor,member);
     const requests=await this.db.many<RowDataPacket>(`SELECT r.id,r.title,r.workspace_id AS workspaceId,r.starts_at AS startsAt,r.ends_at AS endsAt,r.deadline,(r.organizer_membership_id=?) AS isOrganizer,p.display_name AS organizer FROM availability_requests r JOIN memberships om ON om.id=r.organizer_membership_id JOIN people p ON p.id=om.person_id WHERE r.organization_id=? AND (? OR r.organizer_membership_id=? OR EXISTS(SELECT 1 FROM availability_request_participants rp WHERE rp.request_id=r.id AND rp.membership_id=?)) ORDER BY r.created_at DESC LIMIT 50`,[member.id,CAECOMP_ORGANIZATION_ID,admin,member.id,member.id]);
     for(const request of requests) {
-      request.canManage=Boolean(request.isOrganizer||admin);delete request.isOrganizer;
+      request.canManage=Boolean((request.isOrganizer||await this.institutional.isAdmin(actor,member))&&await this.agenda.mayOrganize(actor,member,request.workspaceId??undefined));delete request.isOrganizer;
       request.participants=await this.db.many<RowDataPacket>(`SELECT rp.membership_id AS membershipId,p.display_name AS displayName,rp.reviewed_at AS reviewedAt,rp.review_kind AS reviewKind FROM availability_request_participants rp JOIN memberships m ON m.id=rp.membership_id JOIN people p ON p.id=m.person_id WHERE rp.request_id=? ${request.canManage?'':'AND rp.membership_id=?'}`,request.canManage?[request.id]:[request.id,member.id]);
       request.pendingCount=request.participants.filter((p:RowDataPacket)=>!p.reviewedAt).length;
     }

@@ -19,6 +19,7 @@ test('Agenda persists meetings, resets confirmations and protects private availa
   const memberId=(await ownerApp.inject({method:'POST',url:'/api/members',payload:{honjiSubject:memberActor.subject,displayName:memberActor.displayName,role:'member'}})).json().id;
   const guestId=(await ownerApp.inject({method:'POST',url:'/api/members',payload:{honjiSubject:guestActor.subject,displayName:guestActor.displayName,role:'member'}})).json().id;
   const directorApp=buildApp(new InstitutionalService(db),new DevelopmentIdentityGateway(directorActor));
+  await new InstitutionalService(db).joinDepartment(ownerActor,'1a4e0bd0-5f4a-4d10-8000-000000000104',directorId,'director');
   const memberApp=buildApp(new InstitutionalService(db),new DevelopmentIdentityGateway(memberActor));
   const startsAt='2026-11-16T18:00:00.000Z',endsAt='2026-11-16T19:00:00.000Z';
   const created=await directorApp.inject({method:'POST',url:'/api/meetings',payload:{title:'Reunião reservada',description:'Descrição que não pode vazar',location:'Sala 1',startsAt,endsAt,participantIds:[memberId]}});
