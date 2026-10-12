@@ -1,5 +1,5 @@
 # Coordenação de agentes
-## Implementação validada — Agente 06, 12/10/2026
+## Publicado — Agente 06, 12/10/2026
 
 Base limpa `75b8de9`, dependência Comercial 1.9.0 integrada. Branch
 `feat/pedidos-reservas-producao`; responsável Codex deste chat. Escopo:
@@ -38,9 +38,24 @@ SQL de recebimento, UUID em HTTP privado, foco após leitura assíncrona.
 Roteiro visual recebeu seletores específicos e espera do salvamento; reinício
 antecipado da API interrompeu uma rodada, corrigida sem alteração de infra.
 Timeout da revisão automática da rede Docker passou na nova tentativa permitida.
-Vite mantém aviso de bundle acima de 500 kB; build aprovado, sem regressão de gate.
+Bundle de validação em NODE_ENV=development teve aviso de tamanho; o build
+oficial de produção gerou JavaScript de 362 kB, sem esse aviso, e recebeu nova
+revisão Chromium do artefato exato em 1440/768/390, claro/escuro e perfil membro.
 Sem falha de código/teste pendente. Publicação segue main, build-app/deploy-app
 oficiais; prazo/Pix reais e smoke com sessão pessoal continuam dependências.
+
+Publicação confirmada: código `6842c21` na branch de trabalho e main, com pushes
+confirmados em origin (GitHub) e honji. `build-app caehub-gabriel 1.10.0`
+confirmou source_commit e proveniência; `deploy-app` publicou a imagem oficial
+`honji/caehub-gabriel:1.10.0` com container Healthy. HTTPS confirmou health
+1.10.0/release `12102026-124802`, JS/CSS novos 200, entrada real Honji com
+OIDC/PKCE e novas APIs de pedidos/configuração/produção recusando leitura e
+escrita anônimas. Nenhuma transação de produção ou sessão pessoal autenticada
+foi usada: smoke transacional autenticado permanece pendente. Prazo/Pix reais
+exigem configuração explícita; autosserviço externo e refinamento de exceções
+ficam para próximo incremento, sem avanço para banco/gateway. Migração executa
+no boot antes da readiness; não houve SQL manual em produção. Registro posterior
+de evidência é documental e não altera o código da imagem. Caminhos liberados.
 
 ## Entrega validada — Hierarquia institucional, 11/10/2026
 
