@@ -63,6 +63,13 @@ Critérios C/H verificam decisões/preferências; critérios R/P dependem de apr
 | C-04 | Concorrência e reconciliação preservam invariantes aprovadas; estoque comum não abre acesso a encomendas alheias |
 
 ## Registro de evidência
+Agente 06: cenários observáveis de pedidos/reservas/Pix/produção/retirada estão
+registrados em COORDENACAO.md antes da implementação; contratos em COMERCIAL.md.
+`orders.integration.test.ts` verifica 10→reserva 7→recusa 5 entre campanhas,
+última unidade concorrente, vencimento/Pix tardio, preços preservados,
+autorização/privacidade, produção parcial, sobras, retirada concorrente
+idempotente, reembolso manual e reconexão. Publicação exige gate ENG-001.
+
 
 Formato curto por critério: ID; cenário/escopo; resultado (passou/falhou/pendente); evidência; limitação. “Tela montada com mock” não satisfaz SEC-01. P aberto não satisfaz o critério que depende dele.
 

@@ -1,4 +1,13 @@
 # Decisões validadas após o pacote
+## Ciclo Comercial — Agente 06, 12/10/2026
+
+Pedido anexado autoriza pedidos, reservas provisórias com vencimento, Pix manual,
+produção/recebimento rastreáveis e retiradas, preservando campanha com duas etapas
+e inventário central. Autoriza testes, commit, push, integração main e deploy
+oficial após gate. Contratos em COMERCIAL.md. Prazo não informado: configuração
+explícita pelo operador, sem valor presumido; Pix real permanece dependência.
+Sem gateway bancário, nova autenticação ou mudança de infraestrutura externa.
+
 
 Origem: pedido aprovado de preparação do CAEHUB em 08/10/2026. Este documento complementa, sem reescrever, os originais. Quando houver conflito direto, estas decisões prevalecem.
 

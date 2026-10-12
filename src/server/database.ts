@@ -3,6 +3,7 @@ import { migrateTimetables } from './timetable-migration.js';
 import { migrateAdvancedAgenda } from './agenda-advanced-migration.js';
 import { migrateCommercial } from './commercial-migration.js';
 import { migrateCommercialCatalog } from './commercial-catalog-migration.js';
+import { migrateOrders } from './orders-migration.js';
 
 export type DbConfig = { host: string; port: number; user: string; password: string; database: string };
 export const configFromEnv = (env: NodeJS.ProcessEnv): DbConfig => ({
@@ -71,6 +72,7 @@ export async function migrate(db: Database): Promise<void> {
   await migrateCommercial(db);
   await seed(db);
   await migrateCommercialCatalog(db);
+  await migrateOrders(db);
   await db.run(`INSERT INTO boards (id,workspace_id,name,created_by_membership_id) SELECT UUID(),w.id,'Quadro principal',w.creator_membership_id FROM workspaces w WHERE NOT EXISTS (SELECT 1 FROM boards b WHERE b.workspace_id=w.id)`);
   for (const [position, name, completion] of [['0','Ideias','0'],['1','Planejado','0'],['2','Em andamento','0'],['3','Aguardando','0'],['4','Concluído','1']] as const) await db.run(`INSERT INTO board_columns (id,board_id,name,position,is_completion) SELECT UUID(),b.id,?,?,? FROM boards b WHERE NOT EXISTS (SELECT 1 FROM board_columns c WHERE c.board_id=b.id AND c.position=?)`, [name, Number(position), Number(completion), Number(position)]);
 }

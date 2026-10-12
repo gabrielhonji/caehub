@@ -3,7 +3,7 @@ import {getAgendaNotifications,type AgendaNotification} from '../services/agenda
 import {readAgendaNotification} from '../services/agenda-advanced';
 import {Badge,Button,Dialog} from './primitives';
 
-const labels:Record<string,string>={invited:'Convite',rescheduled:'Novo horário',removed:'Removido',availability_requested:'Revisar disponibilidade',availability_reviewed:'Revisão recebida',poll_invited:'Votação',poll_closed:'Votação encerrada',shift_assigned:'Turno atribuído',shift_accepted:'Aceite de turno',shift_declined:'Recusa de turno',shift_withdrawn:'Desistência',shift_cancelled:'Turno cancelado',shift_rescheduled:'Turno reagendado',shift_removed:'Participação removida'};
+const labels:Record<string,string>={order_ready:'Pedido pronto',invited:'Convite',rescheduled:'Novo horário',removed:'Removido',availability_requested:'Revisar disponibilidade',availability_reviewed:'Revisão recebida',poll_invited:'Votação',poll_closed:'Votação encerrada',shift_assigned:'Turno atribuído',shift_accepted:'Aceite de turno',shift_declined:'Recusa de turno',shift_withdrawn:'Desistência',shift_cancelled:'Turno cancelado',shift_rescheduled:'Turno reagendado',shift_removed:'Participação removida'};
 export function AgendaNotifications(){
   const [items,setItems]=useState<AgendaNotification[]>([]),[open,setOpen]=useState(false),[unreadOnly,setUnreadOnly]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[reading,setReading]=useState('');
   const request=useRef(0);

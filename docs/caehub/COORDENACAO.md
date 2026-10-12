@@ -1,4 +1,47 @@
 # Coordenação de agentes
+## Implementação validada — Agente 06, 12/10/2026
+
+Base limpa `75b8de9`, dependência Comercial 1.9.0 integrada. Branch
+`feat/pedidos-reservas-producao`; responsável Codex deste chat. Escopo:
+serviço/migração/testes de pedidos, integração do inventário/rotas, composição
+React Comercial, documentação e metadados de release. Sem disputa identificada.
+
+Aceite antecipado: estoque 10, pedido A de 7, pedido B de 5 recusado; duas
+solicitações da última unidade produzem um sucesso; cancelamento/expiração
+liberam uma vez; Pix confirmado após expiração exige revisão administrativa.
+Preço 200 centavos × 3 = 600 preservado após catálogo mudar para 300.
+Encomenda paga de 3 mantém físico zero; recebimento de 5 aloca 3 e deixa 2
+livres; retirada baixa 3 uma vez. Pagamentos/recebimentos/entregas duplicados
+não repetem efeitos; produção iniciada e entrega impedem cancelamento simples.
+Negar ações a não operadores e dados de outros compradores; reinício preserva
+dados/histórico. Gate completo em containers e revisão Chromium desktop/mobile,
+claro/escuro; commit/push, main e deploy oficial autorizados pelo pedido.
+Prazo de reserva solicitado ao usuário; Pix real ainda depende da configuração.
+
+Versão 1.10.0: pedidos persistentes com preços efetivos, mutex transacional de
+estoque, vencimento/reconciliação, Pix manual/tardio, produção, recebimentos
+parciais/sobras, alocação administrativa e retirada idempotente. Consulta própria
+para membros e cadastro administrativo externo, sem novo login/gateway.
+Gate em Node/MySQL descartáveis: 28/28 testes, TypeScript/Vite e auditoria de
+produção (zero vulnerabilidades). Testes incluem nomes alterados sem dividir a
+consolidação, cancelamentos/reembolso, negações, última unidade e retirada
+concorrentes; migração repetida/reconexão e reinício real mantiveram registros.
+Chromium real percorreu pedido misto → Pix → produção → recebimento 5/alocação 3
+→ pronto → entrega, com saldos finais 8 físicos e 2 sobras; consulta de membro
+mostrou somente seu pedido, sem ações administrativas. Revisão 1440/768/390 px,
+claro/escuro, teclado/foco, sem overflow/exceções; erro preservou campos.
+Composição final reutiliza fieldset/formulário Comercial e Dialog existentes.
+Capturas/fixtures permanecem fora do Git e não representam dados de produção.
+
+Falhas investigadas/corrigidas: números agregados convertidos para inteiros,
+SQL de recebimento, UUID em HTTP privado, foco após leitura assíncrona.
+Roteiro visual recebeu seletores específicos e espera do salvamento; reinício
+antecipado da API interrompeu uma rodada, corrigida sem alteração de infra.
+Timeout da revisão automática da rede Docker passou na nova tentativa permitida.
+Vite mantém aviso de bundle acima de 500 kB; build aprovado, sem regressão de gate.
+Sem falha de código/teste pendente. Publicação segue main, build-app/deploy-app
+oficiais; prazo/Pix reais e smoke com sessão pessoal continuam dependências.
+
 ## Entrega validada — Hierarquia institucional, 11/10/2026
 
 HIER-01, Codex deste chat. Integração com estrutura central Honji por projeto:

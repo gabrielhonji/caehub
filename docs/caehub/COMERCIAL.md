@@ -56,8 +56,9 @@ preenchimento consciente pelo gestor.
 
 Saldo físico pertence à variação, começa em zero e é centralizado, inclusive
 sobras recebidas de encomendas. Não existe saldo editável no navegador.
-`physicalQuantity=availableQuantity`, `reservedQuantity=0` e
-`reservationsImplemented=false` documentam a ausência de reservas reais.
+`physicalQuantity` é o recebido; `reservedQuantity` soma reservas válidas e
+alocações; `availableQuantity=physicalQuantity-reservedQuantity`.
+`reservationsImplemented=true`. Saída/ajuste não consomem unidades comprometidas.
 
 Movimentações transacionais bloqueiam produto e variação, verificam saldo não
 negativo e persistem histórico/saldo atomicamente. Entrada/saída recebem inteiro
@@ -112,12 +113,90 @@ Fluxo 0 → entrada 50 → saída 8 → recusa 43 → ajuste +3 = 45 continua ob
 Revisão visual de campanhas/catalogo/formulários/detalhes, desktop/mobile e
 ambos os temas, com fixtures fictícias e MySQL real descartável.
 
-Lojinhas/Pedidos/Vendas podem consumir UUIDs de campanha/produto/variação,
-vínculos, custo/venda e inventário central. Definir reservas, limites, compras,
-produção, pagamento, cancelamento e retirada antes de implementar esses fluxos.
-Não há checkout, pedidos, pagamentos, entrega ou lucro financeiro realizado.
+Pedidos/Vendas consomem os mesmos UUIDs, vínculos, preços e inventário central.
+Agente 06 autoriza o ciclo abaixo; sem gateway ou lucro financeiro realizado.
 
 Na etapa de retirada, os modelos sob encomenda existentes permanecem visíveis
 na campanha; novos produtos sob encomenda exigem a etapa Vendas e encomendas.
 Cadastro e mudança de etapa são serializados na campanha. Novos produtos físicos
 continuam permitidos na segunda etapa para o catálogo de estoque.
+
+## Pedidos — Agente 06, 12/10/2026
+
+Operação administrativa por administração institucional/direção de Produtos:
+comprador membro usa ID real de `people`, validado no projeto; externo usa
+nome/contato operacional, sem identidade autenticada fictícia. Backend grava
+preços/nomes/variações da compra e calcula total em centavos. Catálogo atual
+não tem preços de membro distintos; nenhum desconto é inventado. Membros
+ativos consultam somente pedidos próprios. Consulta ampla/debug não expõe
+clientes. Autosserviço externo depende de acesso Honji compatível.
+
+| Eixo | Estados/transições |
+| --- | --- |
+| Pedido | pending → confirmed por Pix; pending → expired por reserva vencida; Pix tardio → review; alocação administrativa → confirmed; cancelled por cancelamento; completed por retirada |
+| Pagamento | pending/problem → paid por operador; cancelamento pago → refund_required; comprovação manual registrada → refunded |
+| Alocação/item | stock: provisional → committed → consumed; vencimento/cancelamento → released; preorder: none → committed parcial/integral por recebimento/alocação de sobras → consumed |
+| Produção/item | waiting → in_production → received; parcial mantém estado até completar; físico usa not_needed |
+| Entrega | waiting → ready somente etapa 2, pago, confirmado e todos os itens alocados; ready → collected com baixa física |
+
+Prazo da reserva é configurado conscientemente pelo operador em minutos
+(1–10080), sem valor presumido. Inicialmente vazio, impede pedidos físicos até
+definição; encomenda não reserva estoque inexistente. Mudar prazo afeta somente
+novos pedidos. Pix real não é inventado; instruções ausentes aparecem como
+pendência. Comprovante enviado não confirma pagamento; conferência registra ator,
+horário e justificativa. Configuração somente acessível ao operador.
+
+Saldo exclui reservas vencidas usando relógio do banco. Reconciliação persistida
+executa no boot, a cada minuto, nas operações e nas consultas de pedidos. Mutex
+transacional por organização em `commercial_operations` serializa todos os
+escritores de reservas/recebimentos/retiradas/movimentos, entre processos.
+Pedidos usam READ COMMITTED e locks de registros; sem filas/lock em memória.
+Serialização global é apropriada ao volume atual, podendo ser refinada depois.
+
+Pix tardio registra pagamento, mas mantém review sem reocupar estoque.
+Regularização requer saldo físico livre para todos os itens de estoque.
+Cancelamento libera alocação uma vez, preserva registros e, se pago, exige
+reembolso manual. Produção iniciada/retirada impedem cancelamento simples;
+ocorrência administrativa documenta exceção sem fingir estorno/devolução.
+Correções físicas usam movimentos. Não há exclusão de pedidos/histórico.
+
+Na etapa 2, pedido novo de modelo exclusivo vende somente físico livre, com
+fulfillment=stock; pedidos antigos conservam preorder. Campanha arquivada não
+recebe pedidos novos. Criação usa requestKey UUID + hash; repetição com dados
+diferentes é recusada. Pagamento/recebimento/retirada repetidos não repetem efeitos.
+
+## Produção, recebimentos e retirada
+
+Consolidação agrupa encomendas por variação, separando pagas aguardando entrega,
+pendentes, canceladas, alocadas e em produção. Início marca obrigações pagas
+atuais. Recebimento exige etapa 2 e registra UUID idempotente, campanha, variação,
+referência de lote, quantidade aguardada/recebida/alocada, diferença, ator/momento.
+Entrada e alocação FIFO ocorrem atomicamente. Parcial não deixa pedido pronto;
+excesso recebido fica livre. Entrada manual com encomendas pagas pendentes exige
+o fluxo de recebimento para proteger alocações. Alocação administrativa pode usar
+sobras físicas para encomenda paga posteriormente ainda não enviada à produção,
+sem nova entrada; produção já iniciada é reconciliada por recebimentos.
+
+Retirada exige ready e consome alocação enquanto baixa físico, atomicamente.
+Notificação de pronto reutiliza Agenda para compradores membros; sem serviço
+novo ou e-mails. Migração idempotente `migrateOrders` cria operações, pedidos,
+itens, eventos e recebimentos, com FKs/checks/unicidade, sem alterar saldo antigo.
+
+| API (prefixo `/api/commercial`) | Uso |
+| --- | --- |
+| GET/POST `/orders` | Lista pela identidade / criação administrativa |
+| GET `/orders/:id` | Detalhes próprios ou administrativos e histórico |
+| POST `/orders/:id/actions` | pay, payment_problem, allocate, ready, collect, cancel, refund, exception; justificativa obrigatória |
+| GET/PUT `/settings` | Prazo e instruções Pix, restritos a operador |
+| GET `/buyers` | Compradores cadastrados, restritos a operador |
+| POST `/reservations/reconcile` | Reconciliação administrativa |
+| GET `/campaigns/:id/production` | Consolidação/recebimentos |
+| POST `/campaigns/:id/production/start` | Início por variação |
+| POST `/campaigns/:id/production/receipts` | Entrada/alocação transacional |
+
+`CommercialOrders` compõe Button/Badge/Dialog/Eyebrow, feedback e campos
+existentes para lista/filtros, pedido misto, Pix, pendências, histórico, produção,
+divergências e entrega. Membros sem catálogo veem Meus pedidos.
+Próximo incremento: autosserviço externo Honji e refinamento de exceções.
+Prazo/instruções Pix reais precisam ser configurados antes das vendas físicas.
+Não avançar automaticamente para integração bancária.

@@ -54,7 +54,7 @@ ENG-001 é leitura inicial de execução; reler apenas quando a tarefa mudar de 
 | P-03 | Cardinalidade de atribuições/auxiliares, poderes, transições e ciclo de vida de cartões | Operações de Kanban dependentes dessas regras |
 | P-04 | Origem da agenda, semântica de turnos, conflitos, visibilidade e fuso | Regras e integração de Agenda |
 | P-05 | Ativos CAECOMP, composição de marcas, fontes/paleta finais e acesso a componentes Honji | Aprovação visual final |
-| P-06 | Detalhes de estoque/encomendas: reserva, pagamento, cancelamento, retirada e reconciliação | Operações comerciais além das invariantes confirmadas |
+| P-06 | Resolvido pelo pedido Agente 06: reservas, Pix manual, produção e retirada em COMERCIAL.md; prazo/Pix reais exigem configuração explícita | Autosserviço externo depende de acesso Honji compatível |
 | P-07 | Stack de servidor/persistência, versionamento e ferramentas reais de teste | Execução técnica desses componentes |
 
 Para fechar um P: registrar decisão curta, origem/data, documentos afetados e critério de aceite; retirar sugestões incompatíveis. Este pacote não altera contratos de outros projetos.

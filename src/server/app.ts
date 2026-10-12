@@ -12,6 +12,7 @@ import { MeetingPolls } from './meeting-polls.js';
 import { Shifts, ScheduleConflict } from './shifts.js';
 import { CommercialService, productInput, productFields, variantInput, movementInput } from './commercial.js';
 import { optionsInput } from './commercial-catalog.js';
+import { OrderService, orderInput, orderAction, receiptInput, settingsInput } from './orders.js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -38,7 +39,19 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   });
   const actor = async (request: import("fastify").FastifyRequest) => { const value = await identity.current(request); if (!value) throw new Forbidden('Honji identity integration is unavailable'); if (!value.projectAccess) throw new Forbidden('project.access is required'); if(value.debugView&&value.debugView.mode!=='real'&&!['GET','HEAD'].includes(request.method))throw new Forbidden('debug profiles are read-only'); return value; };
   const commercial=new CommercialService(service.db,service);
+  const orders=new OrderService(service.db,service);
   const paramId=(request:import('fastify').FastifyRequest)=>id.parse((request.params as {id:string}).id);
+  app.get('/api/commercial/orders',async request=>orders.list(await actor(request),(request.query as {campaignId?:string}).campaignId===undefined?undefined:id.parse((request.query as {campaignId:string}).campaignId)));
+  app.post('/api/commercial/orders',async(request,reply)=>reply.code(201).send(await orders.create(await actor(request),orderInput.parse(request.body))));
+  app.get('/api/commercial/orders/:id',async request=>orders.detail(await actor(request),paramId(request)));
+  app.post('/api/commercial/orders/:id/actions',async request=>orders.act(await actor(request),paramId(request),orderAction.parse(request.body)));
+  app.get('/api/commercial/settings',async request=>orders.settings(await actor(request)));
+  app.put('/api/commercial/settings',async request=>orders.configure(await actor(request),settingsInput.parse(request.body)));
+  app.get('/api/commercial/buyers',async request=>{await orders.manage(await actor(request));return service.db.many<import('mysql2').RowDataPacket>("SELECT p.id,p.display_name AS name FROM people p JOIN memberships m ON m.person_id=p.id WHERE m.organization_id=? AND p.honji_subject NOT LIKE 'caehub-debug-%' ORDER BY p.display_name",['1a4e0bd0-5f4a-4d10-8000-000000000001']);});
+  app.post('/api/commercial/reservations/reconcile',async request=>{await orders.manage(await actor(request));await orders.reconcile();return {ok:true};});
+  app.get('/api/commercial/campaigns/:id/production',async request=>orders.production(await actor(request),paramId(request)));
+  app.post('/api/commercial/campaigns/:id/production/start',async request=>orders.startProduction(await actor(request),paramId(request),z.object({variantId:id}).strict().parse(request.body).variantId));
+  app.post('/api/commercial/campaigns/:id/production/receipts',async(request,reply)=>reply.code(201).send(await orders.receive(await actor(request),paramId(request),receiptInput.parse(request.body))));
   app.get('/api/commercial',async request=>commercial.catalog(await actor(request)));
   app.post("/api/commercial/categories",async(request,reply)=>reply.code(201).send(await commercial.products.createCategory(await actor(request),z.object({name:z.string().trim().min(1).max(120),options:optionsInput.default([])}).strict().parse(request.body))));
   app.patch("/api/commercial/categories/:id",async request=>commercial.products.updateCategory(await actor(request),paramId(request),z.object({options:optionsInput,revision:z.number().int().positive()}).strict().parse(request.body)));
