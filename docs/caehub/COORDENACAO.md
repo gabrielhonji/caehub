@@ -1,5 +1,5 @@
 # Coordenação de agentes
-## Validado, publicação em andamento — Compras e retirada, 12/10/2026
+## Publicado — Compras e retirada, 12/10/2026
 
 Base limpa `db88d3f`, branch `fix/compras-retirada-ux`, Codex deste chat.
 Reserva: Brand/ThemeToggle/AppShell, PublicPortal/CommercialShop/CommercialOrders,
@@ -42,6 +42,23 @@ temporária agora tem mensagem amigável compartilhada. Fixtures/capturas fora
 do Git. Nenhuma alteração de infraestrutura, migração, identidade externa ou
 máquina de estados. Main remota conferida sem avanço concorrente. Smoke com
 sessão pessoal de produção continua pendente; publicação e reservas em andamento.
+
+Publicação confirmada: fonte `78bc7a0`, branch enviada ao GitHub e integração
+fast-forward na main, confirmada em origin/honji. build-app gerou a imagem
+oficial `honji/caehub-gabriel:1.13.0` com source_commit conferido. Artefato
+exato repetiu a revisão completa de portal/interno, 3 próprios prontos + 1
+retirado sem 7 de terceiros, encomenda nova na etapa 1, Pix, navegação pessoal/
+notificações, retorno/foco e estados de falha/vazio. Bootstrap da fixture em
+schema novo ultrapassou a sondagem inicial; logs confirmaram READY e o roteiro
+passou, sem alterar ambiente, dados reais ou infraestrutura.
+deploy-app confirmou Healthy/deploy ok. HTTPS confirmou health 1.13.0/release
+`12102026-234053`, raiz/JS/CSS/logo CAECOMP 200, catálogo com campanha em
+collection, um produto físico/duas variações e zero modelos exclusivos;
+status comprador anônimo false e leituras/escrita de pedidos privadas 403.
+Página Honji OIDC/PKCE real 200. Chromium publicado verificou marca/tema,
+1440/390 e ambos os temas, sem overflow/exceções. Não foi usada sessão pessoal
+nem criada transação financeira em produção. Registro documental posterior
+não altera a imagem publicada. Incremento concluído e reservas liberadas.
 
 ## Publicado — Agente 07, 12/10/2026
 
