@@ -1,5 +1,5 @@
 # Coordenação de agentes
-## Validado, publicação em andamento — Agente 07, 12/10/2026
+## Publicado — Agente 07, 12/10/2026
 
 Base limpa `cec469b`, dependências 06/1.11 integradas; branch
 `feat/portal-publico-compras`, Codex deste chat. Reserva: portal React público,
@@ -41,6 +41,23 @@ Main remota conferida sem avanço concorrente; origem oficial é main do
 repositório Honji e domínio preserva proxy-root. Reservas mantidas até concluir
 publicação. Smoke com sessão pessoal/transação real continua pendente; este
 gate não presume identidade externa nem configuração Pix/prazo de produção.
+
+Publicação confirmada: fonte `e52481e`, branch enviada ao origin e integração
+fast-forward na main, confirmada em origin/honji. build-app produziu a imagem
+oficial `honji/caehub-gabriel:1.12.0` com source_commit verificado. A imagem
+exata repetiu revisão Chromium de seleção/compra/Pix, quantidade/recuperação e
+pagamento→pronto→retirado em schema fictício isolado; nenhum dado real.
+Fixture aguardou migrations no primeiro boot, depois ficou pronta sem mudar
+infraestrutura. deploy-app confirmou Healthy e deploy ok. HTTPS confirmou
+health 1.12.0/release `12102026-212504`, raiz pública e JS/CSS 200, catálogo
+público com uma campanha/dois produtos/seis variações; status comprador anônimo
+false, leituras privadas e criação anônima 403. Honji OIDC/PKCE real retornou
+página de login 200. Chromium publicado verificou 1440/390 e ambos os temas,
+sem overflow ou exceções. Não foi exercitada sessão pessoal/transação financeira
+em produção. Documentação posterior não altera a fonte da imagem publicada.
+Incremento concluído; reservas liberadas. Próximo trabalho depende da identidade
+externa aprovada, contratos de publicação de imagens/eventos/retirada e smoke
+autenticado, sem iniciar automaticamente Agente 08.
 
 ## Publicado — Refinamento Comercial, 12/10/2026
 
