@@ -1,5 +1,5 @@
 # Coordenação de agentes
-## Implementação validada — Refinamento Comercial, 12/10/2026
+## Publicado — Refinamento Comercial, 12/10/2026
 
 Pedido atual: melhorar os elementos implementados e completar lacunas do ciclo.
 Base limpa `7038fc7`; branch `feat/comercial-operacao-completa`, Codex deste chat.
@@ -46,6 +46,17 @@ sem mudar host/Docker/DNS/permissões. Falhas não foram usadas como atalho de g
 Sem falha de código/teste pendente. Publicação autorizada segue integração main,
 build-app/deploy-app e smoke público. Transações com sessão pessoal em produção,
 Pix/prazo reais e política de acesso externo continuam dependências explícitas.
+
+Publicação confirmada: código `c1949d3` integrado à main e enviado em origin e
+honji; imagem oficial `honji/caehub-gabriel:1.11.0` pelo build-app com
+source_commit verificado. O artefato exato repetiu a revisão completa de compra,
+revisão/pendência, produção, recebimento e retirada com dados fictícios; dois
+containers iniciaram no mesmo schema novo com migrations protegidas.
+deploy-app confirmou Healthy. HTTPS confirmou health 1.11.0/release
+`12102026-161724`, JS/CSS correspondentes 200, login Honji/OIDC/PKCE real e
+leitura/escrita anônima negadas em loja, my-orders e operação administrativa.
+Nenhuma transação real ou sessão pessoal foi exercitada em produção. Registro
+documental posterior não altera o código da imagem; reservas de arquivos liberadas.
 
 ## Publicado — Agente 06, 12/10/2026
 
