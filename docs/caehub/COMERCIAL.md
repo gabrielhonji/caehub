@@ -128,8 +128,9 @@ comprador membro usa ID real de `people`, validado no projeto; externo usa
 nome/contato operacional, sem identidade autenticada fictícia. Backend grava
 preços/nomes/variações da compra e calcula total em centavos. Catálogo atual
 não tem preços de membro distintos; nenhum desconto é inventado. Membros
-ativos consultam somente pedidos próprios. Consulta ampla/debug não expõe
-clientes. Autosserviço externo depende de acesso Honji compatível.
+ativos consultam e criam pedidos próprios pela loja de compra. Consulta
+ampla/debug não expõe clientes nem permite compras de teste. Autosserviço
+externo ainda depende de acesso Honji compatível.
 
 | Eixo | Estados/transições |
 | --- | --- |
@@ -167,8 +168,10 @@ diferentes é recusada. Pagamento/recebimento/retirada repetidos não repetem ef
 
 ## Produção, recebimentos e retirada
 
-Consolidação agrupa encomendas por variação, separando pagas aguardando entrega,
-pendentes, canceladas, alocadas e em produção. Início marca obrigações pagas
+Consolidação agrupa encomendas por variação, conservando pagas e entregues,
+separando pendentes, canceladas, revisão, a produzir, alocadas e em produção.
+Recebidas acumulam lotes reais; livres mostram saldo atual após reservas.
+Início marca obrigações pagas
 atuais. Recebimento exige etapa 2 e registra UUID idempotente, campanha, variação,
 referência de lote, quantidade aguardada/recebida/alocada, diferença, ator/momento.
 Entrada e alocação FIFO ocorrem atomicamente. Parcial não deixa pedido pronto;
@@ -197,6 +200,67 @@ itens, eventos e recebimentos, com FKs/checks/unicidade, sem alterar saldo antig
 `CommercialOrders` compõe Button/Badge/Dialog/Eyebrow, feedback e campos
 existentes para lista/filtros, pedido misto, Pix, pendências, histórico, produção,
 divergências e entrega. Membros sem catálogo veem Meus pedidos.
-Próximo incremento: autosserviço externo Honji e refinamento de exceções.
+Próximo incremento: autosserviço externo Honji e regras específicas de devolução
+ou cancelamento de encomendas já comissionadas, mediante decisão operacional.
 Prazo/instruções Pix reais precisam ser configurados antes das vendas físicas.
 Não avançar automaticamente para integração bancária.
+
+## Refinamento operacional — 1.11.0
+
+Membro ativo com project.access compra pela própria identidade Honji, em
+`#/comercial/comprar` ou pela entrada Comercial de quem não administra catálogo.
+GET `/api/commercial/shop` retorna apenas campanhas/produtos/variações ativos,
+preço de venda e disponibilidade; omite custos, reservas detalhadas e compradores.
+POST `/api/commercial/my-orders` aceita campanha, itens e requestKey, jamais
+identidade de comprador, papel, preço final ou estados administrativos. Backend
+resolve a pessoa e aplica o mesmo fluxo transacional de pedidos. GET
+`/my-orders` e `/my-orders/:id` forçam consulta própria, inclusive para owner.
+Externos mantêm cadastro administrativo; não há login paralelo ou autoinscrição.
+
+Prévia mostra subtotal/total e distingue encomenda de estoque. Itens duplicados
+e quantidades acima do livre são impedidos na interface; backend revalida tudo.
+`expectedPriceCents` opcional sinaliza o preço visto, não define o preço cobrado:
+se mudou, pedido é recusado para nova conferência. Interface sempre o envia.
+Pedido registrado abre seus detalhes e instruções Pix. Rascunho de criação e
+recebimento é mantido ao fechar/reabrir o fluxo na mesma campanha; troca de
+campanha reinicia o contexto. Rascunhos ficam na memória da página, sem salvar
+campos pessoais em localStorage/sessionStorage.
+
+Pedidos têm `version`; configuração tem `revision`. Toda alteração/histórico de
+pedido incrementa versão. Interface envia versão e requestKey em ações; chave
+é vinculada a pedido, ator e conteúdo e persistida em `commercial_order_commands`.
+Reenvio idêntico responde sem repetir efeitos/eventos, mesmo depois de mudar a
+versão. Hash novo é canônico, independente da ordem dos campos; criação também
+reconhece o hash legado 1.10 para conservar replay após upgrade sem outra reserva.
+Outra ação na tela antiga recebe 409 e pede atualização. Configuração
+também recusa revisão antiga. Campos novos são opcionais para compatibilidade
+com clientes legados; autorização/transições/transações continuam obrigatórias.
+
+Backend retorna `availableActions` conforme pagamento, alocação, produção e
+etapa; UI oferece somente ações atuais. Pix, cancelamento, reembolso e retirada
+pedem confirmação explícita e justificativa. Quando a revisão mudou, atualizar
+detalhes descarta a ação anterior. Alocação de encomenda sem unidades físicas livres é recusada, sem
+indicar sucesso ou criar estoque. Produção comissionada usa recebimentos.
+
+`exception` cria uma pendência aberta vinculada ao evento; `resolve_exception`
+exige ID do caso e resolução, conservando responsável/momento e histórico.
+Essas ações não fazem cancelamento, retorno ao estoque ou reembolso por si só.
+`commercial_order_incidents` recebe também ocorrências antigas por ID estável do
+evento, preservando data/autor e sem duplicar casos resolvidos ao repetir boot.
+Notas administrativas, atores e referências internas não são enviados ao
+comprador; seu histórico mostra apenas evento/data, itens e estados próprios.
+Detalhes e produção usam leitura coerente com as transações de operações.
+
+GET `/orders` aceita campaignId, search, status, paymentStatus, deliveryStatus,
+issues=open, page e pageSize (padrão 20, máximo 100); retorna total/pages/summary.
+`paymentStatus=unconfirmed` agrupa pendente/problema ainda não encerrados.
+Pendências são restritas a operador. Totais são da campanha/identidade, separados
+do filtro atual; buscas/páginas sempre conservam autorização. UI protege contra
+respostas antigas de filtros, oferece paginação e restaura foco mesmo se o
+pedido sair do filtro após a operação.
+
+Migrations adicionam somente duas revisões e as tabelas de comandos/pendências.
+Inicializações usam lock de sessão por schema em conexão dedicada, com liberação
+em finally, porque DDL pode encerrar transações. Referência operacional:
+[MySQL 8.4 — locking functions](https://dev.mysql.com/doc/refman/8.4/en/locking-functions.html).
+Teste com dois pools/schema novo valida startup concorrente e liberação.

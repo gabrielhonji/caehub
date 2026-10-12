@@ -1,4 +1,52 @@
 # Coordenação de agentes
+## Implementação validada — Refinamento Comercial, 12/10/2026
+
+Pedido atual: melhorar os elementos implementados e completar lacunas do ciclo.
+Base limpa `7038fc7`; branch `feat/comercial-operacao-completa`, Codex deste chat.
+Escopo reservado: pedidos/loja/revisões/pendências, migração, rotas, composição
+Comercial, testes e documentação/release. Nenhuma disputa identificada.
+Escopo ampliado após observar startup concorrente de migrations: proteção
+localizada em `src/server/database.ts`, com teste de dois pools em schema novo.
+Nenhuma reserva concorrente desse caminho; sem alteração de infraestrutura.
+Aceite: membro compra para si sem escolher identidade ou preço e não recebe
+custo/dados de terceiros; histórico do comprador não expõe notas internas;
+nota/ação reenviada com mesma chave aplica uma vez; tela antiga é recusada por
+revisão; ocorrência abre pendência e resolução preserva trilha sem mexer em
+estoque/financeiro; produção mantém totais de retirados, separa a produzir/em
+produção/recebidos; filtros/paginação/totais e prévia de preço funcionam;
+estoque 10 e pedidos concorrentes continuam sem ultrapassar saldo; migrations
+preservam pedidos existentes. Gate completo, Chromium temas/mobile e publicação
+oficial conforme autorização vigente. Não cria login externo/gateway, nem
+define prazo/Pix reais ou regras novas de devolução/cancelamento de produção.
+
+1.11.0 implementa loja segura para membros e compras próprias, preços vistos
+validados no servidor, fluxo imediato para instruções/detalhes, comandos com
+revisão/idempotência e compatibilidade de replay 1.10, pendências/resoluções
+privadas com backfill de ocorrências antigas, filtros/páginas/totais e produção
+que conserva entregues e distingue a produzir/em produção/recebidas/livres.
+Não recria catálogo/inventário ou altera identidade/permissões centrais.
+
+Gate final em Node 22/MySQL isolados: 30/30 testes, TypeScript e bundle de
+produção (378 kB), auditoria sem vulnerabilidades. Inclui dois pools concorrentes
+para migrations, upgrade sem perda, custos/notas ocultos, identidade/preço/estado
+forjados negados, suspensão, saldo disputado por compradores, revisão antiga,
+comando repetido e legado, pendência resolvida preservada e retirada idempotente.
+Chromium fez compra mista pela conta de membro (total 1000 centavos), Pix
+conferido pelo operador, conflito de tela antiga, pendência privada/resolução,
+produção/recebimento 5→alocação 3→sobras 2 e entrega; saldos finais físico 8,
+encomenda 2. Revisão 1440/768/390, claro/escuro, sem overflow/exceções, campos
+44 px/16 px, foco restaurado inclusive após sair do filtro. Capturas fictícias
+fora do Git. Componentes de domínio compõem a mesma biblioteca existente.
+
+Rodada paralela com alteração de schema na fixture ficou sem progresso e foi
+encerrada; execução serial definida pelo projeto passou. Uma API de revisão
+não ficou disponível na inicialização conjunta; readiness recuperou com startup
+serial. Proteção de sessão para migrations foi validada em teste independente,
+sem mudar host/Docker/DNS/permissões. Falhas não foram usadas como atalho de gate.
+Sem falha de código/teste pendente. Publicação autorizada segue integração main,
+build-app/deploy-app e smoke público. Transações com sessão pessoal em produção,
+Pix/prazo reais e política de acesso externo continuam dependências explícitas.
+
 ## Publicado — Agente 06, 12/10/2026
 
 Base limpa `75b8de9`, dependência Comercial 1.9.0 integrada. Branch

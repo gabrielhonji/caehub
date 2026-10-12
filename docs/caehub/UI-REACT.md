@@ -1,4 +1,16 @@
 # UI React — UI-001
+## Composição Comercial — 1.11.0
+
+CommercialOrders mantém consulta/filtros/paginação e coordena diálogos;
+CommercialOrderForm compõe o formulário existente para subtotal/total e
+rascunho; CommercialOrderDetail representa próximos passos, ações confiáveis
+e pendências; CommercialProduction consolida obrigações/lotes; CommercialShop
+usa o catálogo seguro de compra e identidade existente. São responsabilidades
+de domínio do mesmo fluxo, não uma biblioteca visual nova. Reutilizam Button,
+Badge, Dialog, feedback, campos/formulário e composição editorial Comercial.
+Fontes/tokens/temas, controles 44 px/16 px, foco/teclado e estados de erro/vazio
+seguem DESIGN. Escopo não modifica estilos dos módulos anteriores.
+
 
 ## Regra obrigatória de reutilização
 

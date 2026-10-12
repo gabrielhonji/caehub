@@ -39,6 +39,22 @@ export async function connect(config: DbConfig): Promise<Database> {
 }
 
 export async function migrate(db: Database): Promise<void> {
+  // DDL commits implicitly: serialize migrations on one dedicated session,
+  // scoped to this database, rather than relying on a transaction lock.
+  const connection=await db.pool.getConnection();let acquired=false;
+  const name="CONCAT('caehub:migrate:',LEFT(SHA2(DATABASE(),256),48))";
+  try {
+    const [rows]=await connection.query<RowDataPacket[]>(`SELECT GET_LOCK(${name},60) AS acquired`);
+    acquired=Number(rows[0]?.acquired)===1;
+    if(!acquired)throw new Error('Schema migration lock unavailable');
+    await migrateSchema(new Database(connection as unknown as Pool));
+  } finally {
+    try { if(acquired)await connection.query(`SELECT RELEASE_LOCK(${name})`); }
+    finally { connection.release(); }
+  }
+}
+
+async function migrateSchema(db: Database): Promise<void> {
   await db.run('CREATE TABLE IF NOT EXISTS honji_hierarchy_projection (organization_id CHAR(36) PRIMARY KEY, revision BIGINT NOT NULL, snapshot_hash CHAR(64) NULL)');
   if(!await db.one<RowDataPacket>("SHOW COLUMNS FROM honji_hierarchy_projection LIKE 'snapshot_hash'"))await db.run('ALTER TABLE honji_hierarchy_projection ADD COLUMN snapshot_hash CHAR(64) NULL');
   await db.run(`CREATE TABLE IF NOT EXISTS caehub_sessions (session_hash char(64) primary key, subject varchar(255) null, display_name varchar(255) null, csrf_token varchar(64) not null, oauth_state_hash char(64) null, oauth_nonce_hash char(64) null, oauth_verifier varchar(128) null, created_at datetime(3) not null, last_activity_at datetime(3) not null, expires_at datetime(3) not null, index caehub_sessions_expiry(expires_at))`);

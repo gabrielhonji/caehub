@@ -1,4 +1,14 @@
 # Decisões validadas após o pacote
+## Refinamento Comercial — 12/10/2026
+
+Pedido atual autoriza melhorar a implementação e completar elementos faltantes
+do ciclo. A infraestrutura existente permite compra própria por membro ativo,
+sem novo login/grant; externos continuam pelo fluxo administrativo. Refinamento
+acrescenta proteção de notas internas, revisões/chaves, pendências rastreáveis,
+totais históricos de produção e operação por filtros/páginas. Não determina
+política nova de devolução, cancelamento de produção ou integração bancária;
+configuração real de prazo/Pix permanece explícita. Contratos em COMERCIAL.md.
+
 ## Ciclo Comercial — Agente 06, 12/10/2026
 
 Pedido anexado autoriza pedidos, reservas provisórias com vencimento, Pix manual,
