@@ -188,3 +188,12 @@ não versionados. Publicação usa origem oficial já cadastrada em main,
 Resultado Git/publicação é informado separadamente no relatório deste chat;
 validação autenticada de produção depende da sessão real do usuário, enquanto
 o gate público verifica acesso Honji e recusa sem sessão.
+## Refinamento contextual de espaços — 11/10/2026
+
+Implementado e validado por Codex /root: `src/app/App.tsx`, `src/components/WorkspacePeople.tsx`,
+`src/services/spaces.ts`, `src/styles/space-tools.css`, `src/server/service.ts` e
+`src/server/hierarchy.integration.test.ts`. Cards largos para 1–2 espaços;
+participantes/direção nos detalhes; edição contextual e encaminhamento ao
+departamento no Honji. 25 testes de servidor, TypeScript/build e Chromium
+(0/1/2/3/7 espaços, cinco perfis, 1440/390 px e ambos os temas) aprovados.
+Auditoria de produção sem vulnerabilidades. Publicação pendente neste incremento.

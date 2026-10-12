@@ -22,6 +22,14 @@ test('central hierarchy inherits spaces, revokes access and separates counselor 
     assert.equal((await service.workspace(director,workspaceId)).canManage,true);
     assert.equal((await service.workspace(counselor,workspaceId)).canManage,false);
     assert.equal((await service.workspace(member,workspaceId)).participants.length,2);
+    const detail=await service.workspace(member,workspaceId);
+    assert.equal(detail.canManage,false);
+    assert.equal(detail.participants.find(p=>p.honjiSubject===ids.director)?.kind,'director');
+    assert.equal(detail.participants.find(p=>p.honjiSubject===ids.member)?.kind,'member');
+    assert.equal(detail.participants.some(p=>p.honjiSubject===ids.president),false);
+    const preview=await service.workspace({...director,debugView:{available:true,mode:'events_director'}},workspaceId);
+    assert.equal(preview.readOnly,true);assert.equal(preview.canManage,false);
+    await assert.rejects(service.workspace(member,randomUUID()));
     assert.equal((await db.many('SELECT id FROM department_memberships WHERE department_id=? AND ended_at IS NULL',[departmentId])).length,2);
     assert.equal((await db.many('SELECT id FROM department_memberships WHERE department_id=?',[departmentId])).length,2);
     const board=await kanban.createBoard(director,workspaceId,'Quadro fictício');

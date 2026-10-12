@@ -47,3 +47,19 @@ Exigências para preservar C-04, independentemente da futura matriz de papéis:
 ## Fatia independente sugerida
 
 **R:** protótipo de consulta de Espaço/board/cartão com dados fictícios, componentes compartilhados e estados de acesso. Cenários de atribuição/auxiliar podem ser exibidos como exemplos de desenvolvimento, sem lhes atribuir poderes. Persistência e operações dependentes aguardam decisões. Produção exige integração central e autorização local verificadas.
+## Fluxo contextual de espaços — D-61 (11/10/2026)
+
+**C:** um ou dois espaços disponíveis usam cards largos em toda a largura;
+três ou mais preservam a grade compacta. O início oferece acesso direto quando
+só existe um espaço, sem presumir que administradores participem de todos eles.
+Os detalhes exibem direção e membros/participantes reais, inclusive sem quadro.
+Editar informações fica junto desse contexto e depende do backend; membros e
+conselheiros sem direção acumulada consultam, sem administrar. Templates debug
+não podem editar nem aparecem na lista de pessoas reais.
+
+O gerenciamento de membros de um departamento abre o modal correspondente no
+Portal Honji, que revalida projeto, departamento e autoridade da sessão atual.
+Não existe cadastro paralelo no CAEHUB. Atalhos de tarefas, agenda pessoal e
+consulta do departamento preservam contexto sem alterar vínculos ou grants.
+`WorkspacePeople` compõe controles/diálogo existentes com responsabilidade
+distinta de consulta contextual e edição das informações do espaço.
