@@ -16,7 +16,7 @@ export class KanbanService {
     if (!workspace) throw new NotFound('workspace');
     const admin = await this.institutional.isAdmin(actor, member);
     const director = Boolean(workspace.departmentId && await this.institutional.managesDepartment(member.id, workspace.departmentId));
-    const participant = (await this.institutional.workspaceParticipants(workspaceId)).some(p=>p.membershipId===member.id);
+    const participant=Boolean(await this.db.one<RowDataPacket>(`SELECT m.id FROM memberships m JOIN workspaces w ON w.organization_id=m.organization_id WHERE w.id=? AND m.id=? AND m.status='active' AND (EXISTS(SELECT 1 FROM workspace_participants wp WHERE wp.workspace_id=w.id AND wp.membership_id=m.id) OR EXISTS(SELECT 1 FROM department_memberships dm WHERE dm.department_id=w.department_id AND dm.membership_id=m.id AND dm.ended_at IS NULL))`,[workspaceId,member.id]));
     const broadRead=await this.institutional.canViewAll(actor,member);
     if (!broadRead && !director && !participant) throw new NotFound('workspace');
     return { member, admin, director, broadRead, readOnly:member.role==='counselor'&&!admin&&!director, manager: admin || director };

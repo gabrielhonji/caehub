@@ -5,7 +5,7 @@ import type { RowDataPacket } from 'mysql2';
 
 const snapshotSchema = z.object({ revision: z.number().int().positive(),
   departments: z.array(z.object({ id: z.string().uuid(), name: z.string().min(1).max(120), directorId: z.string().uuid().nullable(), memberIds: z.array(z.string().uuid()) })),
-  roles: z.record(z.string().uuid(), z.enum(['president', 'vice_president', 'counselor', 'member'])),
+  roles: z.record(z.string().uuid(), z.enum(['president', 'vice_president', 'counselor', 'none', 'member'])),
   roster: z.array(z.object({ id: z.string().uuid(), name: z.string().min(1).max(120) })) });
 
 // Only the service-authenticated Honji decision may supply this snapshot.
@@ -13,7 +13,8 @@ const snapshotSchema = z.object({ revision: z.number().int().positive(),
 // second editable authority once the project's hierarchy is activated.
 export async function synchronizeHierarchy(db: Database, input: unknown) {
   const snapshot = snapshotSchema.parse(input);
-  const snapshotHash=createHash('sha256').update(JSON.stringify(snapshot)).digest('hex');
+  const assignmentCount=(subject:string)=>snapshot.departments.filter(d=>d.directorId===subject||d.memberIds.includes(subject)).length;
+  const snapshotHash=createHash('sha256').update('exclusive-v2:').update(JSON.stringify(snapshot)).digest('hex');
   await db.transaction(async tx => {
     await tx.one('SELECT id FROM organizations WHERE id=? FOR UPDATE', [CAECOMP_ORGANIZATION_ID]);
     const cached = await tx.one<RowDataPacket>('SELECT revision,snapshot_hash FROM honji_hierarchy_projection WHERE organization_id=?', [CAECOMP_ORGANIZATION_ID]);
@@ -28,8 +29,8 @@ export async function synchronizeHierarchy(db: Database, input: unknown) {
       else await tx.run('UPDATE people SET display_name=? WHERE id=?', [user.name, person.id]);
       const existing = await tx.one<RowDataPacket>('SELECT id FROM memberships WHERE organization_id=? AND person_id=?', [CAECOMP_ORGANIZATION_ID, person.id]);
       const membershipId = existing?.id ?? randomUUID();
-      const directed = snapshot.departments.some(d => d.directorId === user.id);
-      const role = snapshot.roles[user.id] && snapshot.roles[user.id] !== 'member' ? snapshot.roles[user.id] : directed ? 'director' : 'member';
+      const directed = assignmentCount(user.id)===1&&snapshot.departments.some(d => d.directorId === user.id);
+      const role = snapshot.roles[user.id] && ['president','vice_president','counselor'].includes(snapshot.roles[user.id]) ? snapshot.roles[user.id] : directed ? 'director' : 'member';
       if (existing) await tx.run("UPDATE memberships SET role=?,status='active',ended_at=NULL WHERE id=?", [role, membershipId]);
       else await tx.run("INSERT INTO memberships(id,organization_id,person_id,role,status) VALUES (?,?,?,?,'active')", [membershipId, CAECOMP_ORGANIZATION_ID, person.id, role]);
       members.set(user.id, membershipId);
@@ -37,13 +38,13 @@ export async function synchronizeHierarchy(db: Database, input: unknown) {
     await tx.run("UPDATE memberships m JOIN people p ON p.id=m.person_id SET m.status='suspended' WHERE m.organization_id=? AND p.honji_subject NOT LIKE 'caehub-debug-%' AND p.honji_subject NOT IN (" + (snapshot.roster.map(() => '?').join(',') || "''") + ')', [CAECOMP_ORGANIZATION_ID, ...snapshot.roster.map(u => u.id)]);
     const existingRelations = await tx.many<RowDataPacket>(`SELECT dm.id,dm.department_id AS departmentId,dm.membership_id AS membershipId,dm.kind FROM department_memberships dm JOIN departments d ON d.id=dm.department_id JOIN memberships m ON m.id=dm.membership_id JOIN people p ON p.id=m.person_id WHERE d.organization_id=? AND dm.ended_at IS NULL AND p.honji_subject NOT LIKE 'caehub-debug-%'`, [CAECOMP_ORGANIZATION_ID]);
     const desired = new Map<string,string>();
-    for(const d of snapshot.departments)for(const subject of new Set([...d.memberIds,...(d.directorId?[d.directorId]:[])])){const memberId=members.get(subject);if(memberId)desired.set(`${d.id}:${memberId}`,subject===d.directorId?'director':'member');}
+    for(const d of snapshot.departments)for(const subject of new Set([...d.memberIds,...(d.directorId?[d.directorId]:[])])){const memberId=members.get(subject);if(memberId&&assignmentCount(subject)===1)desired.set(`${d.id}:${memberId}`,subject===d.directorId?'director':'member');}
     for(const relation of existingRelations)if(desired.get(`${relation.departmentId}:${relation.membershipId}`)!==relation.kind)await tx.run('UPDATE department_memberships SET ended_at=NOW() WHERE id=?',[relation.id]);
     await tx.run(`DELETE wp FROM workspace_participants wp JOIN workspaces w ON w.id=wp.workspace_id JOIN memberships m ON m.id=wp.membership_id JOIN people p ON p.id=m.person_id WHERE w.organization_id=? AND w.department_id IS NOT NULL AND p.honji_subject NOT LIKE 'caehub-debug-%'`,[CAECOMP_ORGANIZATION_ID]);
     for (const department of snapshot.departments) {
       await tx.run('INSERT INTO departments(id,organization_id,name) VALUES (?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name)', [department.id, CAECOMP_ORGANIZATION_ID, department.name]);
       for (const subject of new Set([...department.memberIds, ...(department.directorId ? [department.directorId] : [])])) {
-        const memberId = members.get(subject); if (!memberId) continue;
+        const memberId = members.get(subject); if (!memberId||assignmentCount(subject)!==1) continue;
         const kind=subject===department.directorId?'director':'member';
         if(!existingRelations.some(r=>r.departmentId===department.id&&r.membershipId===memberId&&r.kind===kind))await tx.run('INSERT INTO department_memberships(id,department_id,membership_id,kind) VALUES (?,?,?,?)', [randomUUID(), department.id, memberId, kind]);
       }

@@ -10,7 +10,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   if (response.status === 204) return undefined as T;
   return response.json();
 }
-export type SessionInfo={subject:string;displayName:string;csrfToken?:string;membership?:{id:string;role:string;status?:string}|null;owner:boolean;debugView?:{available:boolean;mode:'real'|'admin'|'events_director'|'member'}};
+export type SessionInfo={subject:string;displayName:string;csrfToken?:string;membership?:{id:string;role:string;status?:string}|null;owner:boolean;debugView?:{available:boolean;mode:'real'|'global_admin'|'caecomp_admin'|'events_director'|'events_member'|'products_member'|'xii_admin'|'xii_secretary_member'|'xii_sports_member'}};
 let sessionPromise:Promise<SessionInfo>|undefined;
 export function getSessionInfo(){return sessionPromise??=fetch('/api/me',{credentials:'same-origin'}).then(async response=>{if(!response.ok){location.assign('/acesso');throw new Error('Sessão necessária.');}return response.json() as Promise<SessionInfo>;}).catch(error=>{sessionPromise=undefined;throw error;});}
 async function sessionToken(){return String((await getSessionInfo()).csrfToken??'');}

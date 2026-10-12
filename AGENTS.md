@@ -34,6 +34,10 @@ atualize somente o estado afetado, sem duplicar especificações.
 
 ### Hierarquia e espaços
 
+- D-60: vínculo departamental exclusivo, direção/membro mutuamente exclusivos,
+  cargos independentes. Templates debug só leem, são exclusivos do owner e
+  não aparecem nos participantes reais; não amplie acesso entre projetos.
+
 - Siga a seção D-59 de `docs/caehub/ARQUITETURA-SEGURANCA.md`. Cargos e
   departamentos ativados no Honji são autoridade central; não mantenha edição
   local paralela. Departamentos e ferramentas referenciam IDs estáveis, não nomes.

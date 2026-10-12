@@ -55,6 +55,13 @@ Pode avançar: componentes, layouts, estados de erro/acesso, modelo conceitual e
 
 ### Hierarquia integrada — D-59, 11/10/2026
 
+D-60: cada pessoa possui um departamento por projeto, como diretor ou membro.
+Cargos administrativos não criam vínculos; direção/membro no mesmo departamento
+são mutuamente exclusivos. Projeção antiga ambígua não concede herança até
+correção no Honji. Perfis de visualização usam os departamentos reais de
+Eventos/Produtos e não aparecem como participantes reais. Perfis da XII não
+ganham acesso ao CAEHUB. Seletor agrupado, owner-only e somente leitura.
+
 Honji mantém cargos institucionais e departamentos por projeto. A primeira
 edição no painel ativa a projeção central; antes disso, a configuração local
 existente continua disponível. Depois, cargos e vínculos são editados somente

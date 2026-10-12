@@ -41,7 +41,8 @@ export async function migrate(db: Database): Promise<void> {
   if(!await db.one<RowDataPacket>("SHOW COLUMNS FROM honji_hierarchy_projection LIKE 'snapshot_hash'"))await db.run('ALTER TABLE honji_hierarchy_projection ADD COLUMN snapshot_hash CHAR(64) NULL');
   await db.run(`CREATE TABLE IF NOT EXISTS caehub_sessions (session_hash char(64) primary key, subject varchar(255) null, display_name varchar(255) null, csrf_token varchar(64) not null, oauth_state_hash char(64) null, oauth_nonce_hash char(64) null, oauth_verifier varchar(128) null, created_at datetime(3) not null, last_activity_at datetime(3) not null, expires_at datetime(3) not null, index caehub_sessions_expiry(expires_at))`);
   const debugMode = await db.one<RowDataPacket>(`SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='caehub_sessions' AND column_name='debug_mode'`);
-  if (!debugMode) await db.run("ALTER TABLE caehub_sessions ADD COLUMN debug_mode enum('real','admin','events_director','member') NOT NULL DEFAULT 'real'");
+  if (!debugMode) await db.run("ALTER TABLE caehub_sessions ADD COLUMN debug_mode VARCHAR(48) NOT NULL DEFAULT 'real'");
+  const debugType=await db.one<RowDataPacket>("SHOW COLUMNS FROM caehub_sessions LIKE 'debug_mode'");if(String(debugType?.Type).startsWith('enum'))await db.run("ALTER TABLE caehub_sessions MODIFY COLUMN debug_mode VARCHAR(48) NOT NULL DEFAULT 'real'");
   await db.run(`CREATE TABLE IF NOT EXISTS organizations (id char(36) primary key, slug varchar(80) not null unique, name varchar(255) not null, created_at datetime not null default current_timestamp, updated_at datetime not null default current_timestamp on update current_timestamp)`);
   await db.run(`CREATE TABLE IF NOT EXISTS departments (id char(36) primary key, organization_id char(36) not null, name varchar(120) not null, created_at datetime not null default current_timestamp, unique key departments_organization_name (organization_id,name), constraint fk_department_org foreign key (organization_id) references organizations(id))`);
   await db.run(`CREATE TABLE IF NOT EXISTS people (id char(36) primary key, honji_subject varchar(255) not null unique, display_name varchar(255) not null, created_at datetime not null default current_timestamp)`);
@@ -87,7 +88,9 @@ async function seed(db: Database): Promise<void> {
   const templates = [
     ['1a4e0bd0-5f4a-4d10-8000-000000000020', '1a4e0bd0-5f4a-4d10-8000-000000000021', 'caehub-debug-admin', 'Administração / Presidência', 'president'],
     ['1a4e0bd0-5f4a-4d10-8000-000000000022', '1a4e0bd0-5f4a-4d10-8000-000000000023', 'caehub-debug-events-director', 'Direção de Eventos', 'director'],
-    ['1a4e0bd0-5f4a-4d10-8000-000000000024', '1a4e0bd0-5f4a-4d10-8000-000000000025', 'caehub-debug-member', 'Membro', 'member'],
+    ['1a4e0bd0-5f4a-4d10-8000-000000000024', '1a4e0bd0-5f4a-4d10-8000-000000000025', 'caehub-debug-member', 'Membro de Eventos', 'member'],
+    ['1a4e0bd0-5f4a-4d10-8000-000000000030','1a4e0bd0-5f4a-4d10-8000-000000000031','caehub-debug-global-admin','Administrador global','member'],
+    ['1a4e0bd0-5f4a-4d10-8000-000000000032','1a4e0bd0-5f4a-4d10-8000-000000000033','caehub-debug-products-member','Membro de Produtos','member'],
   ] as const;
   for (const [personId, membershipId, subject, name, role] of templates) {
     await db.run('INSERT IGNORE INTO people (id,honji_subject,display_name) VALUES (?,?,?)', [personId, subject, name]);
@@ -95,6 +98,9 @@ async function seed(db: Database): Promise<void> {
   }
   await db.run(`INSERT IGNORE INTO department_memberships (id,department_id,membership_id,kind) VALUES
     ('1a4e0bd0-5f4a-4d10-8000-000000000026','1a4e0bd0-5f4a-4d10-8000-000000000104','1a4e0bd0-5f4a-4d10-8000-000000000023','director')`);
+  await db.run(`INSERT IGNORE INTO department_memberships(id,department_id,membership_id,kind) VALUES
+    ('1a4e0bd0-5f4a-4d10-8000-000000000034','1a4e0bd0-5f4a-4d10-8000-000000000104','1a4e0bd0-5f4a-4d10-8000-000000000025','member'),
+    ('1a4e0bd0-5f4a-4d10-8000-000000000035','1a4e0bd0-5f4a-4d10-8000-000000000103','1a4e0bd0-5f4a-4d10-8000-000000000033','member')`);
   const spaces: Array<[string, string, number | null]> = [['1a4e0bd0-5f4a-4d10-8000-000000000201', 'Direção Geral', null], ...departments.map((name, index) => [`1a4e0bd0-5f4a-4d10-8000-0000000002${String(index + 2).padStart(2, '0')}`, name, index] as [string, string, number])];
   for (const [id, name, index] of spaces) {
     const departmentId = index === null ? null : `1a4e0bd0-5f4a-4d10-8000-0000000001${String(index + 1).padStart(2, '0')}`;

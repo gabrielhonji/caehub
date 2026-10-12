@@ -9,7 +9,7 @@ export type Actor = {
   institutionalAdmin?: boolean;
   centralHierarchy?: boolean;
   realSubject?: string;
-  debugView?: { available: boolean; mode: 'real' | 'admin' | 'events_director' | 'member' };
+  debugView?: { available: boolean; mode: import('./debug-profiles.js').DebugMode };
 };
 
 export type Membership = { id: string; role: InstitutionalRole; status: 'active' | 'suspended' | 'ended' };

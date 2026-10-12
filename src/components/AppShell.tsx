@@ -5,7 +5,7 @@ import { Brand, HonjiBrand } from './Brand';
 import { getSessionInfo } from '../services/spaces';
 
 export function AppShell({ children, theme, onTheme }: { children: ReactNode; theme: 'light' | 'dark'; onTheme: () => void }) {
-  type DebugMode = 'real' | 'admin' | 'events_director' | 'member';
+  type DebugMode = 'real'|'global_admin'|'caecomp_admin'|'events_director'|'events_member'|'products_member'|'xii_admin'|'xii_secretary_member'|'xii_sports_member';
   const current = location.hash || '#/';
   const [profileOpen, setProfileOpen] = useState(false);
   const [account, setAccount] = useState<{ displayName: string; csrfToken: string; debugView?: { available: boolean; mode: DebugMode } }>();
@@ -63,9 +63,7 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
           <div className="footer-signature"><span>DESENVOLVIDO POR</span><a href="https://github.com/gabrielhonji" target="_blank" rel="noreferrer">gabriel.honji</a><i aria-hidden="true">·</i><span>VERSÃO {__APP_VERSION__} · {__APP_RELEASE__}</span><i aria-hidden="true">·</i><span>UTFPR / APUCARANA</span></div>
         </div>
       </footer>
-      {account?.debugView?.available && <aside className="debug-view-switcher" aria-label="Visualização de depuração"><span>Visualizar como</span><div>{([
-        ['real', 'Minha conta'], ['admin', 'Admin / Presidência'], ['events_director', 'Diretor Eventos'], ['member', 'Membro'],
-      ] as [DebugMode, string][]).map(([mode, label]) => <button type="button" key={mode} aria-pressed={account.debugView?.mode === mode} onClick={() => void setDebugView(mode)}>{label}</button>)}</div></aside>}
+      {account?.debugView?.available&&<aside className="debug-view-switcher"><label>Visualizar como<select aria-label="Perfil de visualização" value={account.debugView.mode} onChange={e=>void setDebugView(e.target.value as DebugMode)}><optgroup label="Administração"><option value="real">Minha conta</option><option value="global_admin">Administrador global</option></optgroup><optgroup label="CAECOMP"><option value="caecomp_admin">Administração / Presidência</option><option value="events_director">Diretor de Eventos</option><option value="events_member">Membro de Eventos</option><option value="products_member">Membro de Produtos</option></optgroup><optgroup label="XII"><option value="xii_admin">Administração / Presidência</option><option value="xii_secretary_member">Membro da Secretaria</option><option value="xii_sports_member">Membro de Esportes</option></optgroup></select></label></aside>}
     </div>
   );
 }
