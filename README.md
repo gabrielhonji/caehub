@@ -13,6 +13,33 @@ docker compose -f compose.dev.yml up web api mysql
 
 O Vite usa proxy interno para o serviço `api`; nenhuma porta é publicada no host. Para visualizar em desenvolvimento, use um túnel SSH para a rede/serviço Docker, conforme a política do ambiente.
 
+## Verificação de um incremento
+
+Execute dentro de container, com `NODE_ENV=development`, fontes deste checkout,
+`dist` presente e MySQL/rede/volume descartáveis separados do ambiente comum:
+
+```sh
+npm run test:server
+npm run build
+npm audit --audit-level=moderate
+```
+
+Os testes MySQL são seriais e usam `DB_*` do ambiente. Para repetir a regressão
+de estabilização, sirva `test/browser/stabilization.fixture.ts` pelo Node 22/tsx
+em container na mesma rede nomeada do navegador. Use um schema vazio dedicado.
+O artefato frontend deve corresponder ao checkout testado. Dentro do container:
+
+```sh
+node --import tsx test/browser/stabilization.fixture.ts
+```
+
+No container Chromium/Playwright já utilizado pelo Honji, execute
+`node test/browser/stabilization.mjs` com `NODE_ENV=development`,
+`CAEHUB_BROWSER_ORIGIN=http://<container-fixture>:8080` e
+`CAEHUB_PLAYWRIGHT_MODULE` apontando para o módulo Playwright disponível nesse
+container. A fixture é exclusivamente fictícia; não publique portas no host.
+Resultados, limites e release estão em `docs/caehub/COORDENACAO.md`.
+
 ## Estrutura
 
 - `docs/caehub/`: planejamento original e decisões complementares.

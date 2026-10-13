@@ -1,4 +1,72 @@
 # Coordenação de agentes
+## Em auditoria — Agente 09, 13/10/2026
+
+Responsável: Codex /root. Base limpa `a719c9c`, `main`, entregas anteriores
+integradas. Escopo inicial reservado: documentação de auditoria neste arquivo;
+`src/app/App.tsx` (retry Minhas tarefas e criação cartão/coluna),
+metadados de release e testes de regressão em navegador. Sem reserva concorrente
+no CAEHUB. Objetivo: estabilização dos módulos existentes, sem novos módulos.
+Aceite observável: jornadas persistem e negam acessos indevidos; última unidade
+tem um único comprador; replays financeiros/retirada não duplicam efeitos;
+Agenda preserva privacidade/capacidade; BFF nega sessão revogada e mock em
+produção; telas desktop/mobile nos dois temas sem impedir operações.
+Gate: suíte completa em banco/rede isolados, tipos/build, segurança,
+integração Honji real, navegador e imagem oficial antes de publicação.
+Fixtures não comprovam transação pessoal de produção.
+
+### Inventário e resultados da auditoria 1.14.3
+
+| Módulo | Situação | Evidência atual e limite |
+| --- | --- | --- |
+| Institucional | Implementado e verificado | Políticas, vínculos exclusivos, hierarquia/revisões, espaços e read-only contextual nos testes MySQL; dashboard/departamentos/espaços no Chromium. Administração central permanece Honji. |
+| Kanban | Implementado e verificado | Cartão, auxiliares, checklist, comentários, movimentação, responsável/transferência, aceite pendente, tarefas próprias, restrição directors e histórico nos testes; criação/refresh e recuperação de falha reproduzidos no navegador. |
+| Agenda | Implementado e verificado | Disponibilidade/exceções, importação/confirmação sintéticas, reuniões/revisões, privacidade coletiva, votos/convocação, turnos/capacidade/concorrência/cancelamento nos testes; formulários e participações nos dois temas/mobile. PDF real não reimportado neste incremento; evidência anterior permanece histórica. |
+| Comercial | Implementado e verificado | Campanhas/etapas, catálogo compartilhado/exclusivo, variações, última unidade, reserva/vencimento, Pix manual, produção/recebimento, alocação, retirada concorrente/idempotente, cancelamento/reembolso e histórico nos testes MySQL. Valores/contatos fictícios. |
+| Portal público/comprador | Implementado e verificado | Catálogo sem custos internos, seleção/checkout, pedidos próprios e negação de pedido alheio; prova acadêmica, compra externa e SSO no Keycloak real descartável; landing HTTPS publicada/temas/mobile. Sem transação pessoal de produção. |
+| Segurança Honji | Implementado e verificado | BFF/PKCE/state/nonce/JWT/cookie/CSRF/expiração, suspensão/revogação/indisponibilidade, logout local/global, autorização contextual e mock recusado em produção. Keycloak 26.8 e dois BFFs reais; Google/SMTP sintéticos. |
+
+Dependências: frontend React servido pelo Fastify/BFF; MySQL próprio com
+migrations idempotentes e lock de sessão; Honji decide account/project.access
+e hierarquia consultando sessão Keycloak viva. APIs efetivas estão em API.md;
+rotas públicas e privadas foram conferidas em app.ts/auth.ts. Banco descartável
+novo executou todas as migrations e repetição/concorrência de inicialização;
+não há ledger de versões de migrations que deva ser presumido em produção.
+Não houve mudança de schema neste incremento.
+
+Problemas encontrados: **P0: 0; P1: 2, ambos corrigidos; P2: 3, um corrigido**.
+P1-01: erro transitório em Minhas tarefas mantinha a página sem recuperação,
+pois copiar filtros não alterava as dependências da consulta. Um contador de
+retry agora dispara a consulta. P1-02: cartão/coluna persistiam, mas reset do
+currentTarget após await lançava exceção e impedia atualizar o quadro;
+referência do formulário capturada antes do await preserva reset/refresh.
+Ambos reproduzidos antes da correção e cobertos por regressão Chromium
+versionada em test/browser/stabilization.mjs, sem exceções após a correção.
+P2-01: handoff acadêmico desatualizado corrigido a partir da confirmação pessoal
+registrada no Kanban central. P2-02: texto técnico do cabeçalho Kanban permanece
+para ajuste editorial posterior. P2-03: aviso de bundle de 713 kB (187 kB gzip);
+sem gargalo comprovado na navegação observada, otimização fica posterior.
+
+Gate local final: **42/42 testes de servidor, 0 skips**, Node 22/MySQL 8.4,
+TypeScript/Vite e npm audit sem vulnerabilidades. Chromium em 1440/390,
+claro/escuro: nove páginas internas e diálogos de disponibilidade, reunião,
+votação, turno/inventário, sem overflow do documento, exceções ou HTTP 5xx.
+Capturas fictícias inspecionadas; grade, marcas canônicas, hierarquia editorial,
+campos e leitura nos dois temas preservados. Regressores verificam persistência
+e atualização do quadro, limpeza dos campos e retry após falha 503 sintética.
+SSO real descartável repetiu MFA obrigatório, OTP inválido recusado/correto
+aceito, prova acadêmica, compra própria, seletor Google, SSO e logout central.
+Preparação: permissão da pasta da imagem, ausência de dist no diretório de teste,
+dist obsoleto do Portal e loader/StrictMode do harness foram diagnosticados e
+corrigidos no ambiente, sem alteração dos contratos ou permissões do host.
+
+Persistência após reiniciar o MySQL descartável: mesmas quatro tarefas, três
+pedidos e 21 unidades físicas antes/depois, por consulta em nova conexão.
+Publicação 1.14.3: gate da imagem oficial, commit/push/main/deploy e smoke
+posterior ainda em andamento. Liberação só
+será registrada após esses resultados. Não há P0/P1 conhecido pendente;
+configuração real de reserva/Pix, operação financeira pessoal e eventual nova
+grade PDF são verificações operacionais distintas. XII legado fora do escopo.
+
 ## Publicado — Agente 08, 12/10/2026
 
 Responsável: Codex deste chat; branch `feat/agente08-seguranca-sso`, base main
@@ -16,7 +84,10 @@ revogação; produção nunca ativa identidade de desenvolvimento. Gate completo
 em containers e revisão visual antes de publicação. Comprador externo só
 compra após endereço exato @alunos.utfpr.edu.br verificado; endereço secundário
 é anexado à mesma conta, sem grants/membership automáticos. Aviso de spam.
-Gabriel confirmou login Google pessoal em produção. Entrega/confirmação na caixa acadêmica real segue pendente.
+Gabriel confirmou login Google pessoal em produção. A coordenação central
+CAE-SSO-08 registra em 13/10/2026 sua confirmação de entrega e verificação do
+e-mail acadêmico, inclusive aviso de spam. Essa confirmação pessoal não é
+substituída pelos testes fictícios deste repositório.
 
 Implementação 1.14.1 concluída: state consumido sob lock, sessão/CSRF novos
 após callback, retorno interno, distinção 401/403/503, sessão central viva e
@@ -89,8 +160,10 @@ inclusive redirecionamentos Keycloak 302/303 até Google com select_account,
 entrada Honji sem prompt, PKCE, negações, temas/mobile e avisos acadêmico/spam.
 Reservas liberadas; confirmação pessoal do seletor solicitada a Gabriel.
 
-Handoff Agente 09: confirmar entrega/confirmação na caixa acadêmica real. Esses resultados não são presumidos por fixtures nem
-pelo smoke anônimo. Consumidor XII legado não envia sid e exige incremento
+Handoff Agente 09: entrega/confirmação na caixa acadêmica real encerrada pela
+confirmação de Gabriel registrada em CAE-SSO-08 em 13/10/2026. Esses resultados
+não são presumidos por fixtures nem pelo smoke anônimo. Consumidor XII legado
+não envia sid e exige incremento
 próprio autorizado antes de afirmar logout global em todo o ecossistema.
 Não houve transação financeira ou manipulação de conta/pedido real em testes.
 
