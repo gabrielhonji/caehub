@@ -49,12 +49,12 @@ ENG-001 é leitura inicial de execução; reler apenas quando a tarefa mudar de 
 
 | ID | O que falta | Bloqueia |
 | --- | --- | --- |
-| P-01 | Contrato real Honji: transporte/semântica de project.access, sessão BFF, identidade, falhas, revogação e responsabilidades | Integração e release autenticado |
+| P-01 | Resolvido por BFF existente e D-62/Agente 08: account.access, project.access, sessão Keycloak viva e identidade estável; ver ARQUITETURA-SEGURANCA.md | Smoke pessoal Google/produção permanece distinto do gate descartável |
 | P-02 | Relação Espaço/departamento/board e regras de acesso/herança | Persistência e autorização dessas relações |
 | P-03 | Cardinalidade de atribuições/auxiliares, poderes, transições e ciclo de vida de cartões | Operações de Kanban dependentes dessas regras |
 | P-04 | Origem da agenda, semântica de turnos, conflitos, visibilidade e fuso | Regras e integração de Agenda |
 | P-05 | Ativos CAECOMP, composição de marcas, fontes/paleta finais e acesso a componentes Honji | Aprovação visual final |
-| P-06 | Resolvido pelo pedido Agente 06: reservas, Pix manual, produção e retirada em COMERCIAL.md; prazo/Pix reais exigem configuração explícita | Autosserviço externo depende de acesso Honji compatível |
-| P-07 | Stack de servidor/persistência, versionamento e ferramentas reais de teste | Execução técnica desses componentes |
+| P-06 | Resolvido por Agentes 06/08: pedidos existentes e autosserviço externo com e-mail acadêmico verificado; prazo/Pix reais exigem configuração explícita | Configuração comercial real continua explícita |
+| P-07 | Resolvido: Fastify/MySQL, tsx/jose, testes/build em containers e canais oficiais | Ver ENG-001 e runbook de produção |
 
 Para fechar um P: registrar decisão curta, origem/data, documentos afetados e critério de aceite; retirar sugestões incompatíveis. Este pacote não altera contratos de outros projetos.

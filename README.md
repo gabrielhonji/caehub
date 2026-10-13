@@ -24,7 +24,7 @@ O Vite usa proxy interno para o serviço `api`; nenhuma porta é publicada no ho
 
 O backend Fastify fica em `src/server/` e usa MySQL próprio do CAEHUB, separado da identidade Honji. As migrações são idempotentes e criam CAECOMP, seus seis departamentos e sete espaços iniciais (Direção Geral e um por departamento). O bootstrap não cria uma pessoa ativa.
 
-Em produção, o mesmo container serve o React e a API atrás de um BFF Honji. A rota pública `/acesso` apresenta o projeto antes do login; Authorization Code + PKCE cria uma sessão persistida no MySQL, e cada chamada à API revalida `project.access` no serviço central. As permissões de Espaços e Kanban continuam sendo avaliadas localmente. O mock por processo permanece restrito ao desenvolvimento.
+Em produção, o mesmo container serve o React e a API atrás de um BFF Honji. A rota pública `/acesso` apresenta o projeto antes do login; Authorization Code + PKCE cria uma sessão persistida no MySQL, e cada chamada à API revalida a conta, a sessão Keycloak e o acesso efetivo no serviço central. As permissões de Espaços e Kanban continuam sendo avaliadas localmente. O mock por processo permanece restrito ao desenvolvimento.
 
 No desenvolvimento, o serviço MySQL é interno à rede Docker e não publica porta. Para preparar o banco e iniciar a API:
 
@@ -41,8 +41,10 @@ Veja os contratos em [`docs/caehub/API.md`](docs/caehub/API.md). Kanban, Agenda 
 
 A raiz `/` é pública: campanhas ativas, catálogo, detalhes e seleção temporária
 por campanha. Conta Honji com vínculo ativo no CAECOMP conclui pelo mesmo serviço
-de pedidos e consulta Pix, produção e retirada próprios. Externos sem vínculo
-continuam atendidos pela operação administrativa, sem acesso institucional novo.
+de pedidos e consulta Pix, produção e retirada próprios. Externos entram pelo
+Google e precisam confirmar e-mail `@alunos.utfpr.edu.br` antes de comprar;
+podem anexar esse endereço à mesma conta criada com outro e-mail. Confira também
+a caixa de spam. A confirmação não concede acesso institucional.
 `/#/espacos` e os demais hashes preservam a gestão protegida. Imagens de produtos,
 eventos públicos e local de retirada aguardam contratos de cadastro/publicação.
 

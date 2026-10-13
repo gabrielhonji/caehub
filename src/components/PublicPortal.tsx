@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Brand, HonjiBrand } from './Brand';
 import { ThemeToggle } from './ThemeToggle';
+import { BuyerEmailVerification } from './BuyerEmailVerification';
 import { Badge, Button, Dialog, EmptyState, ErrorState, Eyebrow, LoadingState } from './primitives';
 import { CommercialOrderForm } from './CommercialOrderForm';
 import { CommercialOrderDetail } from './CommercialOrderDetail';
 import { CommercialOrders } from './CommercialOrders';
-import { api } from '../services/spaces';
+import { api, type SessionInfo } from '../services/spaces';
 import { money } from '../services/commercial';
 import { emptyOrderDraft, newRequestKey, commercialOrderFailure, type OrderDetail, type OrderDraft, type SaleCatalog } from '../services/commercial-orders';
 import { readTheme, saveTheme } from '../services/theme';
@@ -21,9 +22,15 @@ function restore():Selection|undefined{
   }catch{/* The selection remains usable in memory. */}
 }
 
-export function PublicPortal({embedded=false}:{embedded?:boolean}){
+export function PublicPortal({embedded=false,institutionalDenied=false}:{embedded?:boolean;institutionalDenied?:boolean}){
   const [saved]=useState(restore);
   const [catalog,setCatalog]=useState<SaleCatalog>(),[error,setError]=useState(false),[canBuy,setCanBuy]=useState(false),[checkingAccount,setCheckingAccount]=useState(true);
+  const [needsStudentEmail,setNeedsStudentEmail]=useState(false);
+  const [account,setAccount]=useState<SessionInfo>(),[signingOut,setSigningOut]=useState(false);
+  const verification=location.hash.startsWith('#verificar-email');
+  const ownOrderId=location.hash.startsWith('#/meus-pedidos/')?location.hash.split('/')[2]:undefined;
+  const checkAccount=async()=>{try{const value=await api<{canBuy:boolean;requiresStudentEmail?:boolean}>('/public/buyer-status');setCanBuy(value.canBuy);setNeedsStudentEmail(value.requiresStudentEmail===true);if(value.canBuy||value.requiresStudentEmail)setAccount(await api<SessionInfo>('/me'));}catch{setCanBuy(false);}finally{setCheckingAccount(false);}};
+  async function logout(){if(!account||signingOut)return;setSigningOut(true);try{const response=await fetch('/auth/logout',{method:'POST',headers:{'x-csrf-token':account.csrfToken??''}});const result=await response.json();if(!response.ok)throw new Error();location.assign(result.redirect);}catch{setNotice('Não foi possível sair agora. Tente novamente.');setSigningOut(false);}}
   const [campaignId,setCampaignId]=useState(saved?.campaignId??''),[draft,setDraft]=useState<OrderDraft>(()=>({...emptyOrderDraft(),items:saved?.items??[]}));
   const [requestKey,setRequestKey]=useState(saved?.requestKey??newRequestKey()),[productId,setProductId]=useState(''),[variantId,setVariantId]=useState(''),[quantity,setQuantity]=useState('1');
   const [checkout,setCheckout]=useState(false),[busy,setBusy]=useState(false),[formError,setFormError]=useState(''),[detail,setDetail]=useState<OrderDetail>();
@@ -35,9 +42,8 @@ export function PublicPortal({embedded=false}:{embedded?:boolean}){
     catch{setError(true);}
   };
   useEffect(()=>{
-    let active=true;void load();
-    void api<{canBuy:boolean}>('/public/buyer-status').then(value=>{if(active)setCanBuy(value.canBuy);}).catch(()=>{if(active)setCanBuy(false);}).finally(()=>{if(active)setCheckingAccount(false);});
-    return()=>{active=false;};
+    void load();
+    void checkAccount();
   },[]);
   useEffect(()=>{if(!embedded){document.documentElement.dataset.theme=theme;saveTheme(theme);}},[theme,embedded]);
   useEffect(()=>{
@@ -94,9 +100,11 @@ export function PublicPortal({embedded=false}:{embedded?:boolean}){
   };
   const orders=<section id="pedidos" className="buyer-account-section">
     <div className="compact-heading"><div><Eyebrow>MINHA CONTA · {campaign?.name??'TODAS AS CAMPANHAS'}</Eyebrow><h2>{collection?'Seus pedidos e retiradas.':'Acompanhe suas compras.'}</h2></div>{canBuy&&<a className="button button-secondary" href="/#/meus-pedidos">Todos os meus pedidos →</a>}</div>
-    {checkingAccount?<LoadingState/>:canBuy?<CommercialOrders key={`${ordersVersion}-${campaignId}`} mode="mine" campaignId={campaign?.id}/>:<div className="buyer-login-note"><p>Entre com Honji para consultar suas encomendas e as quantidades do seu pedido. Nesta etapa, a equipe informa quando estão prontas para retirada.</p><a className="button button-primary" href="/auth/login">Entrar com Honji</a><small>Compras pela conta exigem vínculo ativo no CAECOMP. Compradores externos devem procurar a equipe da campanha.</small></div>}
+    {checkingAccount?<LoadingState/>:canBuy?<CommercialOrders key={`${ordersVersion}-${campaignId}`} mode="mine" campaignId={ownOrderId?undefined:campaign?.id} initialOrderId={ownOrderId}/>:needsStudentEmail?<BuyerEmailVerification onVerified={()=>void checkAccount()}/>:<div className="buyer-login-note"><p>Entre com Honji para consultar suas encomendas e as quantidades do seu pedido. Nesta etapa, a equipe informa quando estão prontas para retirada.</p><a className="button button-primary" href="/auth/login?provider=google">Entrar ou criar conta com Google</a><a className="button button-secondary" href="/auth/login">Entrar com Honji</a><small>Compradores externos devem confirmar um e-mail @alunos.utfpr.edu.br. Confira também a caixa de spam.</small></div>}
   </section>;
   const content=<>
+    {institutionalDenied&&<p className="form-feedback" role="status">Sua conta pode usar a lojinha. O acesso institucional depende de concessão por um administrador.</p>}
+    {verification&&<BuyerEmailVerification onVerified={()=>void checkAccount()}/>}
     <section className={`commercial-heading public-intro ${embedded?'buyer-page-heading':''}`}><div>
       <Eyebrow>{embedded?'COMERCIAL · MINHAS COMPRAS':'01 / HONJI + CAECOMP'}</Eyebrow>
       <h1>{embedded?<>Escolha, acompanhe,<br/><em>retire.</em></>:<>Feito para reunir.<br/><em>Também para levar.</em></>}</h1>
@@ -140,14 +148,14 @@ export function PublicPortal({embedded=false}:{embedded?:boolean}){
       {formError&&<p role="alert">{formError}</p>}<Button variant="primary" disabled={!valid||draft.items.length>=100}>Adicionar à seleção</Button>
     </form></Dialog>}
     {checkout&&catalog&&<Dialog title="Conferir meu pedido" onClose={()=>{if(!busy)setCheckout(false);}}>
-      {canBuy?<><CommercialOrderForm catalog={catalog} campaignId={campaignId} draft={draft} onChange={changeDraft} onSubmit={()=>void submit()} busy={busy} refresh={()=>void load()}/>{formError&&<p className="form-feedback error" role="alert">{formError}</p>}</>:<><p>Sua seleção fica guardada neste navegador durante esta sessão. Entre com sua conta Honji para continuar.</p><p>Compras pela conta exigem vínculo ativo no CAECOMP. Para compras externas, procure a equipe da campanha.</p><a className="button button-primary" href="/auth/login">Entrar com Honji</a></>}
+      {canBuy?<><CommercialOrderForm catalog={catalog} campaignId={campaignId} draft={draft} onChange={changeDraft} onSubmit={()=>void submit()} busy={busy} refresh={()=>void load()}/>{formError&&<p className="form-feedback error" role="alert">{formError}</p>}</>:needsStudentEmail?<BuyerEmailVerification onVerified={()=>void checkAccount()}/>:<><p>Sua seleção fica guardada neste navegador durante esta sessão. Entre com sua conta Honji para continuar.</p><p>Compradores externos precisam confirmar um e-mail @alunos.utfpr.edu.br. Confira também a caixa de spam.</p><a className="button button-primary" href="/auth/login?provider=google">Entrar ou criar conta com Google</a><a className="button button-secondary" href="/auth/login">Entrar com Honji</a></>}
     </Dialog>}
     {detail&&<Dialog title="Pedido registrado" onClose={()=>setDetail(undefined)}><CommercialOrderDetail detail={detail} busy={busy} onAction={async()=>false} refresh={()=>void refreshDetail()}/>{formError&&<p role="alert">{formError}</p>}</Dialog>}
     {pendingCampaign&&<Dialog title="Trocar de campanha?" onClose={()=>setPendingCampaign('')}><p>Os itens selecionados pertencem a {campaign?.name??'outra campanha'}. Ao trocar, essa seleção será removida. Seus pedidos já registrados permanecem na sua conta.</p><div className="card-actions"><Button onClick={()=>setPendingCampaign('')}>Manter seleção</Button><Button variant="primary" onClick={()=>changeCampaign(pendingCampaign)}>Trocar campanha</Button></div></Dialog>}
   </>;
   if(embedded)return content;
   return <div className="app-shell public-portal"><a className="skip-link" href="#content">Pular para o conteúdo</a>
-    <header className="site-header"><div className="header-inner"><div className="navbar-brands"><HonjiBrand/><span className="navbar-divider" aria-hidden="true"/><Brand href="/"/></div><nav aria-label="Portal público"><a href="#campanhas">Lojinha</a><a href="#pedidos">Meus pedidos</a><a href="/#/espacos">Área interna</a></nav><div className="header-actions"><ThemeToggle theme={theme} onTheme={()=>setTheme(theme==='light'?'dark':'light')}/></div></div></header>
+    <header className="site-header"><div className="header-inner"><div className="navbar-brands"><HonjiBrand/><span className="navbar-divider" aria-hidden="true"/><Brand href="/"/></div><nav aria-label="Portal público"><a href="#campanhas">Lojinha</a><a href="#pedidos">Meus pedidos</a><a href="/#/espacos">Área interna</a></nav><div className="header-actions">{account&&<Button disabled={signingOut} onClick={()=>void logout()}>{signingOut?"Saindo…":"Sair do CAEHUB"}</Button>}<ThemeToggle theme={theme} onTheme={()=>setTheme(theme==='light'?'dark':'light')}/></div></div></header>
     <main id="content" className="content">{content}</main>
     <footer className="site-footer"><div className="footer-inner"><HonjiBrand/><div className="footer-organization"><strong>CAECOMP</strong><span>Centro Acadêmico de Engenharia de Computação</span></div><div className="footer-signature"><span>DESENVOLVIDO POR</span><a href="https://github.com/gabrielhonji">gabriel.honji</a><span>CAEHUB · {__APP_VERSION__}</span></div></div></footer>
   </div>;

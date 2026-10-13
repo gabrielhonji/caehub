@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import manifest from '../../package.json' with { type: 'json' };
 import { z } from 'zod';
-import type { IdentityGateway } from './auth.js';
+import { AuthenticationFailure, HonjiGateway, loginFailurePage, type IdentityGateway } from './auth.js';
 import { Forbidden, InstitutionalService, NotFound, Conflict } from './service.js';
 import { KanbanService } from './kanban.js';
 import { AgendaService } from './agenda.js';
@@ -22,6 +22,7 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   const app = Fastify({ logger: false });
   identity.register?.(app);
   app.addHook('onSend',async(_request,reply,payload)=>{reply.header('x-content-type-options','nosniff').header('referrer-policy','same-origin').header('content-security-policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");return payload;});
+  app.addHook('onSend',async(request,reply,payload)=>{if(request.url.startsWith('/api/')||request.url.startsWith('/auth/')||request.url.startsWith('/acesso'))reply.header('cache-control','no-store');return payload;});
   const kanban = new KanbanService(service.db, service);
   const agenda = new AgendaService(service.db, service);
   const timetables = new TimetableService(service.db, service);
@@ -29,6 +30,7 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   const polls = new MeetingPolls(service.db,service,agenda), shifts = new Shifts(service.db,service,agenda);
   app.addContentTypeParser('application/pdf', { parseAs: 'buffer', bodyLimit: 5 * 1024 * 1024 }, (_request, body, done) => done(null, body));
   app.setErrorHandler((error, _request, reply) => {
+    if(error instanceof AuthenticationFailure){if(_request.url.startsWith('/auth/callback'))return loginFailurePage(reply,error.status,error.message);return reply.code(error.status).send({error:error.code,message:error.message});}
     if ((error as { code?: string }).code === 'FST_ERR_CTP_BODY_TOO_LARGE') return reply.code(413).send({ error: 'payload_too_large', message: 'O arquivo ou formulário excede o tamanho permitido.' });
     if (error instanceof Forbidden) return reply.code(403).send({ error: 'forbidden', message: error.message });
     if (error instanceof NotFound) return reply.code(404).send({ error: 'not_found', message: error.message });
@@ -37,22 +39,22 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
     if (error instanceof z.ZodError) return reply.code(400).send({ error: 'invalid_request', ...(_request.url.startsWith('/api/commercial')?{message:'Confira os campos obrigatórios, preços e opções selecionadas.'}:{}), issues: error.issues });
     return reply.code(500).send({ error: 'internal_error' });
   });
-  const actor = async (request: import("fastify").FastifyRequest) => { const value = await identity.current(request); if (!value) throw new Forbidden('Honji identity integration is unavailable'); if (!value.projectAccess) throw new Forbidden('project.access is required'); if(value.debugView&&value.debugView.mode!=='real'&&!['GET','HEAD'].includes(request.method))throw new Forbidden('debug profiles are read-only'); return value; };
+  const actor = async (request: import("fastify").FastifyRequest,accountOnly=false) => { const value = await identity.current(request); if (!value) {if(identity instanceof HonjiGateway)throw new AuthenticationFailure(401,'session_required','Sua sessão expirou. Entre novamente para continuar.');throw new Forbidden('Honji identity integration is unavailable');} if (!value.projectAccess&&!(accountOnly&&value.accountAccess)) throw new Forbidden('project.access is required'); if(value.debugView&&value.debugView.mode!=='real'&&!['GET','HEAD'].includes(request.method))throw new Forbidden('debug profiles are read-only'); if(!accountOnly)await service.requireMember(value); return value; };
   const commercial=new CommercialService(service.db,service);
   const orders=new OrderService(service.db,service);
   app.get('/api/public/catalog',async(_request,reply)=>{reply.header('cache-control','no-store');return orders.publicCatalog();});
   app.get('/api/public/buyer-status',async(request,reply)=>{
     reply.header('cache-control','no-store');
     const current=await identity.current(request);
-    if(!current?.projectAccess||(current.debugView&&current.debugView.mode!=='real'))return {canBuy:false};
-    try{await service.requireMember(current);return {canBuy:true};}catch(error){if(error instanceof Forbidden)return {canBuy:false};throw error;}
+    if(!current||(current.debugView&&current.debugView.mode!=='real'))return {canBuy:false};
+    try{await orders.buyer(current);return {canBuy:true};}catch(error){if(error instanceof Forbidden)return current.accountAccess?{canBuy:false,authenticated:true,requiresStudentEmail:true}:{canBuy:false};throw error;}
   });
   const paramId=(request:import('fastify').FastifyRequest)=>id.parse((request.params as {id:string}).id);
   app.get('/api/commercial/orders',async request=>orders.list(await actor(request),undefined,orderListInput.parse(request.query)));
-  app.get('/api/commercial/shop',async request=>orders.shop(await actor(request)));
-  app.get('/api/commercial/my-orders',async request=>orders.list(await actor(request),undefined,orderListInput.parse({...request.query as object,mine:'true'})));
-  app.get('/api/commercial/my-orders/:id',async request=>orders.detail(await actor(request),paramId(request),true));
-  app.post('/api/commercial/my-orders',async(request,reply)=>reply.code(201).send(await orders.buy(await actor(request),purchaseInput.parse(request.body))));
+  app.get('/api/commercial/shop',async request=>orders.shop(await actor(request,true)));
+  app.get('/api/commercial/my-orders',async request=>orders.list(await actor(request,true),undefined,orderListInput.parse({...request.query as object,mine:'true'})));
+  app.get('/api/commercial/my-orders/:id',async request=>orders.detail(await actor(request,true),paramId(request),true));
+  app.post('/api/commercial/my-orders',async(request,reply)=>reply.code(201).send(await orders.buy(await actor(request,true),purchaseInput.parse(request.body))));
   app.post('/api/commercial/orders',async(request,reply)=>reply.code(201).send(await orders.create(await actor(request),orderInput.parse(request.body))));
   app.get('/api/commercial/orders/:id',async request=>orders.detail(await actor(request),paramId(request)));
   app.post('/api/commercial/orders/:id/actions',async request=>orders.act(await actor(request),paramId(request),orderAction.parse(request.body)));
@@ -78,7 +80,7 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.post('/api/commercial/variants/:id/movements',async(request,reply)=>reply.code(201).send(await commercial.move(await actor(request),paramId(request),movementInput.parse(request.body))));
   app.get('/api/commercial/variants/:id/movements',async request=>commercial.history(await actor(request),paramId(request)));
   app.get('/health', async (request) => ({ ok: true, version: manifest.version, release: manifest.release }));
-  app.get('/api/me', async (request) => { const current = await identity.current(request);if(!current)throw new Forbidden('Honji identity integration is unavailable'); const membership = current.projectAccess?await service.membership(current):undefined; return { subject: current.subject, displayName: current.displayName, projectAccess: current.projectAccess, owner: current.owner, csrfToken:(request as any).caehubCsrf??'', membership: membership ? { id: membership.id, role: membership.role, status: membership.status } : null, integration: 'honji-bff', debugView:current.debugView }; });
+  app.get('/api/me', async (request) => { const current = await actor(request,true); const membership = current.projectAccess?await service.membership(current):undefined; return { subject: current.subject, displayName: current.displayName, projectAccess: current.projectAccess, buyerAccess:current.buyerAccess===true, institutionalAccess:Boolean(current.projectAccess&&membership?.status==='active'), owner: current.owner, csrfToken:(request as any).caehubCsrf??'', membership: membership ? { id: membership.id, role: membership.role, status: membership.status } : null, integration: 'honji-bff', debugView:current.debugView }; });
   app.get('/api/organization', async (request) => { await actor(request); return service.organization(); });
   app.get('/api/organization/departments', async (request) => { await actor(request); return service.departments(); });
   app.get('/api/members', async (request) => service.listMembers(await actor(request)));

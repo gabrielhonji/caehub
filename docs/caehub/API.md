@@ -1,8 +1,16 @@
 # API institucional, Kanban e Agenda — Incrementos 01 a 04
 
-Base: `/api`. JSON; erros usam `{ error, message }` e retornam `400`, `403`, `404` ou `409`. `GET /health` expõe também a versão e o identificador de release no formato `DDMMAAAA-HHMMSS`.
+Base: `/api`. JSON; erros usam `{ error, message }` e retornam `400`, `401`, `403`, `404`, `409` ou `503`. `GET /health` expõe também a versão e o identificador de release no formato `DDMMAAAA-HHMMSS`.
 
-O servidor resolve o ator na fronteira `IdentityGateway`. Em produção, o BFF Honji usa Authorization Code + PKCE, sessão persistida no MySQL e uma decisão central nova de `project.access` em cada requisição protegida. Sem configuração completa ou decisão positiva, o acesso é negado; nenhum cabeçalho, payload ou papel fornecido pelo navegador concede acesso.
+O servidor resolve o ator na fronteira `IdentityGateway`. Em produção, o BFF Honji usa Authorization Code + PKCE, sessão persistida no MySQL e uma decisão central nova de `account.access`, com sessão Keycloak viva e `projectAccess`, em cada requisição protegida. Institucional exige também membership ativo; comprador externo exige e-mail acadêmico verificado e acessa somente rotas próprias. Sem configuração completa ou decisão positiva, o acesso é negado; nenhum cabeçalho, payload ou papel fornecido pelo navegador concede acesso.
+
+`POST /api/buyer/student-email` recebe somente `{studentEmail}` do domínio
+`alunos.utfpr.edu.br`; `/api/buyer/student-email/confirm` recebe somente
+`{verificationToken}`. Ambos exigem sessão/CSRF e usam o contrato central.
+`GET /api/me` informa buyerAccess e institutionalAccess separadamente.
+`POST /auth/logout` encerra localmente; `{mode:'provider'}` inicia end-session.
+Contratos completos de expiração, revogação e identidade estão em
+ARQUITETURA-SEGURANCA.md.
 
 | Método e rota | Operação |
 | --- | --- |

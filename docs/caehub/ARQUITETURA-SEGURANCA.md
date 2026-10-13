@@ -1,5 +1,49 @@
 # Arquitetura e segurança
 
+## Integração Agente 08 — contrato D-62
+
+O BFF valida assinatura RS256/JWKS, issuer, audience, exp/iat, nonce, azp
+quando presente e sid. Authorization Code + PKCE S256 usa state e transação
+OAuth persistente de 10 minutos, consumida sob lock antes do token exchange.
+Login válido rotaciona o identificador e o CSRF; sessão expira por 1h inativa
+ou 12h absoluta. Cookie `__Host-caehub.sid`: host-only, Path=/, HttpOnly,
+Secure, SameSite=Lax. Destino de retorno é interno. Tokens OIDC não são
+armazenados nem enviados ao navegador; sessões anteriores sem sid exigem login.
+
+`POST /internal/authorization/decisions` recebe JWT técnico, integrationId
+`caehub`, userId do subject OIDC, identitySessionId do sid, projeto CAECOMP e
+`account.access`. Honji usa o UUID Keycloak como iam_users.id; esse contrato
+é confirmado no callback central e na consulta do provedor, sem usar e-mail
+como identidade. A resposta fornece allowed, projectAccess e
+studentEmailVerified; hierarchy/institutionalAdmin aparecem quando houver
+acesso ao projeto. Somente o token técnico é reutilizado, nunca decisões.
+Sessão Keycloak encerrada retorna 401 e invalida a sessão local; suspensão,
+conta pendente e integração suspensa negam; indisponibilidade falha com 503.
+
+Conta externa Google verificada cria pessoa central sem grants. No CAEHUB,
+comprador é people.honji_subject e pedido próprio usa buyer_person_id,
+independentes de memberships. Compra externa exige prova de endereço exato
+`@alunos.utfpr.edu.br`; membros institucionais ativos mantêm o fluxo existente.
+E-mail acadêmico pode ser anexado a uma conta com outro endereço e confirmado
+por link de uso único, válido por 30 minutos e vinculado à mesma conta/sessão.
+Reenvio aguarda 1 minuto; uma prova acadêmica pertence a uma identidade.
+O backend revalida a prova; campos/headers do navegador não concedem acesso.
+Sem project.access e membership ativo, Gestão/Agenda/administração permanecem
+negadas. Conselheiro mantém consulta ampla e edição por função contextual.
+
+`POST /api/buyer/student-email` e `/confirm` delegam ao Honji a emissão e a
+confirmação, com sessão e CSRF. Cookies/sid não são compartilhados entre apps.
+`POST /auth/logout` encerra localmente mesmo após revogação, com CSRF; mode
+`provider` inicia end-session do Keycloak. O Portal já encerra as sessões do
+provedor e revalida sid: conferir o efeito entre aplicações com Keycloak real.
+Consumidores legados que não enviam sid precisam de migração própria; não
+presumir que todas as sessões da XII já tenham essa garantia.
+
+401 é sessão ausente/expirada, 403 é autorização/CSRF negado e 503 é dependência
+temporariamente indisponível. APIs/sessão/callback não são cacheáveis. Identidade
+de desenvolvimento exige NODE_ENV explícito development/test; produção só usa
+as variáveis oficiais existentes e nunca aceita parâmetros de mock do browser.
+
 ## Limites confirmados
 
 **C:** frontend React/TypeScript; autenticação central Honji/Keycloak+BFF; entrada vinculada a `project.access`; autorização local contextual; mock somente em desenvolvimento.

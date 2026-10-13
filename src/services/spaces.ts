@@ -4,15 +4,16 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const method=(init?.method??'GET').toUpperCase();
   const csrf=['GET','HEAD'].includes(method)?'':await sessionToken();
   const response = await fetch(`/api${path}`, { ...init, headers: { ...(init?.body != null ? { 'content-type': 'application/json' } : {}),...(csrf?{'x-csrf-token':csrf}:{}), ...init?.headers } });
-  if(response.status===403){const problem=await response.clone().json().catch(()=>({}));if(problem.message==='Honji identity integration is unavailable'){location.assign('/acesso');throw new Error('Sessão necessária.');}}
+  if(response.status===401){sessionPromise=undefined;location.assign(`/acesso?status=expired&returnTo=${encodeURIComponent(location.pathname+location.search+location.hash)}`);throw new Error('Sua sessão expirou. Entre novamente.');}
+  if(response.status===403){const problem=await response.clone().json().catch(()=>({}));if(problem.error==='access_denied'){sessionPromise=undefined;location.assign('/acesso?status=denied');}else if(problem.message==='Honji identity integration is unavailable'){location.assign('/acesso');throw new Error('Sessão necessária.');}}
   if (!response.ok) { const problem = await response.json().catch(() => ({})); throw Object.assign(new Error(problem.message ?? `Falha ${response.status}`),{code:problem.error}); }
   if (!['GET','HEAD'].includes(method)&&/^\/(?:meetings|meeting-polls|shifts|availability|agenda\/notifications)/.test(path)) window.dispatchEvent(new Event('caehub:agenda-updated'));
   if (response.status === 204) return undefined as T;
   return response.json();
 }
-export type SessionInfo={subject:string;displayName:string;csrfToken?:string;membership?:{id:string;role:string;status?:string}|null;owner:boolean;debugView?:{available:boolean;mode:'real'|'global_admin'|'caecomp_admin'|'events_director'|'events_member'|'products_member'|'xii_admin'|'xii_secretary_member'|'xii_sports_member'}};
+export type SessionInfo={subject:string;displayName:string;csrfToken?:string;projectAccess?:boolean;institutionalAccess?:boolean;buyerAccess?:boolean;membership?:{id:string;role:string;status?:string}|null;owner:boolean;debugView?:{available:boolean;mode:'real'|'global_admin'|'caecomp_admin'|'events_director'|'events_member'|'products_member'|'xii_admin'|'xii_secretary_member'|'xii_sports_member'}};
 let sessionPromise:Promise<SessionInfo>|undefined;
-export function getSessionInfo(){return sessionPromise??=fetch('/api/me',{credentials:'same-origin'}).then(async response=>{if(!response.ok){location.assign('/acesso');throw new Error('Sessão necessária.');}return response.json() as Promise<SessionInfo>;}).catch(error=>{sessionPromise=undefined;throw error;});}
+export function getSessionInfo(){return sessionPromise??=api<SessionInfo>('/me').catch(error=>{sessionPromise=undefined;throw error;});}
 async function sessionToken(){return String((await getSessionInfo()).csrfToken??'');}
 type WorkspaceDto = { id:string;name:string;description:string|null;department?:string;departmentId?:string;participantCount?:number;boardCount?:number;participants?:unknown[] };
 export type WorkspaceDetail={id:string;name:string;description:string|null;department?:string;departmentId?:string|null;canManage:boolean;readOnly:boolean;centralHierarchy:boolean;participants:Array<{membershipId:string;displayName:string;kind:'director'|'member'|'participant'}>};

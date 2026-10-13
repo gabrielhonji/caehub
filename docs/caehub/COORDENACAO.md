@@ -1,4 +1,42 @@
 # Coordenação de agentes
+## Em execução — Agente 08, 12/10/2026
+
+Responsável: Codex deste chat; branch `feat/agente08-seguranca-sso`, base main
+limpa. Escopo: `src/server/{auth.ts,app.ts,database.ts,domain.ts,orders.ts}`,
+testes de autenticação/comprador, `src/{main.tsx,services/spaces.ts}`,
+`src/components/{PublicPortal.tsx,BuyerEmailVerification.tsx}`,
+documentos canônicos e metadados de release. Sem reserva concorrente.
+Honji central ampliado somente após autorização explícita de Gabriel para
+sessão Keycloak, cadastro Google e vínculo acadêmico; reserva CAE-SSO-08 no
+Kanban central. Conselheiro preserva D-59/D-60 por resposta expressa.
+Aceite: callback consumido uma vez, sessão rotacionada, state/nonce/JWT
+validados; revogação central negada na próxima API; falha externa segura e
+distinta de sessão ausente; CSRF obrigatório; logout local possível após
+revogação; produção nunca ativa identidade de desenvolvimento. Gate completo
+em containers e revisão visual antes de publicação. Comprador externo só
+compra após endereço exato @alunos.utfpr.edu.br verificado; endereço secundário
+é anexado à mesma conta, sem grants/membership automáticos. Aviso de spam.
+Google pessoal e entrega na caixa acadêmica real serão smoke de produção.
+
+Implementação 1.14.0 concluída: state consumido sob lock, sessão/CSRF novos
+após callback, retorno interno, distinção 401/403/503, sessão central viva e
+logout local independente de autorização. Toda rota institucional exige
+membership ativo; comprador é pessoa sem membership fabricado, com prova
+acadêmica e pedidos próprios. Confirmação no mesmo usuário, link único/30 min,
+reenvio após 1 minuto e informação de spam. UI externa não monta a fundação
+institucional; mensagens de entrada/callback reutilizam a tela existente.
+
+Gate: 41/41 CAEHUB em Node 22/MySQL descartável; Honji 33/33 e integração
+central JWT/MySQL aprovada; tipos/builds de produção e auditoria sem
+vulnerabilidades. Keycloak 26.8 real/Google OIDC sintético/Mailpit: cadastro
+externo, e-mail de identidade, e-mail acadêmico secundário, recusa do domínio
+errado, compra própria, SSO com Portal e logout central→CAEHUB 401 com cookie
+local ainda presente passaram. Chromium 1440/390 e ambos os temas, estados
+expired/denied/unavailable/cancelled e callback inválido, sem overflow/exceções.
+Fixtures/capturas fora do Git. Readiness do MySQL/Keycloak e expectativas de
+URL/status do Portal foram corrigidas no roteiro, sem mascarar falhas de código
+ou alterar infraestrutura. Git/publicação e artefatos oficiais seguem abaixo.
+
 ## Publicado — Compras e retirada, 12/10/2026
 
 Base limpa `db88d3f`, branch `fix/compras-retirada-ux`, Codex deste chat.

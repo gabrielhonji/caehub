@@ -32,6 +32,9 @@ Critérios C/H verificam decisões/preferências; critérios R/P dependem de apr
 | SEC-04 | Sessão/acesso inválido ou revogado tratado conforme contrato; erros/logs não expõem segredos |
 | SEC-05 | Mock explicitamente restrito ao desenvolvimento e incapaz de conceder acesso na versão de produção |
 | SEC-06 | Cenários de negação e cruzamento de contextos demonstrados com dados fictícios |
+| SEC-07 | Conta externa sem grant/membership consulta páginas públicas e pedidos próprios; APIs institucionais/administrativas e pedidos alheios são recusados |
+| SEC-08 | Compra externa exige e-mail @alunos.utfpr.edu.br verificado no servidor; endereço secundário usa link único/expirável e mesma conta, com aviso de spam |
+| SEC-09 | Logout/revogação central recusa próxima API CAEHUB com cookie local presente; Keycloak real e dois BFFs testados separadamente de Google/SMTP pessoal em produção |
 
 ## Gestão — MVP
 

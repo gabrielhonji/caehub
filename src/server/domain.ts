@@ -5,6 +5,8 @@ export type Actor = {
   subject: string;
   displayName: string;
   projectAccess: boolean;
+  buyerAccess?: boolean;
+  accountAccess?: boolean;
   owner: boolean;
   institutionalAdmin?: boolean;
   centralHierarchy?: boolean;

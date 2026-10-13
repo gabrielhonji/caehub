@@ -1,5 +1,19 @@
 # Comercial — campanhas, catálogo e inventário
 
+## Comprador externo — Agente 08/D-62
+
+Conta Honji externa criada pelo Google pode comprar e consultar somente seus
+pedidos, sem project.access ou membership CAECOMP. Compra exige endereço
+verificado do domínio exato `@alunos.utfpr.edu.br`. Outra conta Google pode
+anexar e confirmar esse endereço pela mesma identidade antes de comprar;
+orientar a conferir a caixa de spam. Regras institucionais de operadores e
+preços existentes permanecem; não criar desconto por declaração do navegador.
+Cadastro autenticado usa people.honji_subject estável e pedido aponta a essa
+pessoa. Não vincular pedidos manuais antigos por nome/e-mail: identidade não
+pode ser inferida. Cadastro administrativo externo continua disponível.
+Esta seção substitui as limitações de autosserviço externo dos incrementos
+06/07 abaixo; os demais contratos comerciais permanecem vigentes.
+
 Pedidos Agente 05 (11/10/2026) e refinamento (12/10/2026) aprovam catálogo,
 variações, estoque central e campanha semestral com duas etapas. Reutilizar
 BASE, D-59/D-60, autorização contextual e DESIGN/UI-001.

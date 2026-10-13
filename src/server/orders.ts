@@ -22,6 +22,15 @@ const requestHash=(value:unknown)=>createHash('sha256').update(JSON.stringify(ca
 export class OrderService {
   readonly commercial: CommercialService;
   constructor(readonly db:Database, readonly institution:InstitutionalService){this.commercial=new CommercialService(db,institution);}
+  async buyer(actor:Actor){
+    if(actor.debugView&&actor.debugView.mode!=='real')throw new Forbidden('Perfis de consulta não fazem compras.');
+    if(actor.projectAccess){const member=await this.institution.membership(actor);if(member?.status==='active'||actor.owner)return this.institution.requireMember(actor);}
+    if(!actor.buyerAccess){if(actor.accountAccess)throw new Forbidden('Compradores externos precisam confirmar um e-mail @alunos.utfpr.edu.br antes de comprar.');return this.institution.requireMember(actor);}
+    await this.db.run('INSERT INTO people(id,honji_subject,display_name) VALUES(?,?,?) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name)',[randomUUID(),actor.subject,actor.displayName]);
+    const person=await this.db.one<RowDataPacket>('SELECT id FROM people WHERE honji_subject=?',[actor.subject]);
+    if(!person)throw new Forbidden('Identidade do comprador indisponível.');
+    return {person_id:person.id};
+  }
   async manage(actor:Actor){if(actor.debugView&&actor.debugView.mode!=='real')throw new Forbidden('Perfis de consulta não operam pedidos.');await this.commercial.authorize(actor);}
   async canManage(actor:Actor){try{await this.manage(actor);return true;}catch(e){if(e instanceof Forbidden)return false;throw e;}}
   async settings(actor:Actor){await this.manage(actor);return this.db.one<RowDataPacket>('SELECT reservation_minutes AS reservationMinutes,pix_instructions AS pixInstructions,revision FROM commercial_operations WHERE organization_id=?',[org]);}
@@ -37,7 +46,7 @@ export class OrderService {
     return this.persistOrder(actor,input);
   }
   async buy(actor:Actor,input:z.infer<typeof purchaseInput>){
-    const member=await this.institution.requireMember(actor);
+    const member=await this.buyer(actor);
     if(actor.debugView&&actor.debugView.mode!=='real')throw new Forbidden('Perfis de consulta não fazem compras.');
     return this.persistOrder(actor,{...input,buyerPersonId:member.person_id,buyerContact:''},true);
   }
@@ -50,7 +59,7 @@ export class OrderService {
       const existing=await db.one<RowDataPacket>('SELECT id,request_hash FROM commercial_orders WHERE request_key=?',[input.requestKey]);if(existing){if(existing.request_hash!==hash&&existing.request_hash!==legacyHash)throw new Conflict('Identificador do pedido já usado com outros dados.');return {id:existing.id};}
       const campaign=await this.commercial.products.campaign(db,input.campaignId);
       const config=await db.one<RowDataPacket>('SELECT reservation_minutes FROM commercial_operations WHERE organization_id=?',[org]);
-      const buyer=input.buyerPersonId?await db.one<RowDataPacket>("SELECT p.id,p.display_name FROM people p JOIN memberships m ON m.person_id=p.id WHERE p.id=? AND m.organization_id=? AND p.honji_subject NOT LIKE 'caehub-debug-%'",[input.buyerPersonId,org]):undefined;
+      const buyer=input.buyerPersonId?await db.one<RowDataPacket>(selfService?"SELECT p.id,p.display_name FROM people p WHERE p.id=? AND p.honji_subject=? AND p.honji_subject NOT LIKE 'caehub-debug-%'":"SELECT p.id,p.display_name FROM people p JOIN memberships m ON m.person_id=p.id WHERE p.id=? AND m.organization_id=? AND p.honji_subject NOT LIKE 'caehub-debug-%'",[input.buyerPersonId,selfService?actor.subject:org]):undefined;
       if(input.buyerPersonId&&!buyer)throw new Conflict('Selecione um comprador cadastrado no projeto.');
       if(!buyer&&!input.buyerName)throw new Conflict('Informe o nome do comprador externo.');
       const rows:RowDataPacket[]=[];let total=0;
@@ -74,7 +83,7 @@ export class OrderService {
     },'READ COMMITTED');
   }
   async shop(actor:Actor){
-    await this.institution.requireMember(actor);
+    await this.buyer(actor);
     return this.publicCatalog();
   }
   async publicCatalog(){
@@ -86,7 +95,7 @@ export class OrderService {
     return {campaigns,products,variants,links,reservationMinutes:config?.reservation_minutes??null};
   }
   async list(actor:Actor,campaignId?:string,query?:z.infer<typeof orderListInput>){
-    const member=await this.institution.requireMember(actor),canManage=await this.canManage(actor);
+    const member=await this.buyer(actor),canManage=await this.canManage(actor);
     const q=query??orderListInput.parse({campaignId});
     if(q.issues&&!canManage)throw new Forbidden('Pendências administrativas exigem operador.');
     await this.reconcile();
@@ -110,7 +119,7 @@ export class OrderService {
   }
   async order(db:Database,id:string){const o=await db.one<RowDataPacket>('SELECT o.* FROM commercial_orders o JOIN commercial_campaigns c ON c.id=o.campaign_id WHERE o.id=? AND c.organization_id=? FOR UPDATE',[id,org]);if(!o)throw new NotFound('Pedido não encontrado.');return o;}
   async detail(actor:Actor,id:string,ownOnly=false){
-    const member=await this.institution.requireMember(actor),canManage=!ownOnly&&await this.canManage(actor);
+    const member=await this.buyer(actor),canManage=!ownOnly&&await this.canManage(actor);
     return this.db.transaction(async db=>{
     await lockCommercial(db);await this.expire(db);
     const o=await db.one<RowDataPacket>('SELECT o.*,c.name AS campaignName,c.stage AS campaignStage FROM commercial_orders o JOIN commercial_campaigns c ON c.id=o.campaign_id WHERE o.id=? AND c.organization_id=?',[id,org]);
