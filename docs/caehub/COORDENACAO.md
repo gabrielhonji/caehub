@@ -1,5 +1,5 @@
 # Coordenação de agentes
-## Em execução — Agente 08, 12/10/2026
+## Publicado — Agente 08, 12/10/2026
 
 Responsável: Codex deste chat; branch `feat/agente08-seguranca-sso`, base main
 limpa. Escopo: `src/server/{auth.ts,identity-http.ts,app.ts,database.ts,domain.ts,orders.ts}`,
@@ -47,6 +47,34 @@ Keycloak real demonstrou que usuário desabilitado pode manter sessões listadas
 Honji agora valida também perfil enabled e ID, reutilizado pelo Portal. Próxima
 API CAEHUB é 401; reabilitar o usuário não ressuscita a sessão local invalidada.
 JWKS indisponível é 503 distinto de assinatura/claims inválidos (401).
+
+Publicação: fontes CAEHUB `315a648` e central `1eaa924`, branches e main
+confirmadas no GitHub e nos remotos autoritativos. build-app gerou
+`honji/caehub-gabriel:1.14.1`, `honji/gabriel:1.4.3` e identidade
+`honji/gabriel-identity:1.0.15` (fonte `56a6b9b`). Runtime CAEHUB exato em
+Node 22/NODE_ENV=production, central extraído da imagem oficial e Keycloak
+oficial repetiram Google sintético, SMTP fictício, suspensão direta,
+revogação, logout local pela tela de acesso, compra própria, SSO e logout
+global entre Portal/CAEHUB; servidor ignorou variáveis de mock na produção.
+Imagem central repetiu integração JWT/MySQL. deploy-app confirmou os três
+Healthy. Portal 0.8.1 publicado na release `20261012-232715`.
+
+Canal kc-admin confirmou honji permitido/master recusado. Cadastro Google
+habilitado por duas mudanças verificadas: criação única ALTERNATIVE e detector
+prévio DISABLED; confirmação de vínculo e MFA preservados. Sem segredo,
+cliente, DNS, proxy, rota, banco de outra aplicação ou permissão alterados.
+HTTPS/Chromium publicado: health 1.14.1/release `12102026-220942`, catálogo
+público, APIs privadas/leitura/escrita/headers forjados sem cookie 401,
+callback forjado 400 com mensagem segura, avisos acadêmico/spam, temas e
+1440/390 sem overflow/exceções; OIDC HTTPS/PKCE/Google real 302. Seletor do
+domínio no smoke foi corrigido para texto literal/espera assíncrona; nenhuma
+mudança do código publicado. Reservas de edição liberadas.
+
+Handoff Agente 09: confirmar login Google pessoal e entrega/confirmação na
+caixa acadêmica real. Esses resultados não são presumidos por fixtures nem
+pelo smoke anônimo. Consumidor XII legado não envia sid e exige incremento
+próprio autorizado antes de afirmar logout global em todo o ecossistema.
+Não houve transação financeira ou manipulação de conta/pedido real em testes.
 
 ## Publicado — Compras e retirada, 12/10/2026
 
