@@ -59,10 +59,15 @@ test('Honji BFF validates callbacks, rotates sessions and enforces live authoriz
     const url=new URL(response.headers.location!);nonce=url.searchParams.get('nonce')!;
     assert.equal(url.searchParams.get('code_challenge_method'),'S256');
     assert.equal(url.searchParams.get('response_type'),'code');
+    assert.equal(url.searchParams.has('prompt'),false,'ordinary Honji login preserves SSO');
     const cookie=String(response.headers['set-cookie']).split(';')[0];
     assert.match(String(response.headers['set-cookie']),/HttpOnly; Secure; SameSite=Lax/);
     return {cookie,state:url.searchParams.get('state')!};
   };
+  const googleLogin=await app.inject('/auth/login?provider=google');
+  const googleAuthorization=new URL(googleLogin.headers.location!);
+  assert.equal(googleAuthorization.searchParams.get('kc_idp_hint'),'google');
+  assert.equal(googleAuthorization.searchParams.get('prompt'),'login','explicit Google login must bypass the existing Honji SSO session');
   const callback=({cookie,state}:{cookie:string;state:string})=>app.inject({url:`/auth/callback?code=fictitious&state=${state}`,headers:{cookie}});
   try{
     await t.test('invalid state and cancelled login cannot create a session',async()=>{

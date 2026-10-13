@@ -16,7 +16,7 @@ revogação; produção nunca ativa identidade de desenvolvimento. Gate completo
 em containers e revisão visual antes de publicação. Comprador externo só
 compra após endereço exato @alunos.utfpr.edu.br verificado; endereço secundário
 é anexado à mesma conta, sem grants/membership automáticos. Aviso de spam.
-Google pessoal e entrega na caixa acadêmica real serão smoke de produção.
+Gabriel confirmou login Google pessoal em produção. Entrega/confirmação na caixa acadêmica real segue pendente.
 
 Implementação 1.14.1 concluída: state consumido sob lock, sessão/CSRF novos
 após callback, retorno interno, distinção 401/403/503, sessão central viva e
@@ -70,8 +70,18 @@ callback forjado 400 com mensagem segura, avisos acadêmico/spam, temas e
 domínio no smoke foi corrigido para texto literal/espera assíncrona; nenhuma
 mudança do código publicado. Reservas de edição liberadas.
 
-Handoff Agente 09: confirmar login Google pessoal e entrega/confirmação na
-caixa acadêmica real. Esses resultados não são presumidos por fixtures nem
+Correção solicitada após smoke pessoal: botão Google força reautenticação
+Keycloak, e o provider solicita select_account ao Google. Entrada Honji comum
+preserva SSO. Escopo reservado: auth.ts/testes, metadados 1.14.2 e coordenação;
+central app.ts/provisionador/roteiro de integração, sem mudanças de grants.
+Gate 1.14.2: 42/42 CAEHUB, 33/33 Honji, tipos/build e audit sem
+vulnerabilidades. Keycloak real confirmou Google select_account com SSO ativo
+nos dois BFFs e SSO comum preservado; prova acadêmica, revogação, logout, temas
+e desktop/mobile aprovados. Fixtures externas são sintéticas. Readiness,
+NODE_ENV do teste e caminhos de assets/capturas foram corrigidos no ambiente
+descartável. Commit/push/build oficial/deploy deste incremento seguem pendentes.
+
+Handoff Agente 09: confirmar entrega/confirmação na caixa acadêmica real. Esses resultados não são presumidos por fixtures nem
 pelo smoke anônimo. Consumidor XII legado não envia sid e exige incremento
 próprio autorizado antes de afirmar logout global em todo o ecossistema.
 Não houve transação financeira ou manipulação de conta/pedido real em testes.

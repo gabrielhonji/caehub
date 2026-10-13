@@ -2,6 +2,10 @@
 
 ## Integração Agente 08 — contrato D-62
 
+O botão Google envia `kc_idp_hint=google` e `prompt=login` para abrir o broker
+mesmo com SSO ativo. O provider central usa `prompt=select_account` para exibir
+a escolha de conta Google. Entrada Honji comum conserva a sessão SSO.
+
 O BFF valida assinatura RS256/JWKS, issuer, audience, exp/iat, nonce, azp
 quando presente e sid. Authorization Code + PKCE S256 usa state e transação
 OAuth persistente de 10 minutos, consumida sob lock antes do token exchange.

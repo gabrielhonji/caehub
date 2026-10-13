@@ -117,7 +117,7 @@ export class HonjiGateway implements IdentityGateway {
       if(query.provider!==undefined&&query.provider!=='google')return reply.code(400).send({error:'invalid_request'});
       await this.db.run('DELETE FROM caehub_sessions WHERE expires_at<=NOW(3)');
       await this.db.run('INSERT INTO caehub_sessions(session_hash,oauth_state_hash,oauth_nonce_hash,oauth_verifier,csrf_token,return_to,created_at,last_activity_at,expires_at) VALUES(?,?,?,?,?,?,NOW(3),NOW(3),DATE_ADD(NOW(3),INTERVAL 10 MINUTE))',[digest(sid),digest(state),digest(nonce),verifier,randomBytes(24).toString('base64url'),returnTo]);
-      reply.header('set-cookie',`${this.cookieName}=${sid}; Path=/; HttpOnly; Secure; SameSite=Lax`).redirect(`${this.config.issuer}/protocol/openid-connect/auth?${form({client_id:this.config.clientId,response_type:'code',redirect_uri:`${this.config.publicOrigin}/auth/callback`,scope:'openid profile email',state,nonce,code_challenge:createHash('sha256').update(verifier).digest('base64url'),code_challenge_method:'S256',...(query.provider==='google'?{kc_idp_hint:'google'}:{})})}`);
+      reply.header('set-cookie',`${this.cookieName}=${sid}; Path=/; HttpOnly; Secure; SameSite=Lax`).redirect(`${this.config.issuer}/protocol/openid-connect/auth?${form({client_id:this.config.clientId,response_type:'code',redirect_uri:`${this.config.publicOrigin}/auth/callback`,scope:'openid profile email',state,nonce,code_challenge:createHash('sha256').update(verifier).digest('base64url'),code_challenge_method:'S256',...(query.provider==='google'?{kc_idp_hint:'google',prompt:'login'}:{})})}`);
     });
     app.get('/auth/callback',async(request,reply)=>{
       const query=request.query as Record<string,unknown>,sid=cookie(request,this.cookieName);
