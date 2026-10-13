@@ -12,28 +12,35 @@ test('Honji BFF validates callbacks, rotates sessions and enforces live authoriz
   const db=await connect(configFromEnv(process.env));await migrate(db);
   const {privateKey,publicKey}=await generateKeyPair('RS256');
   const jwk={...await exportJWK(publicKey),kid:'test-key',alg:'RS256',use:'sig'};
-  const server=createServer((_req,res)=>{res.setHeader('content-type','application/json');res.end(JSON.stringify({keys:[jwk]}));});
+  let tokenResponse:(form:URLSearchParams)=>Promise<Response>,keysUnavailable=false;
+  const server=createServer(async(req,res)=>{
+    res.setHeader('content-type','application/json');
+    if(req.url?.endsWith('/token')){
+      let body='';for await(const chunk of req)body+=String(chunk);
+      const response=await tokenResponse(new URLSearchParams(body));res.statusCode=response.status;res.end(await response.text());
+    }else if(keysUnavailable){res.statusCode=503;res.end('{"error":"private provider details"}');}else res.end(JSON.stringify({keys:[jwk]}));
+  });
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   const issuer=`http://127.0.0.1:${(server.address() as {port:number}).port}/realms/honji`;
   const origin='https://caehub.example',subject=randomUUID();
-  const gateway=new HonjiGateway(db,{publicOrigin:origin,issuer,identityOrigin:issuer,clientId:'caehub',clientSecret:'fictitious',serviceClientId:'service',serviceClientSecret:'fictitious',authorizationOrigin:'https://authorization.example',ownerId:randomUUID()});
+  const config={publicOrigin:origin,issuer,identityOrigin:issuer,clientId:'caehub',clientSecret:'fictitious',serviceClientId:'service',serviceClientSecret:'fictitious',authorizationOrigin:'https://authorization.example',ownerId:randomUUID()};
+  const gateway=new HonjiGateway(db,config);
   const app=buildApp(new InstitutionalService(db),gateway);
   const originalFetch=globalThis.fetch;
   let decision:'allow'|'deny'|'suspended'|'unavailable'|'malformed'|'loggedout'='allow',projectAccess=true,nonce='',tokenVariant='valid',tokenCalls=0,decisionCalls=0;
-  globalThis.fetch=async(input,init)=>{
-    const url=String(input);
-    if(url.endsWith('/protocol/openid-connect/token')){
-      const form=new URLSearchParams(init?.body as URLSearchParams);
+  tokenResponse=async(form)=>{
       if(form.get('grant_type')==='client_credentials')return Response.json({access_token:'technical-test-token',expires_in:60});
       tokenCalls++;
       assert.ok(form.get('code_verifier'));
-      if(tokenVariant==='unavailable')throw new Error('private infrastructure details');
+      if(tokenVariant==='unavailable')return new Response('private infrastructure details',{status:503});
       if(tokenVariant==='invalid')return new Response('',{status:400});
       const signed=await new SignJWT({nonce:tokenVariant==='nonce'?'wrong':nonce,name:'Pessoa fictícia',sid:'provider-session'})
         .setProtectedHeader({alg:'RS256',kid:'test-key'}).setSubject(subject).setIssuer(tokenVariant==='issuer'?'wrong':issuer)
         .setAudience(tokenVariant==='audience'?'wrong':'caehub').setIssuedAt().setExpirationTime(tokenVariant==='expired'?'0s':'5m').sign(privateKey);
       return Response.json({id_token:tokenVariant==='signature'?signed.slice(0,-10)+'tampered00':signed,access_token:'never-expose-this',refresh_token:'never-expose-refresh'});
-    }
+  };
+  globalThis.fetch=async(input,init)=>{
+    const url=String(input);
     if(url.endsWith('/internal/authorization/decisions')){
       decisionCalls++;
       assert.deepEqual(JSON.parse(init?.body as string),{integrationId:'caehub',userId:subject,identitySessionId:'provider-session',resource:{projectId:'CAECOMP'},action:'account.access'});
@@ -97,6 +104,8 @@ test('Honji BFF validates callbacks, rotates sessions and enforces live authoriz
       const beforeDecision=decisionCalls;decision='deny';
       assert.equal((await app.inject({url:'/api/me',headers:{cookie}})).json().error,'access_denied');
       assert.equal(decisionCalls,beforeDecision+1,'fresh authorization despite local cookie');
+      const publicStatus=await app.inject({url:'/api/public/buyer-status',headers:{cookie}});assert.equal(publicStatus.statusCode,200);assert.deepEqual(publicStatus.json(),{canBuy:false,sessionDenied:true});
+      const access=await app.inject({url:'/acesso',headers:{cookie}});assert.equal(access.statusCode,200);assert.ok(access.body.includes('id="local-logout"'));assert.ok(access.body.includes('data-csrf="'+csrf+'"'));assert.ok(!access.body.includes('never-expose'));
       decision='suspended';assert.equal((await app.inject({url:'/api/foundation',headers:{cookie}})).statusCode,403);
       decision='unavailable';assert.equal((await app.inject({url:'/api/me',headers:{cookie}})).statusCode,503);
       decision='malformed';assert.equal((await app.inject({url:'/api/me',headers:{cookie}})).statusCode,503);
@@ -118,6 +127,11 @@ test('Honji BFF validates callbacks, rotates sessions and enforces live authoriz
       assert.equal((await app.inject({url:'/api/me',headers:{cookie}})).statusCode,200);
       decision='loggedout';assert.equal((await app.inject({url:'/api/me',headers:{cookie}})).statusCode,401);decision='allow';
       assert.equal((await app.inject({url:'/api/me',headers:{cookie}})).statusCode,401);
+    });
+    await t.test('unavailable provider keys are distinct from an invalid signed token',async()=>{
+      const pending=await login(),fresh=buildApp(new InstitutionalService(db),new HonjiGateway(db,config));keysUnavailable=true;
+      try{const response=await fresh.inject({url:`/auth/callback?code=fictitious&state=${pending.state}`,headers:{cookie:pending.cookie}});assert.equal(response.statusCode,503);assert.ok(!response.body.includes('private provider details'));}
+      finally{keysUnavailable=false;await fresh.close();}
     });
   }finally{globalThis.fetch=originalFetch;await app.close();await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));await db.close();}
 });

@@ -17,7 +17,7 @@ armazenados nem enviados ao navegador; sessões anteriores sem sid exigem login.
 como identidade. A resposta fornece allowed, projectAccess e
 studentEmailVerified; hierarchy/institutionalAdmin aparecem quando houver
 acesso ao projeto. Somente o token técnico é reutilizado, nunca decisões.
-Sessão Keycloak encerrada retorna 401 e invalida a sessão local; suspensão,
+Sessão Keycloak encerrada ou perfil desabilitado retorna 401 e invalida a sessão local; suspensão,
 conta pendente e integração suspensa negam; indisponibilidade falha com 503.
 
 Conta externa Google verificada cria pessoa central sem grants. No CAEHUB,
@@ -40,7 +40,9 @@ Consumidores legados que não enviam sid precisam de migração própria; não
 presumir que todas as sessões da XII já tenham essa garantia.
 
 401 é sessão ausente/expirada, 403 é autorização/CSRF negado e 503 é dependência
-temporariamente indisponível. APIs/sessão/callback não são cacheáveis. Identidade
+temporariamente indisponível, inclusive falha JWKS. A landing pública conserva
+o catálogo quando a conta é negada; a tela de acesso oferece logout local com
+CSRF derivado exclusivamente da própria sessão. APIs/sessão/callback não são cacheáveis. Identidade
 de desenvolvimento exige NODE_ENV explícito development/test; produção só usa
 as variáveis oficiais existentes e nunca aceita parâmetros de mock do browser.
 

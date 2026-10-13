@@ -45,7 +45,8 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.get('/api/public/catalog',async(_request,reply)=>{reply.header('cache-control','no-store');return orders.publicCatalog();});
   app.get('/api/public/buyer-status',async(request,reply)=>{
     reply.header('cache-control','no-store');
-    const current=await identity.current(request);
+    let current;
+    try{current=await identity.current(request);}catch(error){if(error instanceof AuthenticationFailure&&error.status===403&&error.code==='access_denied')return {canBuy:false,sessionDenied:true};throw error;}
     if(!current||(current.debugView&&current.debugView.mode!=='real'))return {canBuy:false};
     try{await orders.buyer(current);return {canBuy:true};}catch(error){if(error instanceof Forbidden)return current.accountAccess?{canBuy:false,authenticated:true,requiresStudentEmail:true}:{canBuy:false};throw error;}
   });

@@ -1,10 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet, jwtVerify, errors, type JWTVerifyGetKey } from 'jose';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Actor } from './domain.js';
 import type { Database } from './database.js';
 import { synchronizeHierarchy } from './hierarchy.js';
 import {debugModes,debugProfile,normalizeDebugMode} from './debug-profiles.js';
+import { postIdentityForm } from './identity-http.js';
 
 export class AuthenticationFailure extends Error {
   constructor(readonly status: 401 | 403 | 503, readonly code: string, message: string) { super(message); }
@@ -38,7 +39,7 @@ export class HonjiGateway implements IdentityGateway {
   private serviceTokenRequest?:Promise<string|undefined>;
   private readonly provisionedOwners=new Set<string>();
   constructor(private readonly db:Database,private readonly config:Config){this.jwks=createRemoteJWKSet(new URL(`${config.issuer}/protocol/openid-connect/certs`));}
-  private postIdentity(path:string,body:URLSearchParams){return fetch(`${this.config.identityOrigin}${path}`,{method:'POST',headers:{Host:new URL(this.config.issuer).host,'content-type':'application/x-www-form-urlencoded'},body,signal:AbortSignal.timeout(5000)});}
+  private postIdentity(path:string,body:URLSearchParams){return postIdentityForm(new URL(`${this.config.identityOrigin}${path}`),new URL(this.config.issuer).host,body);}
   private async session(request:FastifyRequest){const sid=cookie(request,this.cookieName);if(!sid)return;return this.db.one<any>('SELECT subject,identity_session_id AS identitySessionId,display_name AS displayName,csrf_token AS csrfToken,debug_mode AS debugMode,created_at AS createdAt,last_activity_at AS lastActivity,expires_at AS expiresAt FROM caehub_sessions WHERE session_hash=? AND subject IS NOT NULL',[digest(sid)]);}
   private serviceAccessToken(){
     if(this.serviceToken&&this.serviceToken.expiresAt>Date.now()+5000)return Promise.resolve(this.serviceToken.value);
@@ -105,8 +106,10 @@ export class HonjiGateway implements IdentityGateway {
       const message=messages[String(status)];
       const html=accessPage.replace('Entre para continuar.',message?.[0]??'Entre para continuar.').replace('Use uma conta com acesso ao projeto CAECOMP. Seus espaços e ações serão mostrados conforme o seu vínculo.',message?.[1]??'Use sua conta Honji ou entre com Google. Compradores externos precisam confirmar um e-mail @alunos.utfpr.edu.br. A área institucional depende de acesso concedido por um administrador.');
       const returnTo=safeReturnTo(query.returnTo);
-      return reply.type('text/html').send(html.replace('href="/auth/login"',`href="/auth/login?returnTo=${encodeURIComponent(returnTo)}"`).replace('<a href="https://gabriel.honji.com.br/#solicitar-acesso">',`<a href="/auth/login?provider=google&amp;returnTo=${encodeURIComponent(returnTo)}">Entrar ou criar conta com Google</a><a href="https://gabriel.honji.com.br/#solicitar-acesso">`));
-    });app.get('/honji-access.css',async(_request,reply)=>reply.type('text/css').send(accessCss2+accessBrandCss));app.get('/honji-access.js',async(_request,reply)=>reply.type('application/javascript').send(accessScript));app.get('/favicon.svg',async(_request,reply)=>reply.type('image/svg+xml').send(giroFavicon));
+      const session=await this.session(request);
+      const logout=session?`<button type="button" id="local-logout" data-csrf="${encodeURIComponent(session.csrfToken)}">Sair do CAEHUB</button>`:'';
+      return reply.type('text/html').send(html.replace('href="/auth/login"',`href="/auth/login?returnTo=${encodeURIComponent(returnTo)}"`).replace('<a href="https://gabriel.honji.com.br/#solicitar-acesso">',`<a href="/auth/login?provider=google&amp;returnTo=${encodeURIComponent(returnTo)}">Entrar ou criar conta com Google</a>${logout}<a href="https://gabriel.honji.com.br/#solicitar-acesso">`));
+    });app.get('/honji-access.css',async(_request,reply)=>reply.type('text/css').send(accessCss2.replace('.actions a{','.actions a,.actions button{').replace('.actions a:hover,','.actions a:hover,.actions button:hover,')+accessBrandCss));app.get('/honji-access.js',async(_request,reply)=>reply.type('application/javascript').send(accessScript+localLogoutScript));app.get('/favicon.svg',async(_request,reply)=>reply.type('image/svg+xml').send(giroFavicon));
     app.post('/api/debug-view',async(request,reply)=>{const actor=await this.current(request);if(!actor?.debugView?.available)return reply.code(403).send({error:'forbidden'});const mode=(request.body as any)?.mode;if(!debugModes.includes(mode))return reply.code(400).send({error:'invalid_request'});const sid=cookie(request,this.cookieName);await this.db.run('UPDATE caehub_sessions SET debug_mode=? WHERE session_hash=?',[mode,digest(sid!)]);return {mode};});
     app.get('/auth/login',async(request,reply)=>{
       const sid=randomBytes(32).toString('base64url'),state=randomBytes(32).toString('base64url'),nonce=randomBytes(32).toString('base64url'),verifier=randomBytes(32).toString('base64url');
@@ -137,13 +140,17 @@ export class HonjiGateway implements IdentityGateway {
         idToken=(await response.json() as {id_token?:unknown}).id_token;
       } catch { throw unavailable(); }
       let payload;
+      const keys:JWTVerifyGetKey=async(header,token)=>{
+        try{return await this.jwks(header,token);}
+        catch(error){if(error instanceof errors.JWKSNoMatchingKey)throw error;throw unavailable();}
+      };
       try {
         if(typeof idToken!=='string')throw new Error('missing_id_token');
-        ({payload}=await jwtVerify(idToken,this.jwks,{issuer:this.config.issuer,audience:this.config.clientId,algorithms:['RS256'],requiredClaims:['sub','exp','iat','nonce']}));
+        ({payload}=await jwtVerify(idToken,keys,{issuer:this.config.issuer,audience:this.config.clientId,algorithms:['RS256'],requiredClaims:['sub','exp','iat','nonce']}));
         if(!payload.sub||typeof payload.sid!=='string'||!payload.sid||typeof payload.nonce!=='string'||digest(payload.nonce)!==pending.nonceHash)throw new Error('identity_claims_invalid');
         if(Array.isArray(payload.aud)&&payload.aud.length>1&&payload.azp!==this.config.clientId)throw new Error('authorized_party_invalid');
         if(payload.azp!==undefined&&payload.azp!==this.config.clientId)throw new Error('authorized_party_invalid');
-      } catch { return loginFailurePage(reply,401,'Identidade inválida. Entre novamente com Honji.'); }
+      } catch(error) { if(error instanceof AuthenticationFailure)throw error;return loginFailurePage(reply,401,'Identidade inválida. Entre novamente com Honji.'); }
       const newSid=randomBytes(32).toString('base64url');
       await this.db.run('INSERT INTO caehub_sessions(session_hash,subject,identity_session_id,display_name,csrf_token,created_at,last_activity_at,expires_at) VALUES(?,?,?,?,?,NOW(3),NOW(3),DATE_ADD(NOW(3),INTERVAL 12 HOUR))',[digest(newSid),payload.sub,payload.sid,String(payload.name??''),randomBytes(24).toString('base64url')]);
       reply.removeHeader('set-cookie');
@@ -168,6 +175,7 @@ export function configuredGateway(env:NodeJS.ProcessEnv,db?:Database):IdentityGa
   if(env.NODE_ENV!=='development'&&env.NODE_ENV!=='test')return new UnavailableHonjiGateway();
   const subject=env.CAEHUB_DEV_ACTOR_ID;return new DevelopmentIdentityGateway(subject?{subject,displayName:env.CAEHUB_DEV_ACTOR_NAME??'Desenvolvedor CAEHUB',projectAccess:env.CAEHUB_DEV_PROJECT_ACCESS!=='false',owner:env.CAEHUB_DEV_OWNER==='true'}:undefined);
 }
+const localLogoutScript='(()=>{const button=document.querySelector("#local-logout");button?.addEventListener("click",async()=>{button.disabled=true;try{const response=await fetch("/auth/logout",{method:"POST",headers:{"x-csrf-token":decodeURIComponent(button.dataset.csrf)}});const result=await response.json();if(!response.ok)throw new Error();location.assign(result.redirect);}catch{button.disabled=false;button.textContent="Tentar sair novamente";}});})();';
 const giroFavicon='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><title>HONJI</title><circle cx="32" cy="32" r="32" fill="#145e63"/><g transform="translate(8 8) scale(.75)" fill="#F8F4ED"><path d="M28 28C10 26 6 18 13 10c6-7 20-5 24 3 4 7 0 12-9 15Z"/><path d="M28 28C10 26 6 18 13 10c6-7 20-5 24 3 4 7 0 12-9 15Z" transform="rotate(90 32 32)"/><path d="M28 28C10 26 6 18 13 10c6-7 20-5 24 3 4 7 0 12-9 15Z" transform="rotate(180 32 32)"/><path d="M28 28C10 26 6 18 13 10c6-7 20-5 24 3 4 7 0 12-9 15Z" transform="rotate(270 32 32)"/></g></svg>';
 const accessPage='<!doctype html><html lang="pt-BR" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Acessar CAEHUB — Honji</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/honji-access.css"><script src="/honji-access.js" defer></script></head><body><header><div class="brands"><a class="honji" href="https://gabriel.honji.com.br" aria-label="HONJI, início"><span class="honji-symbol" aria-hidden="true"></span><strong>HONJI</strong></a><i aria-hidden="true"></i><a class="caecomp" href="/acesso"><span class="caecomp-symbol" aria-hidden="true"></span><span>CAECOMP<b>CAEHUB</b></span></a></div><button id="theme" type="button" aria-label="Ativar tema escuro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.7 15.4A8.3 8.3 0 0 1 8.6 4.3 8.5 8.5 0 1 0 19.7 15.4Z"/></svg></button></header><main><section class="intro"><div class="eyebrow">01 / PROJETO PROTEGIDO</div><h1>Seu trabalho,<br><em>no contexto certo.</em></h1><p>O CAEHUB reúne gestão institucional, espaços e colaboração do CAECOMP.</p></section><section class="access-card"><div class="card-symbol"><span class="caecomp-symbol" aria-hidden="true"></span></div><div><span class="eyebrow">CONTA HONJI</span><h2>Entre para continuar.</h2><p>Use uma conta com acesso ao projeto CAECOMP. Seus espaços e ações serão mostrados conforme o seu vínculo.</p></div><div class="actions"><a class="primary" href="/auth/login">Entrar com Honji <span aria-hidden="true">→</span></a><a href="https://gabriel.honji.com.br/#solicitar-acesso">Solicitar acesso</a></div></section></main><footer><span>CAECOMP · UTFPR / APUCARANA</span><span>DESENVOLVIDO POR <a href="https://github.com/gabrielhonji">gabriel.honji</a></span></footer></body></html>';
 const accessScript='(()=>{const root=document.documentElement,button=document.querySelector("#theme"),cookie=document.cookie.split("; ").find(x=>x.startsWith("honji_theme="))?.split("=")[1],saved=cookie||localStorage.getItem("honji-theme"),icon=t=>t==="light"?"<path d=\\"M19.7 15.4A8.3 8.3 0 0 1 8.6 4.3 8.5 8.5 0 1 0 19.7 15.4Z\\"/>":"<circle cx=\\"12\\" cy=\\"12\\" r=\\"3.5\\"/><path d=\\"M11.25 1h1.5v3h-1.5zm0 19h1.5v3h-1.5zM1 11.25h3v1.5H1zm19 0h3v1.5h-3zM4.4 3.35l2.12 2.12-1.06 1.06-2.12-2.12zm13.08 13.08 2.12 2.12-1.06 1.06-2.12-2.12zM18.54 3.35l1.06 1.06-2.12 2.12-1.06-1.06zM5.46 16.43l1.06 1.06-2.12 2.12-1.06-1.06z\\"/>",set=t=>{root.dataset.theme=t;button.setAttribute("aria-label",`Ativar tema ${t==="light"?"escuro":"claro"}`);button.querySelector("svg").innerHTML=icon(t);localStorage.setItem("honji-theme",t);document.cookie=`honji_theme=${t}; Domain=.honji.com.br; Path=/; Max-Age=31536000; SameSite=Lax; Secure`};set(saved==="dark"?"dark":"light");button.addEventListener("click",()=>set(root.dataset.theme==="light"?"dark":"light"));})();';

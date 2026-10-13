@@ -2,7 +2,7 @@
 ## Em execução — Agente 08, 12/10/2026
 
 Responsável: Codex deste chat; branch `feat/agente08-seguranca-sso`, base main
-limpa. Escopo: `src/server/{auth.ts,app.ts,database.ts,domain.ts,orders.ts}`,
+limpa. Escopo: `src/server/{auth.ts,identity-http.ts,app.ts,database.ts,domain.ts,orders.ts}`,
 testes de autenticação/comprador, `src/{main.tsx,services/spaces.ts}`,
 `src/components/{PublicPortal.tsx,BuyerEmailVerification.tsx}`,
 documentos canônicos e metadados de release. Sem reserva concorrente.
@@ -18,7 +18,7 @@ compra após endereço exato @alunos.utfpr.edu.br verificado; endereço secundá
 é anexado à mesma conta, sem grants/membership automáticos. Aviso de spam.
 Google pessoal e entrega na caixa acadêmica real serão smoke de produção.
 
-Implementação 1.14.0 concluída: state consumido sob lock, sessão/CSRF novos
+Implementação 1.14.1 concluída: state consumido sob lock, sessão/CSRF novos
 após callback, retorno interno, distinção 401/403/503, sessão central viva e
 logout local independente de autorização. Toda rota institucional exige
 membership ativo; comprador é pessoa sem membership fabricado, com prova
@@ -26,7 +26,7 @@ acadêmica e pedidos próprios. Confirmação no mesmo usuário, link único/30 
 reenvio após 1 minuto e informação de spam. UI externa não monta a fundação
 institucional; mensagens de entrada/callback reutilizam a tela existente.
 
-Gate: 41/41 CAEHUB em Node 22/MySQL descartável; Honji 33/33 e integração
+Gate: 42/42 CAEHUB em Node 22/MySQL descartável; Honji 33/33 e integração
 central JWT/MySQL aprovada; tipos/builds de produção e auditoria sem
 vulnerabilidades. Keycloak 26.8 real/Google OIDC sintético/Mailpit: cadastro
 externo, e-mail de identidade, e-mail acadêmico secundário, recusa do domínio
@@ -35,7 +35,18 @@ local ainda presente passaram. Chromium 1440/390 e ambos os temas, estados
 expired/denied/unavailable/cancelled e callback inválido, sem overflow/exceções.
 Fixtures/capturas fora do Git. Readiness do MySQL/Keycloak e expectativas de
 URL/status do Portal foram corrigidas no roteiro, sem mascarar falhas de código
-ou alterar infraestrutura. Git/publicação e artefatos oficiais seguem abaixo.
+ou alterar infraestrutura. Gate da imagem 1.14.0 identificou status opcional
+403 bloqueando a landing quando a conta é revogada. Corrigido em 1.14.1:
+catálogo público preservado, status sem compra, indicação de acesso negado/
+falha temporária e logout local por CSRF na tela de entrada. Imagem 1.14.0
+não foi implantada. Git/publicação e artefatos oficiais seguem abaixo.
+Sondagem Node 22 oficial confirmou que fetch ignora o Host do issuer na troca
+interna OIDC. Transporte usa HTTP(S) nativo e teste com conexão real, mantendo
+JOSE/PKCE e sem alterar configuração de proxy ou credenciais.
+Keycloak real demonstrou que usuário desabilitado pode manter sessões listadas.
+Honji agora valida também perfil enabled e ID, reutilizado pelo Portal. Próxima
+API CAEHUB é 401; reabilitar o usuário não ressuscita a sessão local invalidada.
+JWKS indisponível é 503 distinto de assinatura/claims inválidos (401).
 
 ## Publicado — Compras e retirada, 12/10/2026
 
