@@ -79,7 +79,15 @@ vulnerabilidades. Keycloak real confirmou Google select_account com SSO ativo
 nos dois BFFs e SSO comum preservado; prova acadêmica, revogação, logout, temas
 e desktop/mobile aprovados. Fixtures externas são sintéticas. Readiness,
 NODE_ENV do teste e caminhos de assets/capturas foram corrigidos no ambiente
-descartável. Commit/push/build oficial/deploy deste incremento seguem pendentes.
+descartável. Harness da imagem central conserva package.json type=module
+para evitar misturar instâncias ESM/CJS do openid-client. As imagens oficiais
+CAEHUB 1.14.2 (f0d2892) e Honji 1.4.4 (20e7284) repetiram esse gate.
+Main/GitHub/remotos autoritativos confirmados; build-app/deploy-app nos canais
+oficiais: ambas Healthy. kc-admin confirmou somente config.prompt alterado
+para select_account. Smoke Chromium HTTPS publicado passou em 13/10/2026,
+inclusive redirecionamentos Keycloak 302/303 até Google com select_account,
+entrada Honji sem prompt, PKCE, negações, temas/mobile e avisos acadêmico/spam.
+Reservas liberadas; confirmação pessoal do seletor solicitada a Gabriel.
 
 Handoff Agente 09: confirmar entrega/confirmação na caixa acadêmica real. Esses resultados não são presumidos por fixtures nem
 pelo smoke anônimo. Consumidor XII legado não envia sid e exige incremento
