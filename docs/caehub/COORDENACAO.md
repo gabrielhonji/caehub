@@ -1,11 +1,13 @@
 # Coordenação de agentes
-## Em auditoria — Agente 09, 13/10/2026
+## Publicado — Agente 09, 13/10/2026
 
-Responsável: Codex /root. Base limpa `a719c9c`, `main`, entregas anteriores
-integradas. Escopo inicial reservado: documentação de auditoria neste arquivo;
+Responsável: Codex /root. **Done; pronto com restrições operacionais abaixo.**
+Base limpa `a719c9c`, `main`, entregas anteriores integradas. Escopo concluído:
+documentação de auditoria neste arquivo;
 `src/app/App.tsx` (retry Minhas tarefas e criação cartão/coluna),
 metadados de release e testes de regressão em navegador. Sem reserva concorrente
-no CAEHUB. Objetivo: estabilização dos módulos existentes, sem novos módulos.
+no CAEHUB; reservas liberadas. Objetivo: estabilização dos módulos existentes,
+sem novos módulos.
 Aceite observável: jornadas persistem e negam acessos indevidos; última unidade
 tem um único comprador; replays financeiros/retirada não duplicam efeitos;
 Agenda preserva privacidade/capacidade; BFF nega sessão revogada e mock em
@@ -51,21 +53,51 @@ TypeScript/Vite e npm audit sem vulnerabilidades. Chromium em 1440/390,
 claro/escuro: nove páginas internas e diálogos de disponibilidade, reunião,
 votação, turno/inventário, sem overflow do documento, exceções ou HTTP 5xx.
 Capturas fictícias inspecionadas; grade, marcas canônicas, hierarquia editorial,
-campos e leitura nos dois temas preservados. Regressores verificam persistência
+campos e leitura nos dois temas preservados. Regressões verificam persistência
 e atualização do quadro, limpeza dos campos e retry após falha 503 sintética.
 SSO real descartável repetiu MFA obrigatório, OTP inválido recusado/correto
 aceito, prova acadêmica, compra própria, seletor Google, SSO e logout central.
 Preparação: permissão da pasta da imagem, ausência de dist no diretório de teste,
 dist obsoleto do Portal e loader/StrictMode do harness foram diagnosticados e
 corrigidos no ambiente, sem alteração dos contratos ou permissões do host.
+Jornada adicional do comprador em Chromium: próprias 3 unidades prontas e 1
+retirada, outras 7 ausentes; exclusivos ocultos na etapa 2, troca de campanha
+preserva seleção, encomenda na etapa 1, checkout/Pix fictício, navegação própria
+e link de notificação aprovados. API confirmou as quantidades; roteiro passou
+a aguardar o carregamento independente dos pedidos antes das assertivas.
+Dialog de cartão: foco inicial dentro do modal, Shift+Tab contido e Escape
+restaurando o acionador aprovados. Isso não constitui certificação WCAG completa.
 
 Persistência após reiniciar o MySQL descartável: mesmas quatro tarefas, três
 pedidos e 21 unidades físicas antes/depois, por consulta em nova conexão.
-Publicação 1.14.3: gate da imagem oficial, commit/push/main/deploy e smoke
-posterior ainda em andamento. Liberação só
-será registrada após esses resultados. Não há P0/P1 conhecido pendente;
-configuração real de reserva/Pix, operação financeira pessoal e eventual nova
-grade PDF são verificações operacionais distintas. XII legado fora do escopo.
+Publicação **1.14.3**, release `13102026-093332`, fonte `61e59c1`:
+commit e main confirmados por refs idênticas em GitHub/origin e honji.
+`build-app caehub-gabriel 1.14.3` produziu imagem com essa proveniência.
+Imagem oficial Node 22, usuário node, NODE_ENV=production e healthcheck Healthy
+repetiu o gate Keycloak/Honji/SQL/Chromium, prova acadêmica, compra própria, MFA,
+seleção de conta, revogação e logout global. Variáveis de mock presentes e
+headers forjados sem sessão retornaram 401. Regressão versionada também passou
+num schema vazio separado com frontend exato da imagem oficial.
+
+`deploy-app caehub-gabriel honji/caehub-gabriel:1.14.3` confirmou Healthy;
+site-mode confirmou proxy-root saudável. Smoke Chromium HTTPS publicado
+confirmou health/versão/release, catálogo sem custos, APIs privadas negadas,
+callback inválido seguro, cookie host-only/Secure/HttpOnly/SameSite=Lax,
+OIDC/PKCE HTTPS, Google select_account e SSO comum preservado. Landing e quatro
+estados de acesso (expirada/negada/indisponível/cancelada) passaram em 1440/390
+e claro/escuro, sem overflow/exceções. Sem login pessoal, pedido real ou mutação
+financeira de produção nesta auditoria. A confirmação pessoal acadêmica é a
+evidência registrada por Gabriel em CAE-SSO-08, não inferida destes testes.
+
+**Recomendação:** liberada para uso controlado com as regras atuais e conferência
+manual. Nenhum P0/P1 identificado permanece aberto. Antes das vendas físicas,
+operador configura e confere prazo de reserva e instruções reais de Pix; não
+foram inventados ou alterados nesta auditoria. Transação financeira pessoal e
+nova grade PDF real continuam verificações operacionais distintas. Catálogo
+atual usa preço único, conforme COMERCIAL.md; preço de membro distinto não é
+implementado nem presumido. Dois P2 editoriais/desempenho permanecem para depois.
+XII legado continua fora do escopo; logout global foi demonstrado entre Portal
+e CAEHUB, sem extrapolar para todos os consumidores Honji.
 
 ## Publicado — Agente 08, 12/10/2026
 
