@@ -1,4 +1,29 @@
 # Coordenação de agentes
+## Entrega validada — Agente 10, 13/10/2026
+
+Responsável: Codex /root. Base limpa `1b55d12`, main, origin/honji iguais.
+Escopo concluído: três documentos de homologação/operação em docs/caehub,
+links em README.md e registro neste arquivo. Sem alteração de runtime,
+infraestrutura, dados pessoais ou pagamentos. Aceite: roteiros com executor,
+passos, resultado/evidência e falha; prontidão distingue gate técnico de aceite
+humano; recuperação descreve somente canais disponíveis. Validação documental
+e consultas públicas/operacionais somente leitura; sem repetir gate 09.
+
+**Done; reservas liberadas.** Roteiros em HOMOLOGACAO-INSTITUCIONAL.md,
+LIBERACAO-COMERCIAL.md e OPERACAO.md, vinculados no README. Revisão de
+cobertura, links locais e diff sem erros de whitespace. Consulta atual:
+proxy-root/container healthy; health 1.14.3/release 13102026-093332;
+catálogo público 200 e notificações privadas anônimas 401. Nomes de variáveis
+conferidos sem valores; configurações comerciais privadas não consultadas.
+Sem defeito novo reproduzido, correção de runtime ou deploy; gate 42/42 do
+Agente 09 preservado como evidência histórica, sem reexecução artificial.
+Pronto para iniciar homologação assistida; aceite do piloto e vendas continuam
+bloqueados por testes humanos/configurações e recuperação não comprovada.
+Backup/restauração, acesso a logs e alertas precisam de evidência do dono da
+infraestrutura; não se afirma que estejam ausentes no servidor. Próxima ação:
+presidência designa participantes/suporte, executa I01–I13 e obtém recuperação;
+financeiro/operador completam C01–C09 antes da compra controlada autorizada.
+
 ## Publicado — Agente 09, 13/10/2026
 
 Responsável: Codex /root. **Done; pronto com restrições operacionais abaixo.**

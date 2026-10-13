@@ -81,3 +81,12 @@ A lojinha interna usa a mesma experiência do portal. Na etapa de retirada,
 encomendas aparecem apenas nos pedidos do próprio comprador com quantidade e
 estado registrados; modelos exclusivos não ficam disponíveis para recompra.
 Novas encomendas permanecem habilitadas durante a etapa de vendas.
+
+## Homologação e operação assistida
+
+Antes do piloto ou das vendas reais, consulte o
+[roteiro institucional](docs/caehub/HOMOLOGACAO-INSTITUCIONAL.md), os
+[gates comerciais](docs/caehub/LIBERACAO-COMERCIAL.md) e o
+[manual operacional e quadro de prontidão](docs/caehub/OPERACAO.md).
+Gate técnico não substitui aceite humano, conferência financeira ou recuperação
+comprovada do banco.
