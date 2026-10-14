@@ -1,5 +1,14 @@
 # Coordenação de agentes
 
+## Publicação UX-14 — 14/10/2026
+
+Usuário autorizou publicação deste batch e deploy direto após batches validados
+no escopo desta tarefa. CAEHUB 1.14.5, release `14102026-195535`,
+fonte `bb872f2`: enviada a origin/honji, imagem oficial pelo build-app,
+compilação aprovada; imagem health/raiz 200, foundation anônima 403.
+Deploy confirmou Healthy; HTTPS health 1.14.5, foundation sem sessão 401.
+Teste focado do incremento reutilizado; sem sessão pessoal de produção.
+
 ## Refinamento visual validado — Agente 11, 14/10/2026
 
 UX-14: App, KanbanBoard, CSS e testes de navegador ajustados ao feedback atual.
