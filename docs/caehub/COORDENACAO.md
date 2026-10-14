@@ -2,7 +2,7 @@
 
 ## PERF-12 — auditoria de performance, 14/10/2026
 
-Doing: Agente 12 / Codex. Base main limpa 1.14.6. Investigar carregamento,
+Concluído: Agente 12 / Codex. Base main limpa 1.14.6. Investigar carregamento,
 requisições e atualização por ação em Institucional, Agenda e Comercial;
 reserva App, main, services/spaces, components/deferred, testes de performance e este registro. Backend/queries
 somente após baseline e ampliação explícita dos caminhos. Aceite: comparação
@@ -20,7 +20,17 @@ retry/401/chunk e regressão Kanban aprovados. Teste antigo de comentário agora
 procura o toast global do UX-15, sem remover asserções. Portal com Keycloak/MFA
 e BFF reais da stack dev aprovado; produção autenticada não exercitada.
 Diagnóstico e reprodução: relatório PERF-12 em coordination/reports do Honji.
-Gate aprovado; publicação oficial autorizada em preparação.
+Publicado: fonte `ff84463` em main, confirmada em origin/honji; imagem oficial
+1.14.7/release `14102026-203717`, proveniência verificada, 13 assets validados,
+health/raiz 200 e API anônima negada na imagem. Deploy Healthy; HTTPS health
+1.14.7, catálogo 200 e foundation/Agenda/pedidos anônimos 401. Chromium público
+390/1440 sem exceção/overflow. Portal 0.8.3 também publicado. Probe público
+do HTML CAEHUB variou de mediana 43 para 106 ms; ambos os domínios ficaram
+mais lentos, causa externa/código não isolada, sem ganho de TTFB declarado.
+Não houve sessão pessoal ou escrita de negócio em produção. Relatório central
+registra limites e pendências; caminhos liberados. Banco e container
+descartáveis de performance são removidos após coleta; MySQL dev do Portal
+existente foi retomado pelo Compose para validar sessão real.
 
 ## UX-15 — detalhes Kanban e toast seletivo, 14/10/2026
 
