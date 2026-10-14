@@ -94,6 +94,44 @@ diretamente à workstation pelo mecanismo autorizado, sem dump em repouso no
 servidor; acesso e retenção precisam ser aprovados pelo responsável. Não criar
 endpoint de exportação, cron ou infraestrutura como parte desta homologação.
 
+## Canais Honji e Keycloak
+
+A app de infraestrutura é `caehub-gabriel`; o `integrationId` de autorização
+permanece `caehub`. O domínio `caehub-gabriel.honji.com.br` opera em
+`proxy-root`; não crie outra app ou rota por prefixo para o mesmo domínio.
+Consulte o estado com `site-mode --status caehub-gabriel` e use o rollback do
+próprio canal.
+
+Execute canais SSH de produção fora do sandbox. Para complementar configuração
+sem perder os segredos criados por `register-integration`, use `set-env --merge`:
+o `set-env` sem `--merge` substitui todo o arquivo privado. Novas integrações
+são criadas exclusivamente por `register-integration`; não crie clients
+manualmente nem tente rotacionar segredos por outro canal.
+
+Use `/usr/local/bin/kc-admin` sempre fora do sandbox. Ele lê sozinho a
+credencial privada em `~/.config/honji/keycloak-admin.env`; nunca imprima,
+copie, faça `cat` ou `source` desse arquivo. Comandos aceitos:
+
+```text
+kc-admin --check
+kc-admin GET    <caminho>
+kc-admin POST   <caminho> <corpo.json|->
+kc-admin PUT    <caminho> <corpo.json|->
+kc-admin DELETE <caminho>
+```
+
+O caminho é relativo a `/admin/realms/honji/`; caminhos absolutos, `..`, o
+realm `master` e operações de `client-secret` são recusados. A saída redige
+segredos como `<redigido>` e um PUT recompõe os valores atuais. Antes de mudar
+um client de produção, faça GET para arquivo temporário, altere somente o
+necessário, aplique o PUT e confira o resultado. Redirect URIs e web origins
+usam somente o FQDN real da app, sem curingas.
+
+Não apague clients ou usuários sem confirmação; não altere
+`gabriel-codex-admin`, `realm-management` nem os clients embutidos do Keycloak.
+O console web administrativo não é o canal operacional. Se `kc-admin --check`
+indicar acesso ao realm `master`, pare e avise o dono da infraestrutura.
+
 ## Sequência de liberação
 
 1. Definir pessoas/contato e executar o [roteiro institucional](HOMOLOGACAO-INSTITUCIONAL.md).
