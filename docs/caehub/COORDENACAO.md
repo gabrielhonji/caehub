@@ -9,6 +9,10 @@ Toast compartilhado em confirmações de cartões, espaço, Agenda/grade e
 Comercial; erros e instruções permanecem contextuais. Popover nativo deixa
 a confirmação acima de diálogos sem capturar foco; some após 5,5 segundos.
 Build e navegador focado desktop/mobile aprovados com dados fictícios.
+Publicado: CAEHUB 1.14.6/release `14102026-201012`, fonte `fd91aa1`,
+por build-app/deploy-app. Imagem oficial verificada; Healthy e HTTPS health
+confirmados, foundation anônima 401. Gate de servidor anterior reutilizado,
+sem mudanças de servidor neste batch.
 
 ## Publicação UX-14 — 14/10/2026
 
