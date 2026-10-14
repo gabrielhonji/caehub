@@ -3,13 +3,26 @@
 ## KanbanBoard — 14/10/2026
 
 Extrai a composição do quadro de App: cards, gestão contextual de colunas,
-participação explícita, seletor de movimento, arraste, rolagem e limites.
+participação explícita, arraste, rolagem e limites; movimento por seletor no diálogo de edição.
 Responsabilidade de domínio distinta; reutiliza Button/Badge e handlers de
-feedback existentes. Não copia controles nem cria biblioteca. Drag é adicional
-ao seletor e usa canMove/isHelper do servidor; opacidade da borda depende
+feedback existentes. Não copia controles nem cria biblioteca. Arraste pela parte superior é adicional
+ao seletor de edição e usa canMove/isHelper do servidor; opacidade da borda depende
 do scroll real, sem pintar gradiente de cor. Modal/arquivados usam trava de
 envio e preservam rascunho na falha. Utility request-key reutiliza o gerador
 existente do Comercial, mantendo sua exportação compatível.
+## Refinamento Kanban — 14/10/2026
+
+Pedido atual substitui a composição inicial: contexto com superfície opaca e
+respiro; navegação na linha de criação; colunas com altura natural entre limites;
+edição em Dialog compartilhado fora do scroll; cores por coluna refletidas em
+cards; ações compactas, mão para entrar/sair e reticências no hover/foco.
+Arraste exige movimento real do mouse, mostra título flutuante e destino;
+clique simples abre detalhes. Seletor permanece no editar para teclado/toque.
+Feedback flutuante anuncia salvamento e confirmação; controles liberados após
+confirmação da escrita, sem esperar refresh agregado. Movimento atualiza o
+quadro local após confirmação; refresh em background mantém aviso global de
+falha. Nenhuma alteração de API, permissões ou schema.
+
 ## Composição Comercial — 1.11.0
 
 CommercialOrders mantém consulta/filtros/paginação e coordena diálogos;

@@ -1,5 +1,17 @@
 # Coordenação de agentes
 
+## Refinamento visual validado — Agente 11, 14/10/2026
+
+UX-14: App, KanbanBoard, CSS e testes de navegador ajustados ao feedback atual.
+Contexto opaco, controles junto à criação, edição de coluna em Dialog,
+altura natural, cards coloridos compactos, mão/toggle, arraste superior com
+feedback visual e seletor restrito ao editar. Refresh deixa de bloquear controles
+após confirmação da escrita. Compilação TypeScript/Vite e teste focado de
+navegador com identidades/APIs fictícias aprovados: arraste, modal sem clip,
+movimento no editar, auxiliar, confirmação antes do refresh, desktop/mobile.
+Sem alterações de servidor ou nova execução da suíte de servidor.
+Este incremento não foi publicado em produção.
+
 ## Publicação autorizada — Agente 11, 14/10/2026
 
 CAEHUB 1.14.4, release `14102026-192226`, fonte `6d5ee14`.

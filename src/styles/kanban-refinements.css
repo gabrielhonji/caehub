@@ -23,3 +23,17 @@
 .kanban-viewport .board-grid { align-items: stretch; }
 .kanban-viewport .board-column { height: auto; min-height: min(70vh, 560px); }
 .card-drag-handle { touch-action: pan-y; user-select: none; }
+/* Compact Kanban within the space workflow. */
+section.workspace-people{padding:24px;background:var(--surface);border:1px solid var(--line);border-radius:14px}.workspace-people>p{line-height:1.7}.workspace-roster{gap:24px}
+.kanban-forms{align-items:end;flex-wrap:wrap}.kanban-controls-slot{margin-left:auto;align-self:end}.kanban-controls-slot .kanban-navigation{margin:0;gap:8px;font-size:11px}.kanban-navigation>span:last-child{display:none}
+.kanban-viewport .board-grid{align-items:start}.kanban-viewport .board-column{height:max-content;min-height:180px;max-height:calc(100dvh - 220px);border-top-color:var(--column-color)}
+.kanban-viewport .board-card{border-left-color:var(--column-color);background:color-mix(in srgb,var(--column-color) 4%,var(--surface));padding:12px;transition:border-color .15s,box-shadow .15s}.kanban-viewport .board-card:hover{transform:none;border-color:var(--column-color)}
+.kanban-viewport .badge{color:var(--column-color);background:color-mix(in srgb,var(--column-color) 12%,var(--surface))}
+.card-upper{position:relative;cursor:grab;touch-action:pan-y;user-select:none}.card-upper:active{cursor:grabbing}.card-upper .card-detail-trigger{cursor:inherit}
+.card-menu{position:absolute;right:0;top:-5px;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;opacity:0}.board-card:hover .card-menu,.board-card:focus-within .card-menu{opacity:1}.card-menu:focus-visible{outline:2px solid var(--focus)}
+.kanban-viewport .board-card footer{align-items:center;padding-right:38px;min-height:32px;font-size:11px}.kanban-viewport .card-quick-actions{position:absolute;right:10px;bottom:10px;margin:0}.kanban-viewport .card-quick-actions .button{width:32px;height:32px;min-height:32px;margin:0;padding:0;font-size:17px;opacity:1;background:transparent}.kanban-viewport .card-quick-actions .button[aria-pressed=true]{background:color-mix(in srgb,var(--column-color) 14%,var(--surface));color:var(--column-color)}
+.kanban-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:100;max-width:calc(100vw - 32px);padding:12px 20px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);box-shadow:0 8px 32px color-mix(in srgb,var(--text) 18%,transparent);pointer-events:none}.kanban-toast.pending{border-color:var(--accent)}
+.kanban-drag-ghost{position:fixed;z-index:1000;pointer-events:none;padding:12px 16px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--surface);border:1px solid var(--accent);border-radius:10px;box-shadow:0 8px 24px color-mix(in srgb,var(--text) 20%,transparent)}
+@media(max-width:720px){section.workspace-people{padding:18px}.kanban-controls-slot{margin-left:0;width:100%}.kanban-controls-slot .kanban-navigation{justify-content:space-between}.kanban-viewport .card-menu{opacity:1}}
+
+.kanban-viewport .card-quick-actions .button[aria-pressed=true]::after{content:"✓";position:absolute;right:-2px;bottom:-2px;font-size:10px;background:var(--surface);border-radius:50%;line-height:14px;width:14px;height:14px}

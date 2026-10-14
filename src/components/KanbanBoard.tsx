@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { CSSProperties, PointerEvent } from 'react';
 import type { Board, BoardCard } from '../domain/types';
-import { Badge, Button } from './primitives';
+import { Badge, Button, Dialog } from './primitives';
 import { deleteColumn, leaveCard, moveCard, renameColumn, volunteer } from '../services/spaces';
 
 type Action=(work:()=>Promise<unknown>,message:string)=>Promise<boolean>;
@@ -9,16 +10,25 @@ type Action=(work:()=>Promise<unknown>,message:string)=>Promise<boolean>;
 function Card({card,busy,writable,onOpen,onAction,onDrag,onDragMove,onDragEnd}:{card:BoardCard;busy:boolean;writable:boolean;onOpen:(card:BoardCard)=>void;onAction:Action;onDrag:(event:PointerEvent,card:BoardCard)=>void;onDragMove:(event:PointerEvent)=>void;onDragEnd:(event:PointerEvent)=>void}){
   const [helping,setHelping]=useState(Boolean(card.isHelper));
   useEffect(()=>setHelping(Boolean(card.isHelper)),[card.isHelper]);
-  return <article className="board-card">
-    <div className="card-topline"><Badge>{card.column}</Badge>{writable&&card.canMove&&<button className="card-drag-handle" type="button" disabled={busy} aria-label={`Arrastar ${card.title}`} title="Arraste para outra coluna; o seletor também permite mover por teclado ou toque." onPointerDown={event=>onDrag(event,card)} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}><span aria-hidden="true">⠿</span></button>}</div>
-    <button className="card-detail-trigger" type="button" onClick={()=>onOpen(card)}><h3>{card.title}</h3><p>{card.summary}</p></button>
+  return <article className="board-card" onClickCapture={event=>{if(event.currentTarget.dataset.dragged){event.preventDefault();event.stopPropagation();delete event.currentTarget.dataset.dragged;}}}>
+    <div className="card-upper" aria-label={`Arrastar ${card.title}`} onPointerDown={event=>onDrag(event,card)} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}>
+      <div className="card-topline"><Badge>{card.column}</Badge><button type="button" className="card-menu" aria-label={`Editar ${card.title}`} onPointerDown={event=>event.stopPropagation()} onClick={()=>onOpen(card)}>⋯</button></div>
+      <button className="card-detail-trigger" type="button" onClick={()=>onOpen(card)}><h3>{card.title}</h3><p>{card.summary}</p></button>
+    </div>
     <footer><span>{card.assignee}</span><span>{card.helpers+Number(helping)-Number(Boolean(card.isHelper))} auxiliares</span></footer>
-    {writable&&<div className="card-quick-actions"><Button disabled={busy} aria-pressed={helping} aria-label={helping?`Deixar de ser auxiliar em ${card.title}`:`Quero ajudar em ${card.title}`} title={helping?'Clique para sair dos auxiliares':'Clique para participar como auxiliar'} onClick={()=>void onAction(async()=>{if(helping)await leaveCard(card.id);else await volunteer(card.id);setHelping(!helping);},helping?'Você deixou de ser auxiliar neste cartão.':'Você agora participa como auxiliar neste cartão.')}>{helping?'Ajudando ✓':'Ajudar'}</Button></div>}
+    {writable&&<div className="card-quick-actions"><Button disabled={busy} aria-pressed={helping} aria-label={helping?`Deixar de ser auxiliar em ${card.title}`:`Quero ajudar em ${card.title}`} title={helping?'Clique para sair dos auxiliares':'Clique para participar como auxiliar'} onClick={()=>void onAction(async()=>{if(helping)await leaveCard(card.id);else await volunteer(card.id);setHelping(!helping);},helping?'Você deixou de ser auxiliar neste cartão.':'Você agora participa como auxiliar neste cartão.')}><span aria-hidden="true">✋</span></Button></div>}
   </article>;
 }
 
 export function KanbanBoard({board,busy,onOpen,onAction}:{board:Board;busy:boolean;onOpen:(card:BoardCard)=>void;onAction:Action}){
   const viewport=useRef<HTMLDivElement>(null),edge=useRef(0),dragged=useRef<BoardCard|undefined>(undefined);
+  const [columns,setColumns]=useState(board.columns);
+  useEffect(()=>setColumns(board.columns),[board.columns]);
+  const [editing,setEditing]=useState<string>();
+  const [controls,setControls]=useState<HTMLElement|null>(null);
+  useEffect(()=>setControls(document.getElementById(`kanban-controls-${board.id}`)),[board.id]);
+  const origin=useRef<{x:number;y:number}|undefined>(undefined);
+  const [ghost,setGhost]=useState<{x:number;y:number}>();
   const [dragging,setDragging]=useState<BoardCard>(),[target,setTarget]=useState<string>();
   const [limits,setLimits]=useState({left:false,right:false,first:1,last:board.columns.length});
   const writable=board.canWrite!==false;
@@ -35,20 +45,23 @@ export function KanbanBoard({board,busy,onOpen,onAction}:{board:Board;busy:boole
     return()=>{observer.disconnect();element.removeEventListener('scroll',update);};
   },[board.columns.length]);
   useEffect(()=>{if(!dragging)return;const timer=setInterval(()=>{if(viewport.current&&edge.current)viewport.current.scrollLeft+=edge.current*12;},30);return()=>clearInterval(timer);},[dragging]);
-  const cancelDrag=()=>{edge.current=0;dragged.current=undefined;setDragging(undefined);setTarget(undefined);};
+  const cancelDrag=()=>{edge.current=0;dragged.current=undefined;setDragging(undefined);setTarget(undefined);setGhost(undefined);origin.current=undefined;};
   const scroll=(direction:number)=>viewport.current?.scrollBy({left:direction*Math.max(280,(viewport.current.clientWidth??300)*.8),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
-  const start=(event:PointerEvent,card:BoardCard)=>{if(busy||!writable||!card.canMove||event.pointerType!=='mouse'||event.button!==0)return;event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);dragged.current=card;setDragging(card);};
+  const start=(event:PointerEvent,card:BoardCard)=>{if(busy||!writable||!card.canMove||event.pointerType!=='mouse'||event.button!==0)return;if((event.target as HTMLElement).closest('.card-menu'))return;event.currentTarget.setPointerCapture(event.pointerId);dragged.current=card;origin.current={x:event.clientX,y:event.clientY};};
   const locate=(event:PointerEvent)=>{const element=document.elementFromPoint(event.clientX,event.clientY)?.closest<HTMLElement>('[data-column-id]');return element&&viewport.current?.contains(element)?element.dataset.columnId:undefined;};
-  const over=(event:PointerEvent)=>{if(!dragged.current||busy)return;setTarget(locate(event));const rect=viewport.current!.getBoundingClientRect();edge.current=event.clientX<rect.left+48?-1:event.clientX>rect.right-48?1:0;};
-  const drop=(event:PointerEvent)=>{const card=dragged.current,columnId=locate(event);cancelDrag();if(event.type==='pointercancel'||!card||busy||!columnId||card.columnId===columnId)return;void onAction(()=>moveCard(card.id,columnId,card.version??1),'Cartão movido.');};
+  const over=(event:PointerEvent)=>{if(!dragged.current||busy||!origin.current)return;if(!dragging&&Math.hypot(event.clientX-origin.current.x,event.clientY-origin.current.y)<6)return;setDragging(dragged.current);setGhost({x:event.clientX,y:event.clientY});setTarget(locate(event));const rect=viewport.current!.getBoundingClientRect();edge.current=event.clientX<rect.left+48?-1:event.clientX>rect.right-48?1:0;};
+  const drop=(event:PointerEvent)=>{const card=dragged.current,columnId=locate(event),moved=Boolean(ghost);if(moved){const article=event.currentTarget.closest('article');if(article){article.dataset.dragged='true';setTimeout(()=>delete article.dataset.dragged,250);}}cancelDrag();if(!moved||event.type==='pointercancel'||!card||busy||!columnId||card.columnId===columnId)return;void onAction(async()=>{await moveCard(card.id,columnId,card.version??1);setColumns(current=>current.map(column=>({...column,cards:column.cards.filter(c=>c.id!==card.id).concat(column.id===columnId?[{...card,columnId,column:column.label,version:(card.version??1)+1}]:[])})));},'Cartão movido.');};
+  const edited=board.columns.find(column=>column.id===editing);
   return <>
-    <div className="kanban-navigation"><div role="group" aria-label="Percorrer colunas"><Button disabled={!limits.left} onClick={()=>scroll(-1)} aria-label="Ver colunas anteriores">←</Button><Button disabled={!limits.right} onClick={()=>scroll(1)} aria-label="Ver próximas colunas">→</Button></div><span>Colunas {limits.first}–{limits.last} de {board.columns.length}</span><span>{limits.right?'Há mais colunas à direita →':limits.left?'← Há colunas à esquerda':'Todas as colunas estão visíveis'}</span></div>
-    <p className="board-guidance">Arraste pelo puxador para mover um cartão ou use seu seletor de coluna por teclado ou toque. Clique em Ajudar para participar; clique novamente em Ajudando para sair.</p>
+    {edited&&<Dialog title={`Editar coluna ${edited.label}`} onClose={()=>setEditing(undefined)}><div className="modal-form"><form className="modal-form" onSubmit={event=>{event.preventDefault();const name=String(new FormData(event.currentTarget).get('name'));void onAction(()=>renameColumn(edited.id,name),'Coluna renomeada.').then(ok=>{if(ok)setEditing(undefined);});}}><label>Novo nome<input name="name" defaultValue={edited.label} required disabled={busy}/></label><Button disabled={busy}>Renomear</Button></form>{board.columns.length>1&&<form className="modal-form" onSubmit={event=>{event.preventDefault();const destination=String(new FormData(event.currentTarget).get('target'));void onAction(()=>deleteColumn(edited.id,destination),'Coluna excluída e cartões realocados.').then(ok=>{if(ok)setEditing(undefined);});}}><label>Realocar cartões para<select name="target" disabled={busy}>{board.columns.filter(c=>c.id!==edited.id).map(c=><option value={c.id} key={c.id}>{c.label}</option>)}</select></label><Button disabled={busy}>Excluir e realocar</Button></form>}</div></Dialog>}
+    {ghost&&dragging&&createPortal(<div className="kanban-drag-ghost" style={{left:ghost.x+12,top:ghost.y+12}}>{dragging.title}</div>,document.body)}
+    {controls&&createPortal(<div className="kanban-navigation"><div role="group" aria-label="Percorrer colunas"><Button disabled={!limits.left} onClick={()=>scroll(-1)} aria-label="Ver colunas anteriores">←</Button><Button disabled={!limits.right} onClick={()=>scroll(1)} aria-label="Ver próximas colunas">→</Button></div><span>Colunas {limits.first}–{limits.last} de {board.columns.length}</span><span>{limits.right?'Há mais colunas à direita →':limits.left?'← Há colunas à esquerda':'Todas as colunas estão visíveis'}</span></div>,controls)}
+
     <div ref={viewport} className="board-scroll kanban-viewport" data-left={limits.left} data-right={limits.right} tabIndex={0} aria-label="Quadro Kanban. Role horizontalmente para consultar as colunas.">
       <div className="board-grid" style={{'--column-count':board.columns.length} as CSSProperties}>
-        {board.columns.map(column=><section className={`board-column ${target===column.id?'column-drop-target':''}`} key={column.id} data-column-id={column.id}>
-          <header><div className="column-title"><h3>{column.label}</h3>{board.canManage&&<details className="column-manager"><summary aria-label={`Editar coluna ${column.label}`}>⋯</summary><div className="column-manager-panel"><form onSubmit={event=>{event.preventDefault();const name=String(new FormData(event.currentTarget).get('name'));void onAction(()=>renameColumn(column.id,name),'Coluna renomeada.');}}><label>Novo nome<input name="name" defaultValue={column.label} required disabled={busy}/></label><Button disabled={busy}>Renomear</Button></form>{board.columns.length>1&&<form onSubmit={event=>{event.preventDefault();const destination=String(new FormData(event.currentTarget).get('target'));void onAction(()=>deleteColumn(column.id,destination),'Coluna excluída e cartões realocados.');}}><label>Realocar cartões para<select name="target" disabled={busy}>{board.columns.filter(c=>c.id!==column.id).map(c=><option value={c.id} key={c.id}>{c.label}</option>)}</select></label><Button disabled={busy}>Excluir e realocar</Button></form>}</div></details>}</div><span>{column.cards.length}</span></header>
-          {column.cards.length?column.cards.map(card=><div key={card.id}><Card card={card} writable={writable} busy={busy||!writable} onOpen={onOpen} onAction={onAction} onDrag={start} onDragMove={over} onDragEnd={drop}/>{writable&&card.canMove&&<label className="card-move-field">Mover cartão<select aria-label={`Mover ${card.title}`} disabled={busy} value={card.columnId} onChange={event=>{const id=event.target.value;if(id!==card.columnId)void onAction(()=>moveCard(card.id,id,card.version??1),'Cartão movido.');}}>{board.columns.map(c=><option value={c.id} key={c.id}>{c.label}</option>)}</select></label>}</div>):<p className="column-empty">Nenhum cartão neste estágio.</p>}
+        {columns.map((column,index)=><section className={`board-column ${target===column.id?'column-drop-target':''}`} style={{'--column-color':({'Ideias':'var(--muted)','Planejado':'#b37516','Em andamento':'#0758c9','Aguardando':'#8555a5','Concluído':'#287a59'} as Record<string,string>)[column.label]??['var(--muted)','#b37516','#0758c9','#8555a5','#287a59'][index%5]} as CSSProperties} key={column.id} data-column-id={column.id}>
+          <header><div className="column-title"><h3>{column.label}</h3>{board.canManage&&<button type="button" className="column-edit" aria-label={`Editar coluna ${column.label}`} onClick={()=>setEditing(column.id)}>⋯</button>}</div><span>{column.cards.length}</span></header>
+          {column.cards.length?column.cards.map(card=><div key={card.id}><Card card={card} writable={writable} busy={busy||!writable} onOpen={onOpen} onAction={onAction} onDrag={start} onDragMove={over} onDragEnd={drop}/></div>):<p className="column-empty">Nenhum cartão neste estágio.</p>}
         </section>)}
       </div>
     </div>

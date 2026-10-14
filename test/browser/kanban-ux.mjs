@@ -40,11 +40,11 @@ try{
  await page.keyboard.press('Escape');
  await dialog.waitFor({state:'hidden'});await expect(trigger).toBeFocused();
  const target=page.locator('.board-column').filter({has:page.getByRole('heading',{name:'Planejado',exact:true})});
- const handle=page.getByRole('button',{name:'Arrastar '+card.title});await expect(handle).toBeEnabled();
+ const handle=page.locator('.card-upper').filter({has:page.getByRole('heading',{name:card.title,exact:true})});await expect(handle).toBeVisible();
  const sourceBox=await handle.boundingBox(),targetBox=await target.boundingBox();
  await page.mouse.move(sourceBox.x+sourceBox.width/2,sourceBox.y+sourceBox.height/2);
  await page.mouse.down();
- await page.mouse.move(targetBox.x+targetBox.width/2,sourceBox.y+sourceBox.height/2,{steps:12});
+ await page.mouse.move(targetBox.x+targetBox.width/2,targetBox.y+80,{steps:12});
  await page.mouse.up();
  await page.getByRole('status').filter({hasText:'Cartão movido.'}).waitFor({timeout:5000});
  let detail=await page.request.get(origin+'/api/cards/'+card.id).then(r=>r.json());assert.equal(detail.columnId,board.columns[1].id);
