@@ -1,4 +1,14 @@
 # Coordenação de agentes
+
+## Publicação autorizada — Agente 11, 14/10/2026
+
+CAEHUB 1.14.4, release `14102026-192226`, fonte `6d5ee14`.
+Pedido explícito do usuário autorizou deploy das correções Kanban/Agenda.
+Fonte enviada a origin/honji; build-app oficial recompilou TypeScript/Vite.
+Imagem oficial validada por injeção HTTP: health/raiz 200 e foundation
+sem identidade 403. Deploy confirmou Healthy; HTTPS público confirmou
+health 1.14.4 e foundation anônima 401. Testes do incremento anterior
+reutilizados; sem repetição da suíte e sem teste com sessão pessoal de produção.
 ## Entrega validada — Agente 11, 14/10/2026
 
 Base limpa `3a85d8a`, main. Reserva delimitada: App/KanbanBoard, tipos/services
