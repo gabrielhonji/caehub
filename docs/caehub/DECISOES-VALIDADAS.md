@@ -1,4 +1,17 @@
 # Decisões validadas após o pacote
+## Kanban e orientação da grade — 14/10/2026
+
+Gabriel relatou teste com amigo e autorizou corrigir ações duplicadas,
+auxiliares com toggle e feedback, arrastar cartões entre colunas e indicar
+conteúdo lateral por fade de opacidade/rolagem. Arraste conserva o seletor
+de teclado/toque e a autorização contextual existente; não cria poder de
+edição nem ordenação interna nova. Operações que criam registros recebem
+chave de reenvio, sem impedir duas criações intencionais com chaves distintas.
+Entrar/sair de auxiliar usa os endpoints existentes, com reentrada e histórico
+somente quando há mudança real de participação. Grade acadêmica inclui o
+link e sete passos de exportação PDF fornecidos pelo usuário, mantendo revisão
+e confirmação antes de importar. Sem alteração comercial, login ou infraestrutura.
+
 ## Compras e retirada — refinamento aprovado, 12/10/2026
 
 Pedido do usuário corrige tema/marca, UX de compras e integração à área interna.

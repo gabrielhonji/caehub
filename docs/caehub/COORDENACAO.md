@@ -1,4 +1,21 @@
 # Coordenação de agentes
+## Entrega validada — Agente 11, 14/10/2026
+
+Base limpa `3a85d8a`, main. Reserva delimitada: App/KanbanBoard, tipos/services
+de cartões, TimetableImport, CSS Kanban, kanban/app/database do servidor,
+testes relacionados e documentação Gestão/API. Escopo autorizado pelo pedido:
+prevenir cliques/reenvios duplicados, entrar/sair de auxiliar com feedback,
+arrastar mantendo seletor por teclado/toque, indicar rolagem lateral e incluir
+link/passos fornecidos para PDF UTFPR. Aceite: uma criação por comando,
+retry seguro, participação reativável sem histórico repetido, estados corretos
+após atualização e restrições preservadas; layout/temas/teclado no navegador.
+Sem mudanças de regras comerciais/autenticação/infraestrutura e sem deploy autorizado.
+Validação: compilação TypeScript/Vite, 43 testes de servidor aprovados em MySQL
+isolado e navegador com API real para cliques/reenvio, auxiliares, arraste por
+eventos de ponteiro, rolagem, mobile/temas e guia UTFPR. Regressão UI anterior
+aprovada. Identidades fictícias locais; sem sessão pessoal de produção.
+Gerador UUID existente extraído para reutilização, preservando export comercial.
+
 ## Entrega validada — Agente 10, 13/10/2026
 
 Responsável: Codex /root. Base limpa `1b55d12`, main, origin/honji iguais.

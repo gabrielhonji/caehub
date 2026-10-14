@@ -1,4 +1,15 @@
 # UI React — UI-001
+
+## KanbanBoard — 14/10/2026
+
+Extrai a composição do quadro de App: cards, gestão contextual de colunas,
+participação explícita, seletor de movimento, arraste, rolagem e limites.
+Responsabilidade de domínio distinta; reutiliza Button/Badge e handlers de
+feedback existentes. Não copia controles nem cria biblioteca. Drag é adicional
+ao seletor e usa canMove/isHelper do servidor; opacidade da borda depende
+do scroll real, sem pintar gradiente de cor. Modal/arquivados usam trava de
+envio e preservam rascunho na falha. Utility request-key reutiliza o gerador
+existente do Comercial, mantendo sua exportação compatível.
 ## Composição Comercial — 1.11.0
 
 CommercialOrders mantém consulta/filtros/paginação e coordena diálogos;

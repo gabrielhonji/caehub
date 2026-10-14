@@ -1,5 +1,20 @@
 # Gestão — especificação MVP
 
+## Refinamento autorizado — Kanban, 14/10/2026
+
+- Criar cartão/coluna, comentar e adicionar checklist reutiliza a mesma chave
+  de envio em falha/resposta perdida; cliques durante processamento são bloqueados.
+- Auxiliar é estado explícito: Ajudar entra, Ajudando sai, com aria-pressed,
+  confirmação e contagem; reentrada é permitida. Repetir a mesma intenção
+  no servidor não repete participação nem histórico.
+- Mouse arrasta pelo puxador entre colunas do mesmo quadro; seletor por teclado
+  e toque permanece. Apenas quem já pode editar o cartão recebe movimentação.
+- O quadro usa a quantidade real de colunas. Fade de opacidade só aparece no
+  lado com conteúdo oculto; setas, contagem e barra horizontal orientam a rolagem.
+- Formulários do modal preservam conteúdo na falha; processamento, erro e sucesso
+  são visíveis. Arquivados e restauração também recebem trava e recuperação.
+
+
 Entrada de execução: BASE.md + este documento. Para interface, DESIGN.md/UI-REACT.md; para acesso e mutações, seção de autorização em ARQUITETURA-SEGURANCA.md; critérios G em ACEITE.md.
 
 ## Escopo e entidades

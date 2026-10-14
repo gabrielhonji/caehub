@@ -1,0 +1,74 @@
+import assert from 'node:assert/strict';
+const {chromium,expect}=await import(process.env.CAEHUB_PLAYWRIGHT_MODULE??'@playwright/test');
+const origin=process.env.CAEHUB_BROWSER_ORIGIN;
+if(!origin||process.env.NODE_ENV!=='development')throw Error('Disposable development origin required');
+const browser=await chromium.launch({args:['--no-sandbox']});
+const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+const workspace='1a4e0bd0-5f4a-4d10-8000-000000000201';
+const firstTitle='Cartão fictício contra cliques repetidos '+Date.now(),lostTitle='Cartão fictício com resposta perdida '+Date.now();
+try{
+ await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/#/espacos/'+workspace);
+ const title=page.locator('.kanban-forms input[name=title]');
+ await title.fill(firstTitle);let creations=0;
+ page.on('request',r=>{if(r.method()==='POST'&&/\/boards\/[^/]+\/cards$/.test(new URL(r.url()).pathname))creations++;});
+ await title.evaluate(input=>{for(let i=0;i<6;i++)input.form.requestSubmit();});
+ await page.getByRole('heading',{name:firstTitle,exact:true}).waitFor();
+ assert.equal(creations,1);assert.equal(await title.inputValue(),'');
+ let lost=true;const keys=[];
+ await page.route('**/api/boards/*/cards',async route=>{
+   keys.push(route.request().headers()['idempotency-key']);
+   const response=await route.fetch();if(lost){lost=false;await route.abort('failed');}else await route.fulfill({response});
+ });
+ await title.fill(lostTitle);
+ await page.getByRole('button',{name:'Criar cartão',exact:true}).click();await page.getByRole('alert').waitFor();
+ assert.equal(await title.inputValue(),lostTitle);
+ await page.getByRole('button',{name:'Criar cartão',exact:true}).click();await page.getByRole('status').filter({hasText:'Cartão criado.'}).waitFor();
+ assert.equal(keys.length,2);assert.equal(keys[0],keys[1]);
+ const foundation=()=>page.request.get(origin+'/api/foundation').then(r=>r.json());
+ let data=await foundation(),board=data.boards.find(b=>b.workspaceId===workspace);
+ assert.equal(board.columns.flatMap(c=>c.cards).filter(c=>c.title===lostTitle).length,1);
+ const card=board.columns.flatMap(c=>c.cards).find(c=>c.title===firstTitle);
+ const help=page.getByRole('button',{name:'Quero ajudar em '+card.title});
+ await help.click();await page.getByRole('button',{name:'Deixar de ser auxiliar em '+card.title}).waitFor();await page.getByRole('status').filter({hasText:'agora participa'}).waitFor();
+ await page.getByRole('button',{name:'Deixar de ser auxiliar em '+card.title}).click();await page.getByRole('button',{name:'Quero ajudar em '+card.title}).waitFor();
+ await page.getByRole('button',{name:'Quero ajudar em '+card.title}).click();await page.getByRole('button',{name:'Deixar de ser auxiliar em '+card.title}).waitFor();
+ const trigger=page.locator('.card-detail-trigger').filter({has:page.getByRole('heading',{name:card.title,exact:true})});await trigger.click();
+ const dialog=page.getByRole('dialog');await dialog.getByLabel('Novo comentário').fill('Comentário fictício único');let comments=0;
+ page.on('request',r=>{if(r.method()==='POST'&&r.url().endsWith('/comments'))comments++;});
+ await dialog.getByLabel('Novo comentário').evaluate(input=>{for(let i=0;i<6;i++)input.form.requestSubmit();});
+ await dialog.getByRole('status').filter({hasText:'Comentário publicado.'}).waitFor();assert.equal(comments,1);await expect(dialog.getByLabel('Novo comentário')).toHaveValue('');
+ await page.keyboard.press('Escape');
+ await dialog.waitFor({state:'hidden'});await expect(trigger).toBeFocused();
+ const target=page.locator('.board-column').filter({has:page.getByRole('heading',{name:'Planejado',exact:true})});
+ const handle=page.getByRole('button',{name:'Arrastar '+card.title});await expect(handle).toBeEnabled();
+ const sourceBox=await handle.boundingBox(),targetBox=await target.boundingBox();
+ await page.mouse.move(sourceBox.x+sourceBox.width/2,sourceBox.y+sourceBox.height/2);
+ await page.mouse.down();
+ await page.mouse.move(targetBox.x+targetBox.width/2,sourceBox.y+sourceBox.height/2,{steps:12});
+ await page.mouse.up();
+ await page.getByRole('status').filter({hasText:'Cartão movido.'}).waitFor({timeout:5000});
+ let detail=await page.request.get(origin+'/api/cards/'+card.id).then(r=>r.json());assert.equal(detail.columnId,board.columns[1].id);
+ const replay=await page.request.post(origin+'/api/cards/'+card.id+'/move',{data:{columnId:board.columns[1].id,version:card.version}});
+ assert.equal(replay.status(),200);detail=await page.request.get(origin+'/api/cards/'+card.id).then(r=>r.json());assert.equal(detail.activities.filter(a=>a.action==='card.moved').length,1);
+ for(let n=0;n<3;n++)assert.equal((await page.request.post(origin+'/api/boards/'+board.id+'/columns',{data:{name:'Coluna fictícia extra '+n}})).status(),201);
+ await page.reload();const viewport=page.locator('.kanban-viewport');await viewport.waitFor();
+ for(const width of [1440,820,390,393])for(const theme of ['light','dark']){
+   await page.setViewportSize({width,height:1000});await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
+   await viewport.evaluate(e=>{e.scrollLeft=0;});await page.waitForTimeout(80);
+   assert.equal(await viewport.getAttribute('data-right'),'true');
+   assert.equal(await page.getByRole('button',{name:'Ver colunas anteriores'}).isDisabled(),true);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+   assert.notEqual(await viewport.evaluate(e=>getComputedStyle(e).maskImage),'none');
+   await viewport.evaluate(e=>{e.scrollLeft=e.scrollWidth;});await page.waitForTimeout(80);
+   assert.equal(await viewport.getAttribute('data-left'),'true');assert.equal(await viewport.getAttribute('data-right'),'false');
+   if(process.env.CAEHUB_SCREENSHOTS)await page.screenshot({path:process.env.CAEHUB_SCREENSHOTS+'/kanban-'+width+'-'+theme+'.png',fullPage:true});
+ }
+ // One column must expand naturally, without a fictional five-column scroll area.
+ await page.route('**/api/foundation',async route=>{const response=await route.fetch(),value=await response.json();value.boards=value.boards.map(b=>({...b,columns:b.columns.slice(0,1)}));await route.fulfill({json:value});});
+ await page.reload();await viewport.waitFor();await page.waitForTimeout(80);assert.equal(await viewport.getAttribute('data-right'),'false');
+ await page.unroute('**/api/foundation');await page.goto(origin+'/#/agenda');await page.getByRole('button',{name:'Importar grade',exact:true}).click();
+ const importDialog=page.getByRole('dialog',{name:'Importar grade acadêmica'});await importDialog.getByText('Como gerar o PDF das disciplinas na UTFPR').click();
+ assert.equal(await importDialog.getByRole('link',{name:'Abrir Portal do Aluno da UTFPR ↗'}).getAttribute('href'),'https://sistemas2.utfpr.edu.br/dpls/sistema/aluno10/mpmenu.inicio');
+ assert.equal(await importDialog.locator('.timetable-pdf-help li').count(),7);await importDialog.getByText('Salvar como PDF',{exact:true}).waitFor();await page.keyboard.press('Escape');
+ assert.deepEqual(errors,[]);console.log('PASS: rapid submissions, lost-response idempotency, helper join/leave/rejoin, one comment, mouse drag/replay, one/many columns, opacity edges, mobile/themes and UTFPR guide.');
+}finally{await browser.close();}

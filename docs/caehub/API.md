@@ -1,5 +1,21 @@
 # API institucional, Kanban e Agenda — Incrementos 01 a 04
 
+## Reenvio Kanban e participação — 14/10/2026
+
+Criação de cartões/colunas/comentários/checklist aceita header opcional
+`Idempotency-Key` (UUID). Ator, operação/recurso e chave identificam o comando;
+payload diferente na mesma chave retorna 409. Gravação, atividade e recibo
+ficam na mesma transação. Replay verifica novamente o acesso atual; não
+armazena dados do formulário no recibo, somente hash e ID do resultado.
+Sem header, o contrato anterior permanece; clientes atualizados enviam a chave.
+Tabela nova: `kanban_commands`, criada pela migration comum idempotente.
+
+Cards de `GET /boards/:id` e `GET /foundation` incluem `isHelper` e `canMove`
+derivados do ator no servidor. POST/DELETE de auxiliares definem entrar/sair,
+sem toggle implícito no backend: repetir intenção não inverte nem duplica efeito.
+Reentrar conserva o histórico anterior. Movimento repetido para a coluna atual
+é no-op; movimento com revisão antiga para outra coluna continua retornando 409.
+
 Base: `/api`. JSON; erros usam `{ error, message }` e retornam `400`, `401`, `403`, `404`, `409` ou `503`. `GET /health` expõe também a versão e o identificador de release no formato `DDMMAAAA-HHMMSS`.
 
 O servidor resolve o ator na fronteira `IdentityGateway`. Em produção, o BFF Honji usa Authorization Code + PKCE, sessão persistida no MySQL e uma decisão central nova de `account.access`, com sessão Keycloak viva e `projectAccess`, em cada requisição protegida. Institucional exige também membership ativo; comprador externo exige e-mail acadêmico verificado e acessa somente rotas próprias. Sem configuração completa ou decisão positiva, o acesso é negado; nenhum cabeçalho, payload ou papel fornecido pelo navegador concede acesso.

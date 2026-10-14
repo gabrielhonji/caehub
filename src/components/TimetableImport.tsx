@@ -24,6 +24,7 @@ export function TimetableImport({ onSaved }: { onSaved: () => Promise<void> }) {
     <AgendaWorkflow busy={busy} title="Importar grade acadêmica" open={open} onClose={()=>setOpen(false)}>
     <p>1. Envie o PDF ou preencha manualmente. 2. Confira os horários e o período. 3. Confirme para salvar.</p>
     <p>PDF de até 5 MB. A extração lê texto e posições das dez primeiras páginas; documentos escaneados precisam de preenchimento manual.</p>
+    <details className="timetable-pdf-help"><summary>Como gerar o PDF das disciplinas na UTFPR</summary><p><a href="https://sistemas2.utfpr.edu.br/dpls/sistema/aluno10/mpmenu.inicio" target="_blank" rel="noopener noreferrer">Abrir Portal do Aluno da UTFPR ↗</a> (abre em outra aba).</p><ol><li>Faça login, se necessário.</li><li>Abra o menu.</li><li>Escolha <strong>Disciplinas Matriculadas</strong>.</li><li>Clique em <strong>Gerar impressão</strong>.</li><li>Na nova tela, desça até o final da página e clique em <strong>imprimir</strong>.</li><li>Em <strong>destino</strong>, escolha <strong>Salvar como PDF</strong>.</li><li>Envie o PDF no campo <strong>PDF de horários</strong> abaixo, prepare a prévia e confira as disciplinas antes de salvar.</li></ol></details>
     <form className="agenda-form" onSubmit={async event => {
       event.preventDefault(); const file = pdf;
       if (!(file instanceof File) || !file.size) return;
