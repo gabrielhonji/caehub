@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../services/spaces';
 import { money } from '../services/commercial';
 import { emptyOrderDraft, newRequestKey, commercialOrderFailure, buyerOrderLabel, orderLabels, orderTime, type OrderDetail, type OrderDraft, type OrderList, type OrderSettings, type Production, type SaleCatalog } from '../services/commercial-orders';
-import { AccessDeniedState, Badge, Button, Dialog, EmptyState, ErrorState, Eyebrow, LoadingState } from './primitives';
+import { AccessDeniedState, Badge, Button, Toast, Dialog, EmptyState, ErrorState, Eyebrow, LoadingState } from './primitives';
 import { CommercialOrderForm } from './CommercialOrderForm';
 import { CommercialOrderDetail } from './CommercialOrderDetail';
 import { CommercialProduction, type ReceiptDraft } from './CommercialProduction';
@@ -23,7 +23,7 @@ export function CommercialOrders({catalog,campaignId,onInventoryChange,mode='adm
   const query=new URLSearchParams({page:String(page),pageSize:String(pageSize),...(campaignId?{campaignId}:{}),...Object.fromEntries(Object.entries(filters).filter(([,value])=>value))}).toString();
   const load=useCallback(async()=>{
     const current=++generation.current;setLoading(true);
-    try{const result=await api<OrderList>(`/commercial/${route}?${query}`);if(current===generation.current){setData(result);setError('');setDenied(false);}}
+    setFeedback('');try{const result=await api<OrderList>(`/commercial/${route}?${query}`);if(current===generation.current){setData(result);setError('');setDenied(false);}}
     catch(e){if(current===generation.current){setError(failure(e));setDenied((e as {code?:string}).code==='forbidden');}}
     finally{if(current===generation.current)setLoading(false);}
   },[query,route]);
@@ -42,10 +42,10 @@ export function CommercialOrders({catalog,campaignId,onInventoryChange,mode='adm
   };
   const mutate=async(path:string,body:object,method='POST')=>{
     if(busy)return;setBusy(true);setFormError('');
-    try{const result=await api<{id?:string}>(path,{method,body:JSON.stringify(body)});setFeedback('Operação registrada.');await load();await onInventoryChange?.();window.dispatchEvent(new Event('caehub:agenda-updated'));return result;}
+    setFeedback('');try{const result=await api<{id?:string}>(path,{method,body:JSON.stringify(body)});setFeedback('Operação registrada.');await load();await onInventoryChange?.();window.dispatchEvent(new Event('caehub:agenda-updated'));return result;}
     catch(e){setFormError(failure(e));return undefined;}finally{setBusy(false);}
   };
-  const refreshDetail=async()=>{if(!detail||busy)return;setBusy(true);setFormError('');try{setDetail(await api<OrderDetail>(`/commercial/${route}/${detail.order.id}`));await load();}catch(e){setFormError(failure(e));}finally{setBusy(false);}};
+  const refreshDetail=async()=>{if(!detail||busy)return;setBusy(true);setFormError('');setFeedback('');try{setDetail(await api<OrderDetail>(`/commercial/${route}/${detail.order.id}`));await load();}catch(e){setFormError(failure(e));}finally{setBusy(false);}};
   const create=async()=>{
     const items=draft.items.map(line=>{const v=catalog!.variants.find(v=>v.id===line.variantId),p=catalog!.products.find(p=>p.id===v?.productId);return {variantId:line.variantId,quantity:Number(line.quantity),expectedPriceCents:p!.saleCents};});
     const result=await mutate(`/commercial/${mode==='mine'?'my-orders':'orders'}`,{campaignId,requestKey,items,...(mode==='admin'?{...(draft.buyerPersonId?{buyerPersonId:draft.buyerPersonId}:{buyerName:draft.buyerName}),buyerContact:draft.buyerContact}:{})});
@@ -71,7 +71,7 @@ export function CommercialOrders({catalog,campaignId,onInventoryChange,mode='adm
       {canCreate&&<Button variant="primary" disabled={busy} onClick={()=>void open('create')}>{mode==='mine'?'Fazer pedido':'Registrar pedido'}</Button>}
     </div></div>
     {data.canManage&&!campaignId&&<p>Selecione uma campanha para registrar pedidos e acompanhar a produção.</p>}
-    {feedback&&<p className="form-feedback success" role="status">{feedback}</p>}{error&&<p className="form-feedback error" role="alert">{error}<Button onClick={()=>void load()}>Atualizar</Button></p>}
+    <Toast message={feedback}/>{error&&<p className="form-feedback error" role="alert">{error}<Button onClick={()=>void load()}>Atualizar</Button></p>}
     <div className={`commercial-metrics ${mode==='mine'?'buyer-metrics':''}`}><span><strong>{data.summary.total}</strong> pedidos</span><span><strong>{data.summary.paymentPending}</strong> {mode==='mine'?'aguardando pagamento':'pagamentos a conferir'}</span>{mode==='admin'&&<span><strong>{data.summary.review}</strong> em revisão</span>}<span><strong>{data.summary.ready}</strong> {mode==='mine'?'para retirada':'prontos'}</span><span><strong>{data.summary.completed}</strong> {mode==='mine'?'já retirados':'concluídos'}</span>{data.canManage&&<span><strong>{data.summary.refunds}</strong> reembolsos pendentes</span>}</div>
     <details className="commercial-order-filters" open={mode==='admin'?true:undefined}><summary>Filtrar pedidos</summary><div className="commercial-filters form-fields">
       <label>Buscar pedido<input type="search" value={filters.search} onChange={e=>filter({search:e.target.value})} placeholder={mode==='mine'?'Identificador do pedido':'Comprador ou identificador'}/></label>

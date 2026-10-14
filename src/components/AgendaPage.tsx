@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import type { Space } from '../domain/types';
 import { createAvailability, createMeeting, deleteAvailability, getAgendaFoundation, respondMeeting, updateAvailability, updateMeeting } from '../services/agenda';
 import type { AvailabilityBlock, CalendarItem, DepartmentOption, MemberOption, Session } from '../services/agenda';
-import { AccessDeniedState, Badge, Button, EmptyState, ErrorState, Eyebrow, LoadingState } from './primitives';
+import { AccessDeniedState, Badge, Button, Toast, EmptyState, ErrorState, Eyebrow, LoadingState } from './primitives';
 import { AvailabilityExceptions, TimetableImport } from './TimetableImport';
 import { AvailabilityPlanning } from './AvailabilityPlanning';
 import { type ReviewRequest, type MeetingPoll, type OperationalShift } from '../services/agenda-advanced';
@@ -32,7 +32,7 @@ function CalendarEventCard({item,members,spaces,act,feedback,busy}:{feedback:str
   const responseLabel={pending:'Pendente',confirmed:'Confirmado',maybe:'Talvez',declined:'Recusado'} as const;
   return <div className="calendar-event event-meeting">
     {interval}<strong>{item.title}</strong><span>{item.workspace||item.location||'Institucional'}</span>
-    <Badge tone={item.response==='confirmed'?'active':'waiting'}>{item.response?responseLabel[item.response]:'Reunião'}</Badge><Button onClick={()=>setOpen(true)}>Ver reunião</Button><AgendaWorkflow busy={busy} title={item.title} open={open} onClose={()=>setOpen(false)}><p role="status">{feedback}</p><div className="meeting-details"><dl><div><dt>Organização</dt><dd>{item.organizer}</dd></div><div><dt>Local</dt><dd>{item.location||'Não informado'}</dd></div><div><dt>Espaço</dt><dd>{item.workspace||'Institucional'}</dd></div></dl>{item.description&&<p>{item.description}</p>}</div>
+    <Badge tone={item.response==='confirmed'?'active':'waiting'}>{item.response?responseLabel[item.response]:'Reunião'}</Badge><Button onClick={()=>setOpen(true)}>Ver reunião</Button><AgendaWorkflow busy={busy} title={item.title} open={open} onClose={()=>setOpen(false)}>{feedback&&<p role="alert">{feedback}</p>}<div className="meeting-details"><dl><div><dt>Organização</dt><dd>{item.organizer}</dd></div><div><dt>Local</dt><dd>{item.location||'Não informado'}</dd></div><div><dt>Espaço</dt><dd>{item.workspace||'Institucional'}</dd></div></dl>{item.description&&<p>{item.description}</p>}</div>
     {item.response&&<Badge tone={item.response==='confirmed'?'active':item.response==='pending'?'waiting':'neutral'}>{responseLabel[item.response]}</Badge>}
     {item.response&&<div className="response-actions"><Button onClick={()=>void act(()=>respondMeeting(item.id,'confirmed'),'Presença confirmada.')}>Confirmar</Button><Button onClick={()=>void act(()=>respondMeeting(item.id,'maybe'),'Resposta atualizada.')}>Talvez</Button><Button onClick={()=>void act(()=>respondMeeting(item.id,'declined'),'Convite recusado.')}>Recusar</Button></div>}
     {item.canManage&&<details className="meeting-manager"><summary>Gerenciar reunião</summary><form key={item.revision} onSubmit={event=>{event.preventDefault();const data=new FormData(event.currentTarget);void act(()=>updateMeeting(item.id,{expectedRevision:Number(item.revision),title:String(data.get('title')),description:String(data.get('description')||''),location:String(data.get('location')||''),workspaceId:String(data.get('workspaceId')||'')||undefined,startsAt:new Date(String(data.get('startsAt'))).toISOString(),endsAt:new Date(String(data.get('endsAt'))).toISOString(),participantIds:data.getAll('participantIds').map(String)}),'Reunião e convites atualizados.');}}>
@@ -56,7 +56,7 @@ export function AgendaPage({ spaces }:{spaces:Space[]}) {
   const [polls,setPolls]=useState<MeetingPoll[]>([]),[shifts,setShifts]=useState<OperationalShift[]>([]);
   const [availabilityOpen,setAvailabilityOpen]=useState(false),[meetingOpen,setMeetingOpen]=useState(false);
   const [status,setStatus]=useState<'loading'|'ready'|'error'|'denied'>('loading');
-  const [feedback,setFeedback]=useState(''),[saving,setSaving]=useState(false);
+  const [feedback,setFeedback]=useState(''),[confirmation,setConfirmation]=useState(''),[saving,setSaving]=useState(false);
   const [editing,setEditing]=useState<AvailabilityBlock>();
   const [availabilityKind,setAvailabilityKind]=useState<'weekly'|'date'>('weekly');
   const loaded=useRef(false);
@@ -73,7 +73,7 @@ export function AgendaPage({ spaces }:{spaces:Space[]}) {
     }catch(error){if(!loaded.current)setStatus(error instanceof Error&&error.message.toLowerCase().includes('required')?'denied':'error');}
   },[range.from.getTime(),range.to.getTime(),scope,workspaceId]);
   useEffect(()=>{void load();},[load]);
-  const act=async(work:()=>Promise<unknown>,message:string)=>{if(saving)return false;setSaving(true);setFeedback('');try{await work();setFeedback(message);await load();return true;}catch(error){setFeedback(error instanceof Error?error.message:'Não foi possível salvar.');return false;}finally{setSaving(false);}};
+  const act=async(work:()=>Promise<unknown>,message:string)=>{if(saving)return false;setSaving(true);setFeedback('');setConfirmation('');try{await work();setConfirmation(message);await load();return true;}catch(error){setFeedback(error instanceof Error?error.message:'Não foi possível salvar.');return false;}finally{setSaving(false);}};
   const move=(amount:number)=>setAnchor(current=>view==='week'?addDays(current,amount*7):new Date(current.getFullYear(),current.getMonth()+amount,1));
   const calendarDays=useMemo(()=>{
     if(view==='week')return Array.from({length:7},(_,index)=>addDays(range.from,index));
@@ -84,7 +84,7 @@ export function AgendaPage({ spaces }:{spaces:Space[]}) {
   if(status==='loading')return <LoadingState/>;
   if(status==='error')return <ErrorState onRetry={load}/>;
   if(status==='denied')return <AccessDeniedState/>;
-  return <>
+  return <><Toast message={confirmation}/>
     <section className="agenda-heading"><div><Eyebrow>AGENDA · CAECOMP</Eyebrow><h1>Tempo compartilhado,<br/><em>com privacidade.</em></h1><p>Consulte seus compromissos, os calendários autorizados dos espaços e a agenda institucional sem duplicar eventos.</p></div><aside><Eyebrow>SEU CONTEXTO</Eyebrow><strong>{canManage?'Direção e organização':'Participação'}</strong><p>Detalhes particulares nunca aparecem na consulta coletiva.</p></aside></section>
     <section className="calendar-section" aria-labelledby="calendar-title">
       <div className="agenda-controls"><div><Eyebrow>CALENDÁRIO</Eyebrow><h2 id="calendar-title">{range.from.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</h2></div><div className="calendar-switch" role="group" aria-label="Visualização"><Button aria-pressed={view==='week'} onClick={()=>setView('week')}>Semana</Button><Button aria-pressed={view==='month'} onClick={()=>setView('month')}>Mês</Button></div></div>

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { confirmTimetable, previewTimetable, setAvailabilityException, type AvailabilityBlock, type TimetablePreviewRow } from '../services/agenda';
 import { timetableIssues } from '../domain/agenda-input';
-import { Badge, Button } from './primitives';
+import { Badge, Button, Toast } from './primitives';
 import { AgendaSummary, AgendaWorkflow } from './AgendaWorkflow';
 
 const days = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
@@ -13,6 +13,7 @@ export function TimetableImport({ onSaved }: { onSaved: () => Promise<void> }) {
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [confirmation,setConfirmation]=useState('');
   const [open,setOpen]=useState(false);
   const [pdf,setPdf]=useState<File>();
   const [term,setTerm]=useState(''),[validFrom,setValidFrom]=useState(''),[validTo,setValidTo]=useState(''),[reviewed,setReviewed]=useState(false);
@@ -36,7 +37,7 @@ export function TimetableImport({ onSaved }: { onSaved: () => Promise<void> }) {
     {preview && <form className="agenda-form" onSubmit={async event => {
       event.preventDefault();if(issues.length||busy)return;
       setBusy(true); setMessage('');
-      try { await confirmTimetable({ term:term.trim(), validFrom, validTo, confirmed: true, rows: rows.map(row => ({ weekday: row.weekday, startTime: row.startTime ?? '', endTime: row.endTime ?? '' })) }); setMessage('Grade salva. Os horários serão ocupados somente durante o período letivo.'); setPreview(false);setRows([]);setWarnings([]);setReviewed(false); await onSaved(); }
+      try { await confirmTimetable({ term:term.trim(), validFrom, validTo, confirmed: true, rows: rows.map(row => ({ weekday: row.weekday, startTime: row.startTime ?? '', endTime: row.endTime ?? '' })) }); setConfirmation('Grade salva. Os horários serão ocupados somente durante o período letivo.'); setPreview(false);setRows([]);setWarnings([]);setReviewed(false); await onSaved(); }
       catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível salvar.'); }
       finally { setBusy(false); }
     }}><div className="wide-field" role="status">{warnings.map(warning => <p key={warning}>{warning}</p>)}</div>
@@ -47,7 +48,7 @@ export function TimetableImport({ onSaved }: { onSaved: () => Promise<void> }) {
       <fieldset className="participant-picker"><legend>Revisão da grade</legend><label className="inline-check"><input type="checkbox" required disabled={busy} checked={reviewed} onChange={e=>setReviewed(e.target.checked)}/><span>Conferi todos os dias e horários. Ao reimportar o mesmo período, a nova grade substitui a grade importada anterior; blocos manuais são preservados.</span></label></fieldset>
       {issues.length>0&&<div className="validation-summary wide-field" role="status"><strong>Antes de concluir:</strong><ul>{issues.map(issue=><li key={issue}>{issue}</li>)}</ul></div>}<Button variant="primary" disabled={busy || issues.length>0}>{busy ? 'Salvando…' : 'Confirmar e salvar grade'}</Button>
     </form>}
-    {message && <p className="form-feedback" role="status">{message}</p>}
+    <Toast message={confirmation}/>{message && <p className="form-feedback" role="status">{message}</p>}
   </AgendaWorkflow></>;
 }
 

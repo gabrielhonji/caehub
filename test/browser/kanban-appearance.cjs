@@ -16,7 +16,7 @@ async function assets(route,root){const url=new URL(route.request().url());let f
  if(u.pathname==='/api/me')return route.fulfill({json:session});
  if(u.pathname==='/api/foundation'){if(refreshDelay)await new Promise(r=>setTimeout(r,1500));return route.fulfill({json:{workspaces:[space],tasks:[],boards:[board]}});}
  if(u.pathname.startsWith('/api/workspaces/'))return route.fulfill({json:{...space,canManage:true,readOnly:false,participants:[]}});
- if(u.pathname.startsWith('/api/cards/'))return route.fulfill({json:{id:uuid(6),title:'Tarefa fictícia',description:'Exemplo',priority:'normal',tags:[],helpers:[],eligibleParticipants:[],checklist:[],comments:[],activities:[],permissions:{edit:true,manage:true},currentMembershipId:uuid(1)}});
+ if(u.pathname.startsWith('/api/cards/'))return route.fulfill({json:{id:uuid(6),title:'Tarefa fictícia',description:'Exemplo',priority:'normal',tags:[],helpers:[],eligibleParticipants:[],checklist:[],comments:[],activities:Array.from({length:30},(_,i)=>({id:uuid(100+i),actor:'Pessoa fictícia',action:'Atualização fictícia'})),permissions:{edit:true,manage:true},currentMembershipId:uuid(1)}});
  return route.fulfill({json:[]});});
  await page.goto(`https://caehub.test/#/espacos/${space.id}`);
  await page.getByRole('button',{name:'Editar coluna Concluído'}).click();
@@ -25,8 +25,8 @@ async function assets(route,root){const url=new URL(route.request().url());let f
  assert.equal(await page.locator('.kanban-forms .kanban-navigation').count(),1);
  await page.locator('.card-detail-trigger').click();await page.getByRole('dialog').waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'hidden'});
  refreshDelay=true;const source=await page.locator('.card-upper').boundingBox(),target=await page.locator('.board-column').nth(1).boundingBox();await page.mouse.move(source.x+50,source.y+15);await page.mouse.down();await page.mouse.move(target.x+80,target.y+80,{steps:10});await page.mouse.up();await page.getByRole('status').filter({hasText:'Cartão movido.'}).waitFor();assert.equal(moves,1);assert.equal(await page.getByRole('dialog').count(),0);assert.equal(await page.getByRole('button',{name:'Criar cartão',exact:true}).isEnabled(),true);
- await page.getByRole('button',{name:'Editar Tarefa fictícia'}).click();await page.getByLabel('Mover Tarefa fictícia').waitFor();await page.keyboard.press('Escape');
- await page.getByRole('button',{name:'Quero ajudar em Tarefa fictícia'}).click();await page.getByRole('button',{name:'Deixar de ser auxiliar em Tarefa fictícia'}).waitFor();
+ await page.getByRole('button',{name:'Editar Tarefa fictícia'}).click();await page.getByLabel('Mover Tarefa fictícia').waitFor();assert.equal(await page.locator('.activity-list li').count(),20);const field=page.getByLabel('Mover Tarefa fictícia');assert.equal(await field.evaluate(e=>getComputedStyle(e).minHeight),'44px');await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Quero ajudar em Tarefa fictícia'}).click();const helper=page.getByRole('button',{name:'Deixar de ser auxiliar em Tarefa fictícia'});await helper.waitFor();assert.equal(await helper.textContent(),'🤝');await page.mouse.move(1,1);assert.equal(await helper.evaluate(e=>getComputedStyle(e).borderTopColor),'rgba(0, 0, 0, 0)');const toast=page.locator('.action-toast');assert.equal(await toast.evaluate(e=>e.matches(':popover-open')),true);
  for(const width of [1440,390]){await page.setViewportSize({width,height:900});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:`/screenshots/ux14-${width}.png`,fullPage:true});}
  assert.deepEqual(errors,[]);console.log('PASS: unclipped column dialog, compact controls, upper-card mouse drag, edit-only movement, helper toggle and immediate confirmation before refresh; desktop/mobile.');
  }finally{await browser.close();}

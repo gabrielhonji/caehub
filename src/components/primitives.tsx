@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useId, useRef } from 'react';
+import { forwardRef, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
@@ -44,4 +44,12 @@ export function Dialog({ title, children, onClose, closeLabel = 'Fechar', return
     };
   }, [open]);
   return createPortal(<dialog ref={overlay} className="dialog-backdrop" aria-labelledby={titleId} onCancel={event=>{event.preventDefault();close.current();}} onPointerDown={(event) => { if (event.target === event.currentTarget) close.current(); }}><section className={`dialog ${size==='wide'?'dialog-wide':''}`} onPointerDown={event => event.stopPropagation()}><header><h2 id={titleId}>{title}</h2><Button ref={closeButton} onClick={onClose} aria-label="Fechar diálogo">{closeLabel} <span aria-hidden="true">×</span></Button></header><div className="dialog-content">{children}</div></section></dialog>,document.body);
+}
+
+export function Toast({message}:{message:string}) {
+  const element=useRef<HTMLDivElement>(null);
+  const [visible,setVisible]=useState(false);
+  useEffect(()=>{setVisible(Boolean(message));if(!message)return;const timer=setTimeout(()=>setVisible(false),5500);return()=>clearTimeout(timer);},[message]);
+  useEffect(()=>{const node=element.current;if(visible&&node&&typeof node.showPopover==='function')node.showPopover();},[visible,message]);
+  return visible&&message?createPortal(<div ref={element} popover="manual" className="action-toast" role="status" aria-live="polite" aria-atomic="true">✓ {message}</div>,document.body):null;
 }

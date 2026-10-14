@@ -1,5 +1,15 @@
 # Coordenação de agentes
 
+## UX-15 — detalhes Kanban e toast seletivo, 14/10/2026
+
+Divisória do cabeçalho removida antes do contexto; auxiliar ✋/🤝 centralizado,
+borda apenas no hover/foco; selects de movimento/responsável padronizados.
+Histórico exibe os 20 eventos recentes sem apagar dados ou alterar servidor.
+Toast compartilhado em confirmações de cartões, espaço, Agenda/grade e
+Comercial; erros e instruções permanecem contextuais. Popover nativo deixa
+a confirmação acima de diálogos sem capturar foco; some após 5,5 segundos.
+Build e navegador focado desktop/mobile aprovados com dados fictícios.
+
 ## Publicação UX-14 — 14/10/2026
 
 Usuário autorizou publicação deste batch e deploy direto após batches validados

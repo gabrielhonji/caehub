@@ -16,7 +16,7 @@ function Card({card,busy,writable,onOpen,onAction,onDrag,onDragMove,onDragEnd}:{
       <button className="card-detail-trigger" type="button" onClick={()=>onOpen(card)}><h3>{card.title}</h3><p>{card.summary}</p></button>
     </div>
     <footer><span>{card.assignee}</span><span>{card.helpers+Number(helping)-Number(Boolean(card.isHelper))} auxiliares</span></footer>
-    {writable&&<div className="card-quick-actions"><Button disabled={busy} aria-pressed={helping} aria-label={helping?`Deixar de ser auxiliar em ${card.title}`:`Quero ajudar em ${card.title}`} title={helping?'Clique para sair dos auxiliares':'Clique para participar como auxiliar'} onClick={()=>void onAction(async()=>{if(helping)await leaveCard(card.id);else await volunteer(card.id);setHelping(!helping);},helping?'Você deixou de ser auxiliar neste cartão.':'Você agora participa como auxiliar neste cartão.')}><span aria-hidden="true">✋</span></Button></div>}
+    {writable&&<div className="card-quick-actions"><Button disabled={busy} aria-pressed={helping} aria-label={helping?`Deixar de ser auxiliar em ${card.title}`:`Quero ajudar em ${card.title}`} title={helping?'Clique para sair dos auxiliares':'Clique para participar como auxiliar'} onClick={()=>void onAction(async()=>{if(helping)await leaveCard(card.id);else await volunteer(card.id);setHelping(!helping);},helping?'Você deixou de ser auxiliar neste cartão.':'Você agora participa como auxiliar neste cartão.')}><span aria-hidden="true">{helping?'🤝':'✋'}</span></Button></div>}
   </article>;
 }
 
