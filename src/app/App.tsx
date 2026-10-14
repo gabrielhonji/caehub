@@ -1,19 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
+import { deferred } from '../components/deferred';
 import type { CSSProperties, FormEvent, ReactNode } from 'react';
 import { AppShell } from '../components/AppShell';
 import { KanbanBoard } from '../components/KanbanBoard';
 import { Badge, Button, Toast, Dialog, EmptyState, ErrorState, Eyebrow, LoadingState } from '../components/primitives';
 import { SpaceSummary } from '../components/SpaceSummary';
 import { WorkspacePeople } from '../components/WorkspacePeople';
-import { AgendaPage as FunctionalAgendaPage } from '../components/AgendaPage';
-import { CommercialPage } from "../components/CommercialPage";
-import { CommercialShop } from '../components/CommercialShop';
-import { BuyerOrdersPage } from '../components/BuyerOrdersPage';
 import { DepartmentsPage } from '../components/DepartmentsPage';
 import type { Board, BoardCard, Space, TaskPreview } from '../domain/types';
 import { api, addChecklistItem, addColumn, addComment, createCard, decideTransfer, deleteColumn, getArchivedCards, getCardDetail, getFoundation, getTaskPreviews, moveCard, renameColumn, requestTransfer, toggleChecklistItem, updateCard, volunteer, leaveCard } from '../services/spaces';
 import type { ArchivedCardDto, CardDetailDto } from '../services/spaces';
 import { readTheme, saveTheme } from '../services/theme';
+
+const FunctionalAgendaPage=deferred<{spaces:Space[]}>(()=>import('../components/AgendaPage').then(module=>({default:module.AgendaPage})));
+const CommercialPage=deferred<object>(()=>import('../components/CommercialPage').then(module=>({default:module.CommercialPage})));
+const CommercialShop=deferred<object>(()=>import('../components/CommercialShop').then(module=>({default:module.CommercialShop})));
+const BuyerOrdersPage=deferred<{orderId?:string}>(()=>import('../components/BuyerOrdersPage').then(module=>({default:module.BuyerOrdersPage})));
 
 type Status = 'loading' | 'ready' | 'error';
 type FoundationData = { status: Status; spaces: Space[]; tasks: TaskPreview[]; boards: Board[]; refreshError: boolean; refreshing: boolean; load: () => Promise<void> };

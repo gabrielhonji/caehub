@@ -1,5 +1,27 @@
 # Coordenação de agentes
 
+## PERF-12 — auditoria de performance, 14/10/2026
+
+Doing: Agente 12 / Codex. Base main limpa 1.14.6. Investigar carregamento,
+requisições e atualização por ação em Institucional, Agenda e Comercial;
+reserva App, main, services/spaces, components/deferred, testes de performance e este registro. Backend/queries
+somente após baseline e ampliação explícita dos caminhos. Aceite: comparação
+reproduzível, integridade/autorização preservadas, gate completo antes de
+publicação. Pedido atual autoriza commit/push/main/deploy; nenhum efeito
+financeiro real ou alteração de infraestrutura. Sem reservas concorrentes
+ativas identificadas nos caminhos iniciais.
+
+Incremento 1.14.7 implementado: código por rota e uma leitura inicial de sessão,
+renovada na entrada/retry; backend/autorização/CSRF/regras preservados. Cinco
+amostras comparáveis: Kanban 233→203 ms, APIs 5→4 e JS 407,8→284,0 kB;
+Agenda 279→256 ms; catálogo 154→142 ms. Criação 131→126 ms não comprova ganho.
+43/43 testes SQL/servidor, builds/tipos, audit zero, browser desktop/mobile/temas,
+retry/401/chunk e regressão Kanban aprovados. Teste antigo de comentário agora
+procura o toast global do UX-15, sem remover asserções. Portal com Keycloak/MFA
+e BFF reais da stack dev aprovado; produção autenticada não exercitada.
+Diagnóstico e reprodução: relatório PERF-12 em coordination/reports do Honji.
+Gate aprovado; publicação oficial autorizada em preparação.
+
 ## UX-15 — detalhes Kanban e toast seletivo, 14/10/2026
 
 Divisória do cabeçalho removida antes do contexto; auxiliar ✋/🤝 centralizado,

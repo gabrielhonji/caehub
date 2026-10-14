@@ -14,7 +14,9 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 export type SessionInfo={subject:string;displayName:string;csrfToken?:string;projectAccess?:boolean;institutionalAccess?:boolean;buyerAccess?:boolean;membership?:{id:string;role:string;status?:string}|null;owner:boolean;debugView?:{available:boolean;mode:'real'|'global_admin'|'caecomp_admin'|'events_director'|'events_member'|'products_member'|'xii_admin'|'xii_secretary_member'|'xii_sports_member'}};
 let sessionPromise:Promise<SessionInfo>|undefined;
-export function getSessionInfo(){return sessionPromise??=api<SessionInfo>('/me').catch(error=>{sessionPromise=undefined;throw error;});}
+// Entry refreshes on every internal entry/retry; consumers share that result.
+// Backend authorization still runs for every protected request.
+export function getSessionInfo(refresh=false){if(refresh)sessionPromise=undefined;return sessionPromise??=api<SessionInfo>('/me').catch(error=>{sessionPromise=undefined;throw error;});}
 async function sessionToken(){return String((await getSessionInfo()).csrfToken??'');}
 type WorkspaceDto = { id:string;name:string;description:string|null;department?:string;departmentId?:string;participantCount?:number;boardCount?:number;participants?:unknown[] };
 export type WorkspaceDetail={id:string;name:string;description:string|null;department?:string;departmentId?:string|null;canManage:boolean;readOnly:boolean;centralHierarchy:boolean;participants:Array<{membershipId:string;displayName:string;kind:'director'|'member'|'participant'}>};

@@ -36,7 +36,7 @@ try{
  const dialog=page.getByRole('dialog');await dialog.getByLabel('Novo comentário').fill('Comentário fictício único');let comments=0;
  page.on('request',r=>{if(r.method()==='POST'&&r.url().endsWith('/comments'))comments++;});
  await dialog.getByLabel('Novo comentário').evaluate(input=>{for(let i=0;i<6;i++)input.form.requestSubmit();});
- await dialog.getByRole('status').filter({hasText:'Comentário publicado.'}).waitFor();assert.equal(comments,1);await expect(dialog.getByLabel('Novo comentário')).toHaveValue('');
+ await page.getByRole('status').filter({hasText:'Comentário publicado.'}).waitFor();assert.equal(comments,1);await expect(dialog.getByLabel('Novo comentário')).toHaveValue('');
  await page.keyboard.press('Escape');
  await dialog.waitFor({state:'hidden'});await expect(trigger).toBeFocused();
  const target=page.locator('.board-column').filter({has:page.getByRole('heading',{name:'Planejado',exact:true})});
