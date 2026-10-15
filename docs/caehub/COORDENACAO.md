@@ -18,6 +18,15 @@ sugestões, fórmulas/metas e limites de acesso. Build TypeScript/Vite aprovado.
 Navegador com API/MySQL isolados e identidades fictícias cobre os fluxos
 alterados; não representa sessão pessoal autenticada de produção.
 
+Publicação concluída: fonte `78f4b5b` enviada a origin/honji; imagem oficial
+`honji/caehub-gabriel:1.15.0`, release `15102026-153655`, com proveniência
+confirmada pelo build-app. Smoke da imagem com migração em MySQL isolado:
+health/raiz 200 e novas APIs privadas negadas. Deploy oficial Healthy;
+HTTPS confirmou 1.15.0 e reuniões/indicadores anônimos 401. Navegador real
+aprovou desktop/mobile, ambos os temas e comprador externo com dados fictícios.
+Sem sessão pessoal ou transação financeira real em produção. Custos históricos
+ausentes permanecem desconhecidos. Reservas deste incremento liberadas.
+
 ## NAV-16 — destino da Área interna, 15/10/2026
 
 Concluído por Codex `/root`, a pedido de Gabriel. Escopo:
