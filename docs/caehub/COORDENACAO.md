@@ -1,5 +1,24 @@
 # Coordenação de agentes
 
+## UX-20 — retorno humano e foco móvel, 15/10/2026
+
+Pedido atual: corrigir bordas, composição Home/tarefas, alinhamentos e gaps da
+Agenda, estados ocupados/disclosures, controles Kanban e refazer pedidos
+vencidos com conferência dos itens. Reavaliar fluxo desktop e depois móvel.
+Base 5217a66 limpa. Sem alteração de autorização, schema ou infraestrutura.
+
+1.15.2 implementada. Revisão encontrou calendário de 911 px em área de 351 px
+no celular e CSS ainda reservando seis semanas; corrigidos por semana vertical,
+mês compacto com detalhe do dia e linhas naturais. Home móvel compacta e
+limita prévia a cinco tarefas com acesso à lista completa.
+Gate: 46/46 testes servidor, TypeScript/Vite e Chromium com API/MySQL reais
+isolados e dados fictícios. Cobertura: foco/bordas/hierarquia, controles Kanban,
+alinhamento/ênfase dos intervalos, disclosure e repetição parcial com confirmação
+e um único novo pedido. Percurso desktop e 390/360/320, dois temas, semana/mês/dia
+e menu. Sem compra, sessão pessoal ou movimentação financeira em produção.
+Resultado de publicação registrado na conclusão.
+
+
 ## UX-19 — fechamento de navegação, 15/10/2026
 
 Pedido atual aprova as duas análises de navegação. Escopo: Home, shell,

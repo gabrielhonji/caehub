@@ -3,7 +3,7 @@ import { money } from '../services/commercial';
 import { actionLabels, buyerOrderLabel, newRequestKey, nextOrderStep, orderEventLabel, orderLabels, orderTime, type OrderDetail } from '../services/commercial-orders';
 import { Badge, Button } from './primitives';
 
-export function CommercialOrderDetail({detail,busy,refresh,onAction}:{detail:OrderDetail;busy:boolean;refresh:()=>void;onAction:(body:{action:string;note:string;version:number;requestKey:string;incidentId?:string})=>Promise<boolean>}){
+export function CommercialOrderDetail({detail,busy,refresh,onAction,onRepeat}:{detail:OrderDetail;busy:boolean;refresh:()=>void;onRepeat?:()=>void;onAction:(body:{action:string;note:string;version:number;requestKey:string;incidentId?:string})=>Promise<boolean>}){
   const [action,setAction]=useState(''),[note,setNote]=useState(''),[incidentId,setIncidentId]=useState(''),[requestKey,setRequestKey]=useState(newRequestKey);
   const [ack,setAck]=useState(false);const o=detail.order;
   const choose=(action:string,id='')=>{setAction(action);setIncidentId(id);setAck(false);setRequestKey(newRequestKey());};
@@ -12,7 +12,7 @@ export function CommercialOrderDetail({detail,busy,refresh,onAction}:{detail:Ord
   return <>
     <p>{o.campaignName}</p><p className="commercial-order-id">Pedido {o.id}</p><h3>{o.buyer_name}</h3>{o.buyer_contact&&<p>{o.buyer_contact}</p>}
     <div className="card-actions"><Badge>{detail.canManage?orderLabels[o.status]:buyerOrderLabel({status:o.status,paymentStatus:o.payment_status,deliveryStatus:o.delivery_status})}</Badge><Badge>{!detail.canManage&&o.payment_status==='paid'?'Pagamento confirmado':orderLabels[o.payment_status]}</Badge>{detail.canManage&&<Badge>{orderLabels[o.delivery_status]}</Badge>}</div>
-    <p className="commercial-next-step" role="status">{nextOrderStep(detail)}</p>
+    <p className="commercial-next-step" role="status">{nextOrderStep(detail)}</p>{o.status==='expired'&&onRepeat&&<Button variant="primary" onClick={onRepeat}>Refazer pedido</Button>}
     <p>Total registrado: <strong>{money(Number(o.total_cents))}</strong></p>{o.paid_at&&<p>Pagamento conferido em {orderTime(o.paid_at)}.</p>}{o.collected_at&&<p>Retirada em {orderTime(o.collected_at)}.</p>}
     <ul className="commercial-order-items">{detail.items.map(i=><li key={i.id}><strong>{i.product_name} · {i.variant_name}</strong><span>{i.quantity} × {money(i.unit_price_cents)} · {i.fulfillment==='preorder'?'Sua encomenda':'Produto físico'}</span>{detail.canManage?<span>{orderLabels[i.production_status]} · {orderLabels[i.allocation_status]} · {i.allocated_quantity}/{i.quantity} unidades</span>:<span>{o.delivery_status==='collected'?`${i.quantity} já retirados`:o.delivery_status==='ready'?`${i.quantity} para retirada`:i.production_status==='in_production'?'Em produção':i.production_status==='waiting'&&o.payment_status==='paid'?'Aguardando produção':null}</span>}{i.expires_at&&i.allocation_status==='provisional'&&<span>Reserva até {orderTime(i.expires_at)}</span>}</li>)}</ul>
     {o.payment_status!=='paid'&&!['cancelled','completed','expired'].includes(o.status)&&<><h3>Pagamento Pix</h3><p className="commercial-pix">{detail.pixInstructions||'Instruções Pix ainda não configuradas. Consulte o responsável pela campanha.'}</p><p>Comprovante enviado não confirma pagamento. Aguarde a conferência da equipe.</p></>}

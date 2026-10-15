@@ -19,7 +19,8 @@
 .meeting-date{font-size:13px;line-height:1.5}.calendar-event-time:has(.meeting-date){display:block}
 .meeting-list-management{margin-top:10px}.meeting-list-management>summary{font-size:12px;color:var(--muted)}
 .agenda-workflows .agenda-summary{min-height:0}.agenda-summary .summary-actions{margin-top:16px}
-#content:focus{outline:2px solid var(--accent);outline-offset:4px}
+#content:focus:not(:focus-visible){outline:none}
+#content:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
 @media(max-width:720px){
 .site-header nav{max-width:100%;overflow-x:auto;justify-content:flex-start;gap:6px;padding:0 0 6px}
 .site-header nav a{padding-left:8px;padding-right:8px;flex-shrink:0;min-height:44px}
@@ -36,4 +37,56 @@
 .header-inner nav#caehub-navigation[data-open=true]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .header-inner nav#caehub-navigation a{white-space:normal;text-align:center;min-height:44px;border:1px solid var(--line);border-radius:8px}
 .header-inner nav#caehub-navigation .home-link{width:auto}
+}
+
+/* UX-20: consistent sections and human-sized actions. */
+.home-agenda{display:block;padding:24px;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin-bottom:24px}
+.home-agenda>header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.home-agenda-actions{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+.home-agenda ul{display:grid;gap:12px;margin-top:18px}.home-agenda li{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px;background:var(--bg);border:1px solid var(--line);border-radius:10px}.home-agenda li>div{display:grid;gap:6px;min-width:0}.home-agenda li .button{display:inline-flex;flex-shrink:0}
+.home-agenda-empty{display:flex;gap:12px;align-items:center;color:var(--muted);margin-top:12px}.home-agenda-empty>span{display:grid;place-items:center;width:36px;height:36px;background:var(--soft);border-radius:50%;color:var(--accent)}
+.organization-strip li{border:1px solid var(--line);border-radius:9px}
+.task-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.task-overview>div{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:16px}.task-overview strong{font-size:28px;line-height:1;color:var(--accent)}.task-overview span{font-size:13px;color:var(--muted)}
+.agenda-workflows{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:18px}.agenda-workflows>div{display:contents;min-width:0}.agenda-workflows>div[hidden]{display:none}
+.agenda-section-heading>div:has(>.eyebrow){display:block;min-width:0}
+.agenda-section-heading>div>.eyebrow{display:block}
+.agenda-dialog .occupancy-slots article{display:flex;flex-direction:column;gap:10px;border-radius:10px}.occupancy-slots article>ul{flex:1;margin:0;padding-left:18px}.occupancy-slots article>.button{margin-top:auto;width:100%}
+.occupancy-slots article[data-allbusy=true]{background:color-mix(in srgb,var(--muted) 9%,var(--surface));color:var(--muted);opacity:.65}
+.timetable-pdf-help>summary{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:9px;background:var(--soft);list-style:none}.timetable-pdf-help>summary::after{content:'▸';margin-left:auto}.timetable-pdf-help[open]>summary::after{content:'▾'}.timetable-pdf-help>summary::-webkit-details-marker{display:none}
+.space-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.space-options{position:relative}.space-options>summary{cursor:pointer;min-height:44px;display:flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:8px}.space-options>summary::after{content:'▾'}.space-options[open]>summary::after{content:'▴'}.space-options>.button{position:absolute;right:0;top:100%;z-index:3;min-width:150px;background:var(--surface);box-shadow:0 8px 24px #0002}
+.reorder-review ul{padding-left:20px}.reorder-changes{padding:16px;background:var(--soft);border:1px solid var(--line);border-radius:10px}.reorder-review .form-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}.reorder-review .form-actions .button{min-height:44px}
+@media(max-width:720px){
+.home-agenda{padding:18px}.home-agenda-actions{width:100%;margin:0}.home-agenda-actions .button{flex:1}.home-agenda li{align-items:stretch;flex-direction:column}.home-agenda li .button{justify-content:center}
+.task-overview{gap:8px}.task-overview>div{padding:12px 8px;flex-direction:column;align-items:flex-start;gap:8px}.task-overview strong{font-size:25px}.task-overview span{font-size:12px}
+.board-heading-tools{align-items:flex-start;gap:14px;flex-direction:column}.space-tools{width:100%;justify-content:flex-start}.space-tools>.button{flex:1}.space-options{flex-basis:100%}.space-options>summary{justify-content:space-between}.space-options>.button{position:static;width:100%;margin-top:8px}
+}
+.calendar-day-open,.calendar-day-empty{display:none}
+@media(max-width:720px){
+.calendar-scroll{overflow:visible}.calendar-section .functional-calendar{min-width:0;grid-template-columns:minmax(0,1fr);gap:12px;background:transparent;border:0}
+.functional-calendar:not(.functional-month) .functional-day{min-height:0;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:14px}
+.functional-calendar:not(.functional-month) .functional-day>header{display:flex;gap:10px;justify-content:flex-start;margin-bottom:8px}
+.functional-calendar:not(.functional-month) .calendar-day-empty{display:block;margin:4px 0;color:var(--muted);font-size:12px}
+.calendar-section .functional-calendar.functional-month{grid-template-columns:repeat(7,minmax(0,1fr));gap:0;border:1px solid var(--line);background:var(--surface)}
+.functional-month .functional-day{padding:2px;min-height:88px;border-bottom:1px solid var(--line);min-width:0}
+.functional-month .functional-day>header{display:grid;justify-items:center;gap:2px;margin:2px 0;font-size:10px}
+.functional-month .functional-day>header strong{font-size:13px}
+.functional-month .calendar-events{display:none}
+.functional-month .calendar-day-open{display:flex;align-items:center;justify-content:center;min-height:44px;width:100%;padding:0;min-width:0;border:0;background:transparent;font-size:13px}
+.functional-month .calendar-day-open:focus-visible{outline-offset:-2px}
+.agenda-dialog,.dialog-content,.dialog-content form,.dialog-content fieldset{min-width:0}
+.buyer-order-card footer{display:flex;flex-wrap:wrap;gap:12px}.buyer-order-card footer>div{flex-basis:100%}.buyer-order-card footer>.button{flex:1;white-space:normal}
+}
+@media(max-width:380px){.calendar-scroll:has(.functional-month){max-width:none;margin-inline:calc((100vw - 100%)/-2)}.functional-month .functional-day{padding:0}}
+@media(max-width:720px){
+.calendar-section .functional-calendar.functional-month{grid-auto-rows:minmax(88px,auto)}
+.functional-month .functional-day>header{padding-bottom:4px}
+.overview{grid-template-columns:repeat(3,minmax(0,1fr))}.overview>div{min-height:140px;padding:14px 10px;border-bottom:0;border-right:1px solid var(--line)}.overview>div:last-child{border-right:0}
+.overview .eyebrow{font-size:9px;letter-spacing:.6px;min-height:28px;white-space:normal}.overview strong{font-size:32px;margin-top:10px}.overview>div>span:last-child{font-size:11px}
+}
+@media(max-width:720px){
+.calendar-section .agenda-controls{flex-direction:row;align-items:center;gap:8px}
+.calendar-section .agenda-controls>div:first-child{min-width:0;flex:1}.calendar-section .agenda-controls h2{font-size:clamp(18px,5vw,22px);letter-spacing:-.5px;text-transform:none}
+.calendar-section .calendar-switch{flex-shrink:0}.calendar-section .calendar-switch .button{padding:8px;min-width:44px}
+.calendar-section .calendar-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:12px}.calendar-section .scope-controls{flex:1;min-width:130px}.calendar-section .calendar-navigation{width:auto;gap:6px;margin-left:auto}.calendar-section .calendar-navigation .button{min-width:44px;padding:8px}
 }

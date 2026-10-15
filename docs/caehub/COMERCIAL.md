@@ -1,5 +1,18 @@
 # Comercial — campanhas, catálogo e inventário
 
+## Refazer reserva vencida — 1.15.2
+
+Comprador pode preparar novamente seu próprio pedido expirado. Consulta o
+detalhe protegido existente e o catálogo atual; não reativa o pedido antigo.
+A conferência informa itens indisponíveis, encomendas encerradas, redução de
+quantidade pelo estoque e mudanças de preço. Prosseguir com os itens restantes
+exige ação explícita; sem itens disponíveis ou com campanha encerrada não
+permite continuar. Registro final cria um novo pedido pela API existente,
+com preços esperados atuais e chave de reenvio preservada para o mesmo payload.
+O servidor continua validando comprador, campanha, etapa, preço e saldo.
+Preparação não reserva estoque e não executa pagamento.
+
+
 ## Comprador externo — Agente 08/D-62
 
 Conta Honji externa criada pelo Google pode comprar e consultar somente seus

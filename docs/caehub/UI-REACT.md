@@ -1,5 +1,21 @@
 # UI React — UI-001
 
+## Refinamento humano e móvel — 1.15.2
+
+Foco por teclado preservado; clicar no conteúdo não desenha contorno da página.
+Bordas de cards independem das divisórias de listas. Home reúne próximas
+reuniões e ações explícitas; tarefas exibem indicadores em blocos.
+Títulos de seção são blocos separados das barras de controles; cards da
+Agenda compartilham gap, disclosures indicam aberto/fechado e horários com
+todos ocupados têm menor ênfase, sem retirar a possibilidade de convocação.
+Novo cartão destacado precede Arquivados; Nova coluna fica em Opções do espaço.
+No celular, semana é lista vertical; mês ocupa sete colunas na largura disponível
+e abre compromissos do dia em Dialog. Grid usa somente as semanas necessárias,
+sem linha vazia reservada pelo CSS. Revisão inclui 390/360/320 px e dois temas.
+RepeatOrder coordena conferência/repetição, reutilizando CommercialOrderForm e
+Dialog; a regra pura de seleção fica em domain/reorder, sem novo endpoint.
+
+
 ## Continuidade de navegação — 1.15.1
 
 Agenda usa query no hash para aba, visualização, data e escopo; tarefas preservam
