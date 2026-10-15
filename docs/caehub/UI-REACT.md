@@ -147,3 +147,20 @@ Não mostra alocação/estoque global como quantidade comprada. Na retirada, ess
 pedidos precedem a vitrine física. Troca de campanha com seleção pede decisão
 explícita sem perder itens. Notificações de pedido levam ao detalhe pessoal;
 a API revalida a titularidade, inclusive no link direto.
+
+## UX-16 — tarefas, audiência, planejamento e finanças
+
+AgendaTimeFields compartilha início digitável e duração (1h, 1h30, 2h, 3h ou
+fim específico) entre reuniões, votações, disponibilidade e turnos. AgendaAudience
+consulta participantes do espaço autorizado, seleciona sua equipe e inclui os
+cargos institucionais previstos, preservando a revisão de convidados existentes.
+MeetingInbox separa reuniões do calendário, permite consultar respostas e exige
+confirmação no encerramento. PollBallot separa horários de nenhuma opção funciona
+e oferece observação/alternativa. AvailabilityPlanning reaproveita intervalo e
+participantes na convocação. CommercialAnalytics é o painel de números, metas e
+ponto de equilíbrio, sem misturar acesso ao catálogo com acesso financeiro.
+
+Tarefas mostram prioridade e contagem, mantêm título flexível e oferecem volta
+ou abertura do cartão no espaço. Espaço único abre diretamente com quadro antes
+do contexto. Notificações têm destinos e ação compacta de leitura. Meus pedidos
+é o destino único para acompanhamento, inclusive para comprador externo.

@@ -133,3 +133,34 @@ demais convidados começam `pending`. Nenhum canal externo foi introduzido.
 As rotas `/acesso`, `/auth/login`, `/auth/callback` e `/auth/logout` implementam o portão Honji. O cookie de sessão é Secure, HttpOnly, SameSite=Lax e não contém tokens; identificadores de sessão são armazenados somente como hash. Mutações exigem origem exata e token CSRF da sessão. Client secrets permanecem fora do repositório e da imagem.
 
 Cada requisição protegida continua exigindo uma decisão central atual de `project.access`. Apenas o token técnico de client credentials é reaproveitado até pouco antes de expirar; decisões de usuário não são armazenadas em cache. As rotas `foundation` reduzem o número de travessias dessa fronteira sem afrouxar revogação ou autorização contextual.
+
+## UX-16 — reuniões, disponibilidade e indicadores (15/10/2026)
+
+- `GET /api/meetings?archived=true|false`: reuniões legíveis no contexto atual,
+  inclusive fora do mês visível. Justificativas de terceiros só são projetadas
+  para organização/administração autorizada; a pessoa vê a própria resposta.
+- `POST /api/meetings/:id/archive`, `{expectedRevision}`: encerra a reunião,
+  preserva histórico, avisa convidados e libera ocupação. Exige organizador ou
+  administrador com permissão contextual; revisão antiga retorna 409.
+- Resposta `maybe`/`declined` exige `justification` (até 1000 caracteres).
+  Nova confirmação limpa a justificativa; reagendamento limpa respostas antigas.
+- Voto aceita `suggestion: {note?, startsAt?, endsAt?}` quando `noneWorks=true`;
+  horário alternativo exige os dois limites e término posterior. Nenhuma opção
+  funciona é exclusiva; sugestões são privadas à pessoa e ao organizador.
+- Consulta semanal usa limites reais de bloqueios, reuniões e turnos, mescla
+  intervalos contíguos iguais por dia e filtra pela duração mínima solicitada.
+  Continua projetando somente estado livre/ocupado/desconhecido, sem notas.
+- Revisões novas guardam fingerprint da disponibilidade para reconhecer
+  alterações imediatas, exclusões e exceções; revisões legadas usam auditoria.
+- `GET /api/commercial/analytics?campaignId=UUID`: leitura permitida a membros
+  ativos de Produtos/Financeiro e administradores institucionais existentes.
+  Não retorna dados de compradores. Pagamentos confirmados excluem cancelamentos
+  e reembolsos; custo de item é congelado na criação, sem reprecificar histórico.
+- `PUT /api/commercial/analytics/:id`: `{fixedCostCents, revenueGoalCents,
+  costBudgetCents, profitGoalCents, revision}`; valores inteiros não negativos
+  ou null. Somente direções de Produtos/Financeiro e administradores; 409 em
+  revisão obsoleta. Não amplia poderes sobre catálogo, compras ou usuários.
+
+Histórico sem custo permanece desconhecido. Resultado exibido é estimado, com
+custos fixos informados; ponto de equilíbrio por produto é cenário exclusivo
+baseado em preço/custo atuais. Quantidades entre cenários não são somáveis.

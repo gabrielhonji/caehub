@@ -1,0 +1,11 @@
+import {buildApp} from '../../src/server/app.js';
+import {DevelopmentIdentityGateway} from '../../src/server/auth.js';
+import {agendaFixture} from '../../src/server/agenda-test-fixture.js';
+if(process.env.NODE_ENV!=='development')throw new Error('Disposable development fixture only');
+const f=await agendaFixture();
+await f.service.manageWorkspace(f.actors.owner,'1a4e0bd0-5f4a-4d10-8000-000000000201',{addMembershipId:f.ids.member});
+await f.apps.owner.listen({host:'0.0.0.0',port:8080});
+await f.apps.member.listen({host:'0.0.0.0',port:8081});
+const buyer=buildApp(f.service,new DevelopmentIdentityGateway({subject:'ux16-external-fixture',displayName:'Comprador externo fictício',projectAccess:false,accountAccess:true,buyerAccess:true,owner:false}));
+await buyer.listen({host:'0.0.0.0',port:8082});
+console.log('READY: human-feedback fixture with fictitious identities and isolated database.');

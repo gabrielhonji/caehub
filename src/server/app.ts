@@ -1,3 +1,4 @@
+import {CommercialAnalytics} from './commercial-analytics.js';
 import Fastify from 'fastify';
 import manifest from '../../package.json' with { type: 'json' };
 import { z } from 'zod';
@@ -80,6 +81,9 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.post('/api/commercial/products/:id/campaigns',async request=>commercial.link(await actor(request),paramId(request),z.object({campaignId:id}).strict().parse(request.body).campaignId));
   app.post('/api/commercial/variants/:id/movements',async(request,reply)=>reply.code(201).send(await commercial.move(await actor(request),paramId(request),movementInput.parse(request.body))));
   app.get('/api/commercial/variants/:id/movements',async request=>commercial.history(await actor(request),paramId(request)));
+  const analytics=new CommercialAnalytics(service.db,service);
+  app.get('/api/commercial/analytics',async request=>analytics.report(await actor(request),z.object({campaignId:id.optional()}).parse(request.query).campaignId));
+  app.put('/api/commercial/analytics/:id',async request=>analytics.configure(await actor(request),paramId(request),z.object({fixedCostCents:z.number().int().min(0).max(2147483647).nullable(),revenueGoalCents:z.number().int().min(0).max(2147483647).nullable(),costBudgetCents:z.number().int().min(0).max(2147483647).nullable(),profitGoalCents:z.number().int().min(0).max(2147483647).nullable(),revision:z.number().int().min(0)}).strict().parse(request.body)));
   app.get('/health', async (request) => ({ ok: true, version: manifest.version, release: manifest.release }));
   app.get('/api/me', async (request) => { const current = await actor(request,true); const membership = current.projectAccess?await service.membership(current):undefined; return { subject: current.subject, displayName: current.displayName, projectAccess: current.projectAccess, buyerAccess:current.buyerAccess===true, institutionalAccess:Boolean(current.projectAccess&&membership?.status==='active'), owner: current.owner, csrfToken:(request as any).caehubCsrf??'', membership: membership ? { id: membership.id, role: membership.role, status: membership.status } : null, integration: 'honji-bff', debugView:current.debugView }; });
   app.get('/api/organization', async (request) => { await actor(request); return service.organization(); });
@@ -154,16 +158,18 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
     return {calendar,availability,members,departments,notifications,requests,polls:meetingPolls,shifts:operationalShifts,session:{membership:{id:membership.id,role:membership.role},owner:current.owner,canManage,canReadAll}};
   });
   const meetingInput=z.object({title:z.string().trim().min(1).max(200),description:z.string().max(10000).optional(),location:z.string().trim().max(255).optional(),workspaceId:id.optional(),startsAt:z.string().datetime(),endsAt:z.string().datetime(),participantIds:z.array(id).max(100).default([])});
+  app.get('/api/meetings',async request=>agenda.meetingList(await actor(request),z.object({archived:z.enum(['true','false']).optional()}).parse(request.query).archived==='true'));
+  app.post('/api/meetings/:id/archive',async request=>agenda.archiveMeeting(await actor(request),paramId(request),z.object({expectedRevision:z.number().int().positive()}).parse(request.body).expectedRevision));
   app.post('/api/meetings',async(request,reply)=>reply.code(201).send(await agenda.createMeeting(await actor(request),meetingInput.parse(request.body))));
   const meetingUpdate=z.object({expectedRevision:z.number().int().positive(),title:z.string().trim().min(1).max(200).optional(),description:z.string().max(10000).optional(),location:z.string().trim().max(255).optional(),workspaceId:id.optional(),startsAt:z.string().datetime().optional(),endsAt:z.string().datetime().optional(),participantIds:z.array(id).max(100).optional()}).refine(value=>Object.keys(value).some(key=>key!=='expectedRevision'));
   app.patch('/api/meetings/:id',async request=>agenda.updateMeeting(await actor(request),id.parse((request.params as {id:string}).id),meetingUpdate.parse(request.body)));
-  app.post('/api/meetings/:id/response',async request=>{const body=z.object({response:z.enum(['confirmed','maybe','declined'])}).parse(request.body);return agenda.respond(await actor(request),id.parse((request.params as {id:string}).id),body.response);});
+  app.post('/api/meetings/:id/response',async request=>{const body=z.object({response:z.enum(['confirmed','maybe','declined']),justification:z.string().trim().min(1).max(1000).optional()}).parse(request.body);return agenda.respond(await actor(request),id.parse((request.params as {id:string}).id),body.response,body.justification);});
   app.get('/api/agenda/notifications',async request=>agenda.notifications(await actor(request)));
   app.post('/api/agenda/notifications/:id/read',async request=>agenda.readNotification(await actor(request),id.parse((request.params as {id:string}).id)));
   const interval=z.object({startsAt:z.string().datetime(),endsAt:z.string().datetime()});
   app.get('/api/meeting-polls',async request=>polls.list(await actor(request)));
   app.post('/api/meeting-polls',async(request,reply)=>reply.code(201).send(await polls.create(await actor(request),z.object({title:z.string().trim().min(1).max(200),description:z.string().max(10000).optional(),location:z.string().max(255).optional(),workspaceId:id.optional(),deadline:z.string().datetime().optional(),participantIds:z.array(id).min(1).max(100),options:z.array(interval).min(2).max(30)}).parse(request.body))));
-  app.put('/api/meeting-polls/:id/vote',async request=>{const body=z.object({optionIds:z.array(id).max(30),noneWorks:z.boolean().default(false)}).parse(request.body);return polls.vote(await actor(request),id.parse((request.params as {id:string}).id),body.optionIds,body.noneWorks);});
+  app.put('/api/meeting-polls/:id/vote',async request=>{const body=z.object({optionIds:z.array(id).max(30),noneWorks:z.boolean().default(false),suggestion:z.object({note:z.string().trim().max(1000).optional(),startsAt:z.string().datetime().optional(),endsAt:z.string().datetime().optional()}).optional()}).parse(request.body);return polls.vote(await actor(request),id.parse((request.params as {id:string}).id),body.optionIds,body.noneWorks,body.suggestion);});
   app.post('/api/meeting-polls/:id/close',async request=>{const body=z.object({confirmed:z.literal(true),optionId:id.optional()}).parse(request.body);return polls.close(await actor(request),id.parse((request.params as {id:string}).id),body.confirmed,body.optionId);});
   const shiftInput=z.object({title:z.string().trim().min(1).max(200),description:z.string().max(10000).optional(),location:z.string().max(255).optional(),workspaceId:id,relatedMeetingId:id.nullable().optional(),startsAt:z.string().datetime(),endsAt:z.string().datetime(),minimumCapacity:z.number().int().min(0).max(1000).nullable().optional(),maximumCapacity:z.number().int().min(1).max(1000),priorityWindowHours:z.number().int().min(0).max(8760).optional()});
   app.get('/api/shifts',async request=>shifts.list(await actor(request)));

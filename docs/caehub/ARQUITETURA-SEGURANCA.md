@@ -138,3 +138,15 @@ Projetos têm estruturas independentes. O contrato permite novos consumidores,
 mas não migra as permissões específicas da XII nesta entrega.
 
 **H:** fixtures, capturas, testes e exemplos usam dados fictícios. **R:** registrar alterações sensíveis com ator confiável, ação, recurso/contexto e momento, sem segredos. Retenção, acesso aos registros, exclusão e dados pessoais necessários devem ser definidos antes de persistir dados reais.
+
+### Indicadores comerciais — D-68, 15/10/2026
+
+Leitura de `/commercial/analytics` exige vínculo ativo em Produtos ou Financeiro
+(membro ou direção) ou administração institucional já existente. Metas/custos
+fixos exigem direção de um desses departamentos ou a administração existente;
+perfis de visualização permanecem somente leitura. Esta permissão não concede
+catálogo administrativo, operação de pedidos, edição de membros nem dados de
+compradores. Projeções de pedidos próprios excluem custos unitários internos.
+Justificativas/sugestões de reuniões/votações são próprias ou reservadas à
+organização autorizada. A lista de reuniões aplica a visibilidade contextual
+no SQL e mantém a checagem por espaço, sem abrir reuniões de espaços alheios.

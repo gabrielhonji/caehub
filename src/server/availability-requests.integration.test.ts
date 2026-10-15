@@ -11,7 +11,8 @@ test('weekly occupancy unions departments and people, protects privacy and persi
     await f.apps.member.inject({method:'POST',url:'/api/availability/me',payload:{kind:'weekly',weekday:1,startTime:'08:00',endTime:'09:00',note:'Nota privada fictícia'}});
     const query=`from=2026-11-02T00:00:00.000Z&to=2026-11-09T00:00:00.000Z&slotMinutes=60&membershipIds=${f.ids.other}&departmentIds=${department}`;
     const grid=await f.apps.director.inject({method:'GET',url:`/api/availability/week?${query}`});assert.equal(grid.statusCode,200,grid.body);
-    assert.equal(grid.json().slots.length,168);
+    assert.ok(grid.json().slots.length<168,'adjacent identical intervals must merge');
+    assert.ok(grid.json().slots.every((slot:any)=>Date.parse(slot.endsAt)-Date.parse(slot.startsAt)>=3600000));
     assert.ok(grid.json().members.some((m:any)=>m.membershipId===f.ids.member));assert.ok(grid.json().members.some((m:any)=>m.membershipId===f.ids.other));
     const slot=grid.json().slots.find((slot:any)=>slot.startsAt==='2026-11-02T08:00:00.000Z');
     assert.equal(slot.statuses.find((m:any)=>m.membershipId===f.ids.member).status,'busy');assert.equal(slot.statuses.find((m:any)=>m.membershipId===f.ids.other).status,'unknown');
@@ -23,6 +24,9 @@ test('weekly occupancy unions departments and people, protects privacy and persi
     assert.equal((await f.apps.owner.inject({method:'POST',url:`/api/availability/requests/${id}/review`,payload:{kind:'updated'}})).statusCode,403);
     const list=(await f.apps.director.inject({method:'GET',url:'/api/availability/requests'})).json().find((r:any)=>r.id===id);assert.equal(list.pendingCount,1);assert.equal(list.participants.find((p:any)=>p.membershipId===f.ids.member).reviewKind,'unchanged');
     const own=(await f.apps.member.inject({method:'GET',url:'/api/availability/requests'})).json().find((r:any)=>r.id===id);assert.equal(own.participants.length,1);
+    assert.equal(own.participants[0].changedSinceRequest,false);
+    const edited=await f.apps.member.inject({method:'POST',url:'/api/availability/me',payload:{kind:'weekly',weekday:2,startTime:'09:00',endTime:'10:00'}});assert.equal(edited.statusCode,201,edited.body);
+    const changed=(await f.apps.member.inject({url:'/api/availability/requests'})).json().find((r:any)=>r.id===id);assert.equal(changed.participants[0].changedSinceRequest,true);
     const notice=(await f.apps.member.inject({method:'GET',url:'/api/agenda/notifications'})).json().find((n:any)=>n.resourceId===id);assert.equal(notice.kind,'availability_requested');
     assert.equal((await f.apps.other.inject({method:'POST',url:`/api/agenda/notifications/${notice.id}/read`})).statusCode,404);
     assert.equal((await f.apps.member.inject({method:'POST',url:`/api/agenda/notifications/${notice.id}/read`})).statusCode,200);

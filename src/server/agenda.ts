@@ -130,11 +130,21 @@ export class AgendaService {
       return { membershipId: person.membershipId, displayName: person.displayName, status: busy ? 'busy' : own.some((block)=>block.kind==='weekly' && (!block.validFrom || block.validFrom <= firstDay) && (!block.validTo || block.validTo >= lastDay)) ? 'free' : 'unknown' };
     });
     if(!query.slotMinutes)return assess(from,to);
-    const slots=[];
-    for(let cursor=from.getTime();cursor<to.getTime();cursor+=query.slotMinutes*60000) {
-      const end=Math.min(to.getTime(),cursor+query.slotMinutes*60000), statuses=assess(new Date(cursor),new Date(end));
-      slots.push({startsAt:new Date(cursor).toISOString(),endsAt:new Date(end).toISOString(),statuses,allFree:statuses.length>0&&statuses.every(person=>person.status==='free')});
+    const boundaries=new Set<number>([from.getTime(),to.getTime()]);
+    const add=(value:number)=>{if(value>from.getTime()&&value<to.getTime())boundaries.add(value);};
+    const offset=(query.offsetMinutes??0)*60000;
+    for(let cursor=Math.floor((from.getTime()-offset)/86400000)*86400000+offset;cursor<to.getTime();cursor+=86400000){
+      add(cursor);add(cursor+86400000);const local=dayKey(new Date(cursor-offset));
+      for(const block of blocks){const begin=wallInstant(local,block.startTime,query.offsetMinutes).getTime(),end=wallInstant(local,block.endTime,query.offsetMinutes).getTime();if(blockOverlaps(block,new Date(begin),new Date(end),query.offsetMinutes)){add(begin);add(end);}}
     }
+    for(const meeting of meetings){add(new Date(meeting.startsAt).getTime());add(new Date(meeting.endsAt).getTime());}
+    const points=[...boundaries].sort((a,b)=>a-b),intervals:Array<{startsAt:string;endsAt:string;statuses:ReturnType<typeof assess>;allFree:boolean}>=[];
+    for(let i=0;i<points.length-1;i++){
+      const begin=new Date(points[i]),end=new Date(points[i+1]),statuses=assess(begin,end),previous=intervals.at(-1);
+      if(previous&&previous.endsAt===begin.toISOString()&&dayKey(new Date(Date.parse(previous.startsAt)-offset))===dayKey(new Date(begin.getTime()-offset))&&JSON.stringify(previous.statuses)===JSON.stringify(statuses))previous.endsAt=end.toISOString();
+      else intervals.push({startsAt:begin.toISOString(),endsAt:end.toISOString(),statuses,allFree:statuses.length>0&&statuses.every(p=>p.status==='free')});
+    }
+    const slots=intervals.filter(s=>Date.parse(s.endsAt)-Date.parse(s.startsAt)>=query.slotMinutes!*60000);
     return {members,slots};
   }
 
@@ -177,7 +187,7 @@ export class AgendaService {
       const previousParticipants=await tx.many<RowDataPacket>('SELECT membership_id AS membershipId,response FROM meeting_participants WHERE meeting_id=? AND removed_at IS NULL',[id]);
       await agendaHistory(tx,member.id,'meeting',id,'updated',{rescheduled,previous:{startsAt:meeting.starts_at,endsAt:meeting.ends_at,participants:previousParticipants},next:input});
       await tx.run(`UPDATE meetings SET title=COALESCE(?,title),description=COALESCE(?,description),location=COALESCE(?,location),workspace_id=COALESCE(?,workspace_id),starts_at=?,ends_at=?,revision=revision+1 WHERE id=?`, [input.title ?? null, input.description ?? null, input.location ?? null, input.workspaceId ?? null, sqlDate(startsAt), sqlDate(endsAt), id]);
-      if (rescheduled) { await tx.run("UPDATE meeting_participants SET response='pending',response_revision=response_revision+1,responded_at=NULL WHERE meeting_id=? AND removed_at IS NULL", [id]); const participants = await tx.many<RowDataPacket>('SELECT membership_id AS membershipId FROM meeting_participants WHERE meeting_id=? AND removed_at IS NULL', [id]); for (const p of participants) await tx.run("INSERT INTO agenda_notifications (id,membership_id,meeting_id,kind) VALUES (?,?,?,'rescheduled')", [randomUUID(), p.membershipId, id]); }
+      if (rescheduled) { await tx.run("UPDATE meeting_participants SET response='pending',justification=NULL,response_revision=response_revision+1,responded_at=NULL WHERE meeting_id=? AND removed_at IS NULL", [id]); const participants = await tx.many<RowDataPacket>('SELECT membership_id AS membershipId FROM meeting_participants WHERE meeting_id=? AND removed_at IS NULL', [id]); for (const p of participants) await tx.run("INSERT INTO agenda_notifications (id,membership_id,meeting_id,kind) VALUES (?,?,?,'rescheduled')", [randomUUID(), p.membershipId, id]); }
       if (input.participantIds) {
         const desired = [...new Set(input.participantIds)].filter((value) => value !== meeting.organizer_membership_id);
         if (desired.length) { const valid=await tx.many<RowDataPacket>(`SELECT id FROM memberships WHERE organization_id=? AND status='active' AND id IN (${desired.map(()=>'?').join(',')})`,[CAECOMP_ORGANIZATION_ID,...desired]); if(valid.length!==desired.length) throw new Conflict('all participants must be active institutional members'); }
@@ -191,20 +201,42 @@ export class AgendaService {
     return { id, ...outcome };
   }
 
-  async respond(actor: Actor, id: string, response: 'confirmed' | 'maybe' | 'declined') {
+  async respond(actor: Actor, id: string, response: 'confirmed' | 'maybe' | 'declined', justification?:string) {
+    if(response!=='confirmed'&&!justification?.trim())throw new Conflict('Informe uma justificativa para talvez ou recusa.');
     const member=await this.institutional.requireMember(actor);
     await this.db.transaction(async tx=>{
       const meeting=await tx.one<RowDataPacket>('SELECT id FROM meetings WHERE id=? AND organization_id=? AND cancelled_at IS NULL FOR UPDATE',[id,CAECOMP_ORGANIZATION_ID]);
       if(!meeting)throw new NotFound('meeting');
       const invite = await tx.one<RowDataPacket>('SELECT meeting_id FROM meeting_participants WHERE meeting_id=? AND membership_id=? AND removed_at IS NULL', [id, member.id]);
       if (!invite) throw new Forbidden('active meeting invitation required');
-      await tx.run('UPDATE meeting_participants SET response=?,responded_at=NOW(3) WHERE meeting_id=? AND membership_id=? AND removed_at IS NULL', [response, id, member.id]);
+      await tx.run('UPDATE meeting_participants SET response=?,justification=?,responded_at=NOW(3) WHERE meeting_id=? AND membership_id=? AND removed_at IS NULL', [response,response==='confirmed'?null:justification!.trim(), id, member.id]);
       await agendaHistory(tx,member.id,'meeting',id,'responded',{response});
     });
     await this.institutional.audit(actor, 'meeting.responded', 'meeting', id, { response });
     return { id, response };
   }
 
+  async meetingList(actor:Actor,includeArchived=false) {
+    const member=await this.institutional.requireMember(actor),broad=await this.institutional.canViewAll(actor,member);
+    const rows=await this.db.many<RowDataPacket>(`SELECT m.id,m.title,m.description,m.location,m.workspace_id AS workspaceId,w.name AS workspace,m.starts_at AS startsAt,m.ends_at AS endsAt,m.revision,m.cancelled_at AS archivedAt,m.organizer_membership_id AS organizerId,p.display_name AS organizer,mp.response,mp.justification FROM meetings m JOIN memberships om ON om.id=m.organizer_membership_id JOIN people p ON p.id=om.person_id LEFT JOIN workspaces w ON w.id=m.workspace_id LEFT JOIN meeting_participants mp ON mp.meeting_id=m.id AND mp.membership_id=? AND mp.removed_at IS NULL WHERE m.organization_id=? AND (? OR m.organizer_membership_id=? OR mp.membership_id IS NOT NULL OR m.workspace_id IS NULL OR EXISTS(SELECT 1 FROM workspace_participants allowed WHERE allowed.workspace_id=m.workspace_id AND allowed.membership_id=?) OR EXISTS(SELECT 1 FROM workspaces wx JOIN department_memberships dm ON dm.department_id=wx.department_id WHERE wx.id=m.workspace_id AND dm.membership_id=? AND dm.ended_at IS NULL)) ${includeArchived?'':'AND m.cancelled_at IS NULL'} ORDER BY m.starts_at DESC LIMIT 200`,[member.id,CAECOMP_ORGANIZATION_ID,broad,member.id,member.id,member.id]);
+    const result=[];
+    for(const row of rows){if(!broad&&row.organizerId!==member.id&&!row.response&&(row.workspaceId&&!await this.mayReadWorkspace(actor,member,row.workspaceId)))continue;
+      const canManage=Boolean((row.organizerId===member.id||broad)&&await this.mayOrganize(actor,member,row.workspaceId??undefined));
+      const responses=canManage?await this.db.many<RowDataPacket>('SELECT mp.membership_id AS membershipId,p.display_name AS displayName,mp.response,mp.justification FROM meeting_participants mp JOIN memberships m ON m.id=mp.membership_id JOIN people p ON p.id=m.person_id WHERE mp.meeting_id=? AND mp.removed_at IS NULL',[row.id]):undefined;
+      result.push({...row,type:'meeting',canManage,responses,participantIds:canManage?responses?.map(p=>p.membershipId):undefined});
+    }return result;
+  }
+  async archiveMeeting(actor:Actor,id:string,expectedRevision:number){
+    const member=await this.institutional.requireMember(actor);
+    return this.db.transaction(async tx=>{const row=await tx.one<RowDataPacket>('SELECT * FROM meetings WHERE id=? AND organization_id=? FOR UPDATE',[id,CAECOMP_ORGANIZATION_ID]);if(!row)throw new NotFound('meeting');
+      if((row.organizer_membership_id!==member.id&&!await this.institutional.isAdmin(actor,member))||!await this.mayOrganize(actor,member,row.workspace_id??undefined))throw new Forbidden('Organizador autorizado necessário.');
+      if(row.cancelled_at)return {id};if(Number(row.revision)!==expectedRevision)throw new Conflict('Esta reunião mudou. Atualize antes de encerrar.');
+      await tx.run('UPDATE meetings SET cancelled_at=NOW(3),revision=revision+1 WHERE id=?',[id]);
+      const participants=await tx.many<RowDataPacket>('SELECT membership_id AS id FROM meeting_participants WHERE meeting_id=? AND removed_at IS NULL',[id]);
+      for(const participant of participants)await tx.run("INSERT INTO agenda_notifications (id,membership_id,meeting_id,kind,resource_type,resource_id,title) VALUES (?,?,?,'meeting_archived','meeting',?,?)",[randomUUID(),participant.id,id,id,row.title]);
+      await agendaHistory(tx,member.id,'meeting',id,'archived');return {id};
+    });
+  }
   async notifications(actor: Actor) {
     const member = await this.institutional.requireMember(actor);
     return this.db.many<RowDataPacket>(`SELECT n.id,n.kind,n.priority,n.resource_type AS resourceType,COALESCE(n.resource_id,n.meeting_id) AS resourceId,n.created_at AS createdAt,n.read_at AS readAt,m.id AS meetingId,COALESCE(n.title,m.title) AS title FROM agenda_notifications n LEFT JOIN meetings m ON m.id=n.meeting_id WHERE n.membership_id=? ORDER BY n.created_at DESC LIMIT 50`, [member.id]);

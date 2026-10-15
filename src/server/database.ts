@@ -94,10 +94,21 @@ async function migrateSchema(db: Database): Promise<void> {
   await db.run(`CREATE TABLE IF NOT EXISTS agenda_notifications (id char(36) primary key, membership_id char(36) not null, meeting_id char(36) not null, kind enum('invited','rescheduled','removed') not null, created_at datetime(3) not null default current_timestamp(3), read_at datetime(3) null, index agenda_notification_inbox (membership_id,read_at,created_at), constraint fk_agenda_notification_membership foreign key (membership_id) references memberships(id), constraint fk_agenda_notification_meeting foreign key (meeting_id) references meetings(id))`);
   await migrateTimetables(db);
   await migrateAdvancedAgenda(db);
+  for(const [table,column,definition] of [
+    ['availability_request_participants','availability_fingerprint','char(64) NULL'],
+    ['meeting_participants','justification','varchar(1000) NULL'],
+    ['meeting_poll_participants','suggestion_note','varchar(1000) NULL'],
+    ['meeting_poll_participants','suggested_start','datetime(3) NULL'],
+    ['meeting_poll_participants','suggested_end','datetime(3) NULL']
+  ]){if(!await db.one('SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?',[table,column]))await db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);}
+
   await migrateCommercial(db);
   await seed(db);
   await migrateCommercialCatalog(db);
   await migrateOrders(db);
+  if(!await db.one("SHOW COLUMNS FROM commercial_order_items LIKE 'unit_cost_cents'"))await db.run('ALTER TABLE commercial_order_items ADD COLUMN unit_cost_cents int unsigned NULL');
+  await db.run(`CREATE TABLE IF NOT EXISTS commercial_financial_targets (campaign_id char(36) PRIMARY KEY,fixed_cost_cents int unsigned NULL,revenue_goal_cents int unsigned NULL,cost_budget_cents int unsigned NULL,profit_goal_cents int unsigned NULL,revision int unsigned NOT NULL DEFAULT 1,FOREIGN KEY(campaign_id) REFERENCES commercial_campaigns(id))`);
+
   await db.run(`INSERT INTO boards (id,workspace_id,name,created_by_membership_id) SELECT UUID(),w.id,'Quadro principal',w.creator_membership_id FROM workspaces w WHERE NOT EXISTS (SELECT 1 FROM boards b WHERE b.workspace_id=w.id)`);
   for (const [position, name, completion] of [['0','Ideias','0'],['1','Planejado','0'],['2','Em andamento','0'],['3','Aguardando','0'],['4','Concluído','1']] as const) await db.run(`INSERT INTO board_columns (id,board_id,name,position,is_completion) SELECT UUID(),b.id,?,?,? FROM boards b WHERE NOT EXISTS (SELECT 1 FROM board_columns c WHERE c.board_id=b.id AND c.position=?)`, [name, Number(position), Number(completion), Number(position)]);
 }

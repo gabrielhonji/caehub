@@ -1,5 +1,23 @@
 # Coordenação de agentes
 
+## UX-16 — retorno de testes com usuários, 15/10/2026
+
+Escopo: Home/tarefas/espaços/notificações; calendário, reuniões, votações e
+consulta de disponibilidade; pedidos e indicadores financeiros. Origem:
+feedback detalhado de Gabriel, com autorização para publicar batches validados.
+Decisões confirmadas: arquivar encerra para todos e libera o horário;
+Produtos/Financeiro, incluindo membros, leem indicadores; direções desses
+setores e administradores existentes configuram metas. Metas explícitas e
+ponto de equilíbrio calculado aparecem separados; sem valores inventados.
+
+Validação: suíte servidor executada uma vez (44 testes); duas falhas encontradas
+foram corrigidas e revalidadas nos testes afetados. O novo custo histórico foi
+excluído da projeção de compradores. Testes focados adicionais cobrem revisão
+imediata da disponibilidade, justificativas privadas, liberação de horário,
+sugestões, fórmulas/metas e limites de acesso. Build TypeScript/Vite aprovado.
+Navegador com API/MySQL isolados e identidades fictícias cobre os fluxos
+alterados; não representa sessão pessoal autenticada de produção.
+
 ## NAV-16 — destino da Área interna, 15/10/2026
 
 Concluído por Codex `/root`, a pedido de Gabriel. Escopo:

@@ -10,9 +10,9 @@ type Action=(work:()=>Promise<unknown>,message:string)=>Promise<boolean>;
 function Card({card,busy,writable,onOpen,onAction,onDrag,onDragMove,onDragEnd}:{card:BoardCard;busy:boolean;writable:boolean;onOpen:(card:BoardCard)=>void;onAction:Action;onDrag:(event:PointerEvent,card:BoardCard)=>void;onDragMove:(event:PointerEvent)=>void;onDragEnd:(event:PointerEvent)=>void}){
   const [helping,setHelping]=useState(Boolean(card.isHelper));
   useEffect(()=>setHelping(Boolean(card.isHelper)),[card.isHelper]);
-  return <article className="board-card" onClickCapture={event=>{if(event.currentTarget.dataset.dragged){event.preventDefault();event.stopPropagation();delete event.currentTarget.dataset.dragged;}}}>
+  return <article data-card-id={card.id} data-highlight={new URLSearchParams(location.hash.split('?')[1]??'').get('card')===card.id} data-priority={card.priority} className="board-card" onClickCapture={event=>{if(event.currentTarget.dataset.dragged){event.preventDefault();event.stopPropagation();delete event.currentTarget.dataset.dragged;}}}>
     <div className="card-upper" aria-label={`Arrastar ${card.title}`} onPointerDown={event=>onDrag(event,card)} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}>
-      <div className="card-topline"><Badge>{card.column}</Badge><button type="button" className="card-menu" aria-label={`Editar ${card.title}`} onPointerDown={event=>event.stopPropagation()} onClick={()=>onOpen(card)}>⋯</button></div>
+      <div className="card-topline"><Badge>{card.column}</Badge>{card.priority&&card.priority!=='normal'&&<span className="priority-label">{card.priority==='high'?'↑ Alta prioridade':'↓ Baixa prioridade'}</span>}<button type="button" className="card-menu" aria-label={`Editar ${card.title}`} onPointerDown={event=>event.stopPropagation()} onClick={()=>onOpen(card)}>⋯</button></div>
       <button className="card-detail-trigger" type="button" onClick={()=>onOpen(card)}><h3>{card.title}</h3><p>{card.summary}</p></button>
     </div>
     <footer><span>{card.assignee}</span><span>{card.helpers+Number(helping)-Number(Boolean(card.isHelper))} auxiliares</span></footer>
@@ -32,6 +32,8 @@ export function KanbanBoard({board,busy,onOpen,onAction}:{board:Board;busy:boole
   const [dragging,setDragging]=useState<BoardCard>(),[target,setTarget]=useState<string>();
   const [limits,setLimits]=useState({left:false,right:false,first:1,last:board.columns.length});
   const writable=board.canWrite!==false;
+  const targetCard=new URLSearchParams(location.hash.split('?')[1]??'').get('card');
+  useEffect(()=>{if(!targetCard)return;const card=viewport.current?.querySelector<HTMLElement>(`[data-card-id="${CSS.escape(targetCard)}"]`);if(!card)return;card.scrollIntoView({block:'nearest',inline:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});card.querySelector<HTMLButtonElement>('.card-detail-trigger')?.focus({preventScroll:true});},[targetCard,board.id]);
   useEffect(()=>{
     const element=viewport.current;if(!element)return;
     const update=()=>{

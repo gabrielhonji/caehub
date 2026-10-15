@@ -64,7 +64,7 @@ export class OrderService {
       if(!buyer&&!input.buyerName)throw new Conflict('Informe o nome do comprador externo.');
       const rows:RowDataPacket[]=[];let total=0;
       for(const item of [...input.items].sort((a,b)=>a.variantId.localeCompare(b.variantId))){
-        const v=await db.one<RowDataPacket>(`SELECT v.*,p.name AS product_name,p.sale_cents,p.mode,p.campaign_id FROM commercial_variants v JOIN commercial_products p ON p.id=v.product_id JOIN commercial_campaign_products l ON l.product_id=p.id WHERE v.id=? AND p.organization_id=? AND l.campaign_id=? AND p.status='active' AND v.status='active' FOR UPDATE`,[item.variantId,org,input.campaignId]);
+        const v=await db.one<RowDataPacket>(`SELECT v.*,p.name AS product_name,p.sale_cents,p.cost_cents,p.mode,p.campaign_id FROM commercial_variants v JOIN commercial_products p ON p.id=v.product_id JOIN commercial_campaign_products l ON l.product_id=p.id WHERE v.id=? AND p.organization_id=? AND l.campaign_id=? AND p.status='active' AND v.status='active' FOR UPDATE`,[item.variantId,org,input.campaignId]);
         if(!v||v.sale_cents===null)throw new Conflict('Produto indisponível nesta campanha ou preço ainda não definido.');
         if(selfService&&v.mode==='preorder'&&campaign.stage!=='orders')throw new Conflict('As encomendas encerraram. Consulte a quantidade do seu pedido em Meus pedidos para acompanhar a retirada.');
         if(item.expectedPriceCents!==undefined&&item.expectedPriceCents!==Number(v.sale_cents))throw new Conflict('O preço de um item mudou. Atualize o catálogo e confira o total antes de registrar.');
@@ -78,7 +78,7 @@ export class OrderService {
         rows.push({...v,quantity:item.quantity,fulfillment} as RowDataPacket);
       }
       const id=randomUUID();await db.run('INSERT INTO commercial_orders(id,campaign_id,buyer_person_id,buyer_name,buyer_contact,request_key,request_hash,total_cents) VALUES (?,?,?,?,?,?,?,?)',[id,input.campaignId,buyer?.id??null,buyer?.display_name??input.buyerName,input.buyerContact,input.requestKey,hash,total]);
-      for(const v of rows)await db.run(`INSERT INTO commercial_order_items(id,order_id,variant_id,product_name,variant_name,fulfillment,quantity,unit_price_cents,allocation_status,allocated_quantity,expires_at,production_status) VALUES (?,?,?,?,?,?,?,?,?,?,IF(? IS NULL,NULL,TIMESTAMPADD(MINUTE,?,NOW(3))),?)`,[randomUUID(),id,v.id,v.product_name,v.name,v.fulfillment,v.quantity,v.sale_cents,v.fulfillment==='stock'?'provisional':'none',v.fulfillment==='stock'?v.quantity:0,v.fulfillment==='stock'?config!.reservation_minutes:null,config?.reservation_minutes??null,v.fulfillment==='preorder'?'waiting':'not_needed']);
+      for(const v of rows)await db.run(`INSERT INTO commercial_order_items(id,order_id,variant_id,product_name,variant_name,fulfillment,quantity,unit_price_cents,unit_cost_cents,allocation_status,allocated_quantity,expires_at,production_status) VALUES (?,?,?,?,?,?,?,?,?,?,?,IF(? IS NULL,NULL,TIMESTAMPADD(MINUTE,?,NOW(3))),?)`,[randomUUID(),id,v.id,v.product_name,v.name,v.fulfillment,v.quantity,v.sale_cents,v.cost_cents,v.fulfillment==='stock'?'provisional':'none',v.fulfillment==='stock'?v.quantity:0,v.fulfillment==='stock'?config!.reservation_minutes:null,config?.reservation_minutes??null,v.fulfillment==='preorder'?'waiting':'not_needed']);
       await this.event(db,id,actor,'order.created');return {id};
     },'READ COMMITTED');
   }
@@ -124,7 +124,7 @@ export class OrderService {
     await lockCommercial(db);await this.expire(db);
     const o=await db.one<RowDataPacket>('SELECT o.*,c.name AS campaignName,c.stage AS campaignStage FROM commercial_orders o JOIN commercial_campaigns c ON c.id=o.campaign_id WHERE o.id=? AND c.organization_id=?',[id,org]);
     if(!o||(!canManage&&o.buyer_person_id!==member.person_id))throw new NotFound('Pedido não encontrado.');
-    const items=await db.many<RowDataPacket>('SELECT * FROM commercial_order_items WHERE order_id=? ORDER BY product_name,variant_name',[id]);
+    const items=await db.many<RowDataPacket>(`SELECT id,order_id,variant_id,product_name,variant_name,fulfillment,quantity,unit_price_cents,allocation_status,allocated_quantity,expires_at,production_status${canManage?',unit_cost_cents':''} FROM commercial_order_items WHERE order_id=? ORDER BY product_name,variant_name`,[id]);
     const events=await db.many<RowDataPacket>(`SELECT id,action,actor_name AS actor,note,created_at AS createdAt FROM commercial_order_events WHERE order_id=? ${canManage?'':"AND action NOT IN ('administrative.exception','administrative.resolved')"} ORDER BY created_at,id`,[id]);
     const config=await db.one<RowDataPacket>('SELECT pix_instructions FROM commercial_operations WHERE organization_id=?',[org]);
     const incidents=canManage?await db.many<RowDataPacket>('SELECT id,status,note,actor_name AS actor,resolution,resolved_by AS resolvedBy,created_at AS createdAt,resolved_at AS resolvedAt FROM commercial_order_incidents WHERE order_id=? ORDER BY created_at,id',[id]):[];

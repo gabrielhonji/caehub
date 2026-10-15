@@ -104,13 +104,14 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
     <div className="compact-heading"><div><Eyebrow>MINHA CONTA · {campaign?.name??'TODAS AS CAMPANHAS'}</Eyebrow><h2>{collection?'Seus pedidos e retiradas.':'Acompanhe suas compras.'}</h2></div>{canBuy&&<a className="button button-secondary" href="/#/meus-pedidos">Todos os meus pedidos →</a>}</div>
     {checkingAccount?<LoadingState/>:accountProblem??(canBuy?<CommercialOrders key={`${ordersVersion}-${campaignId}`} mode="mine" campaignId={ownOrderId?undefined:campaign?.id} initialOrderId={ownOrderId}/>:needsStudentEmail?<BuyerEmailVerification onVerified={()=>void checkAccount()}/>:<div className="buyer-login-note"><p>Entre com Honji para consultar suas encomendas e as quantidades do seu pedido. Nesta etapa, a equipe informa quando estão prontas para retirada.</p><a className="button button-primary" href="/auth/login?provider=google">Entrar ou criar conta com Google</a><a className="button button-secondary" href="/auth/login">Entrar com Honji</a><small>Compradores externos devem confirmar um e-mail @alunos.utfpr.edu.br. Confira também a caixa de spam.</small></div>)}
   </section>;
-  const content=<>
+  const ownOrdersRoute=location.hash.startsWith('#/meus-pedidos');
+  const content=ownOrdersRoute&&!embedded?<><section className="commercial-heading buyer-page-heading"><div><Eyebrow>MINHA CONTA</Eyebrow><h1>Meus pedidos.</h1><p>Produtos, pagamento e retirada de cada compra.</p><a className="button button-secondary" href="#/comercial/comprar">← Voltar à lojinha</a></div></section>{orders}</>:<>
     {institutionalDenied&&<p className="form-feedback" role="status">Sua conta pode usar a lojinha. O acesso institucional depende de concessão por um administrador.</p>}
     {verification&&<BuyerEmailVerification onVerified={()=>void checkAccount()}/>}
     <section className={`commercial-heading public-intro ${embedded?'buyer-page-heading':''}`}><div>
       <Eyebrow>{embedded?'COMERCIAL · MINHAS COMPRAS':'01 / HONJI + CAECOMP'}</Eyebrow>
       <h1>{embedded?<>Escolha, acompanhe,<br/><em>retire.</em></>:<>Feito para reunir.<br/><em>Também para levar.</em></>}</h1>
-      <p>{embedded?'A lojinha e seus pedidos no mesmo lugar. Escolha a campanha para comprar ou acompanhar sua retirada.':'O CAEHUB reúne as campanhas e o trabalho do CAECOMP. Desenvolvido por Honji em parceria com o Centro Acadêmico de Engenharia de Computação.'}</p>
+      <p>{embedded?'Escolha a campanha e os produtos. Acompanhe pagamento, produção e retirada em Meus pedidos.':'O CAEHUB reúne as campanhas e o trabalho do CAECOMP. Desenvolvido por Honji em parceria com o Centro Acadêmico de Engenharia de Computação.'}</p>
       <div className="card-actions"><a className="button button-primary" href={embedded?'#/comercial/comprar':'#campanhas'} onClick={event=>sectionLink(event,'campanhas')}>Conhecer a lojinha ↓</a><a className="button button-secondary" href={canBuy?'/#/meus-pedidos':'/auth/login'}>{canBuy?'Meus pedidos →':'Entrar com Honji'}</a></div>
     </div><aside><Eyebrow>DO PEDIDO À RETIRADA</Eyebrow><h2>Uma campanha.<br/>Duas etapas.</h2><p>Encomende durante as vendas. Na etapa de retirada, consulte apenas os seus itens e quantidades. Produtos físicos continuam na lojinha.</p><p>O Pix é conferido manualmente pela equipe.</p></aside></section>
     {notice&&<p className="form-feedback success" role="status">{notice}</p>}
@@ -120,11 +121,11 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
         {error&&<p role="alert">Não foi possível atualizar. Confira novamente antes de comprar.</p>}
         {!catalog.campaigns.length?<EmptyState title="Novas campanhas vêm por aí.">Seus pedidos anteriores continuam disponíveis na sua conta.</EmptyState>:<>
           <div className="commercial-campaigns" role="group" aria-label="Selecionar campanha">{catalog.campaigns.map(item=><button key={item.id} className="commercial-campaign" aria-pressed={item.id===campaignId} onClick={()=>chooseCampaign(item.id)}><span>{item.semester||'Semestre a definir'}</span><strong>{item.name}</strong><small>{item.stage==='orders'?'Vendas e encomendas':'Retirada e estoque'}</small></button>)}</div>
-          {campaign?<div className="buyer-campaign-context"><Badge tone="active">{collection?'02 · Retirada':'01 · Vendas e encomendas'}</Badge>{campaign.description&&<p>{campaign.description}</p>}<p>{collection?'As encomendas encerraram. Consulte seus pedidos abaixo. A lojinha oferece somente produtos físicos.':'Escolha os produtos físicos ou faça sua encomenda dos modelos desta campanha.'}</p></div>:<p role="alert">A campanha selecionada não está mais aberta. Escolha outra e confira seus itens.</p>}
+          {campaign?<div className="buyer-campaign-context"><Badge tone="active">{collection?'02 · Retirada':'01 · Vendas e encomendas'}</Badge>{campaign.description&&<p>{campaign.description}</p>}<p>{collection?'As encomendas encerraram. Consulte a página Meus pedidos. A lojinha oferece somente produtos físicos.':'Escolha os produtos físicos ou faça sua encomenda dos modelos desta campanha.'}</p></div>:<p role="alert">A campanha selecionada não está mais aberta. Escolha outra e confira seus itens.</p>}
         </>}
       </>}
     </section>
-    {collection&&orders}
+
     {campaign&&catalog&&<section className="commercial-catalog-section">
       <div className="compact-heading"><div><Eyebrow>LOJINHA · {campaign.name}</Eyebrow><h2>{collection?'Produtos físicos para comprar.':'Escolha seus produtos.'}</h2></div>{draft.items.length>0&&<a className="button button-secondary" href={embedded?'#/comercial/comprar':'#selecao'} onClick={event=>sectionLink(event,'selecao')}>Sua seleção · {draft.items.length}</a>}</div>
       {!products.length?<EmptyState title={collection?'Nenhum produto físico disponível.':'O catálogo está sendo preparado.'}>{collection?'As encomendas feitas anteriormente aparecem somente nos seus pedidos.':'Os produtos publicados aparecerão nesta campanha.'}</EmptyState>:<div className="commercial-catalog">{products.map(item=>{
@@ -141,7 +142,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
       </div>)}
       <div className="buyer-selection-footer"><div className="commercial-total"><span>Total estimado</span><strong>{money(total)}</strong></div><Button variant="primary" disabled={!selected.every(item=>item.valid)||!campaign} onClick={()=>{setFormError('');setCheckout(true);}}>Conferir e concluir</Button></div>
     </section>}
-    {!collection&&orders}
+
     {product&&<Dialog title={product.name} onClose={()=>setProductId('')}><Eyebrow>{campaign?.name} · {product.category}</Eyebrow><p>{product.description}</p><Badge>{preorder?'Sob encomenda':'Estoque físico'}</Badge><form className="form-fields buyer-product-form" onSubmit={event=>{event.preventDefault();add();}}>
       <label>Variação<select aria-label="Variação" value={variantId} onChange={event=>setVariantId(event.target.value)}>{variants.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       {variant?.attributes&&<dl className="buyer-attributes">{Object.entries(variant.attributes).map(([name,value])=><div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>}
@@ -157,7 +158,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
   </>;
   if(embedded)return content;
   return <div className="app-shell public-portal"><a className="skip-link" href="#content">Pular para o conteúdo</a>
-    <header className="site-header"><div className="header-inner"><div className="navbar-brands"><HonjiBrand/><span className="navbar-divider" aria-hidden="true"/><Brand href="/"/></div><nav aria-label="Portal público"><a href="#campanhas">Lojinha</a><a href="#pedidos">Meus pedidos</a><a href="/#/">Área interna</a></nav><div className="header-actions">{account&&<Button disabled={signingOut} onClick={()=>void logout()}>{signingOut?"Saindo…":"Sair do CAEHUB"}</Button>}<ThemeToggle theme={theme} onTheme={()=>setTheme(theme==='light'?'dark':'light')}/></div></div></header>
+    <header className="site-header"><div className="header-inner"><div className="navbar-brands"><HonjiBrand/><span className="navbar-divider" aria-hidden="true"/><Brand href="/"/></div><nav aria-label="Portal público"><a href="#campanhas">Lojinha</a><a href="/#/meus-pedidos">Meus pedidos</a><a href="/#/">Área interna</a></nav><div className="header-actions">{account&&<Button disabled={signingOut} onClick={()=>void logout()}>{signingOut?"Saindo…":"Sair do CAEHUB"}</Button>}<ThemeToggle theme={theme} onTheme={()=>setTheme(theme==='light'?'dark':'light')}/></div></div></header>
     <main id="content" className="content">{content}</main>
     <footer className="site-footer"><div className="footer-inner"><HonjiBrand/><div className="footer-organization"><strong>CAECOMP</strong><span>Centro Acadêmico de Engenharia de Computação</span></div><div className="footer-signature"><span>DESENVOLVIDO POR</span><a href="https://github.com/gabrielhonji">gabriel.honji</a><span>CAEHUB · {__APP_VERSION__}</span></div></div></footer>
   </div>;

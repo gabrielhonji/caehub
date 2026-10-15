@@ -29,13 +29,14 @@ export class MeetingPolls {
     for(const poll of polls) {
       poll.canManage=Boolean((admin||poll.organizerId===member.id)&&await this.agenda.mayOrganize(actor,member,poll.workspaceId??undefined));
       poll.options=await this.db.many<RowDataPacket>(`SELECT o.id,o.starts_at AS startsAt,o.ends_at AS endsAt,(SELECT COUNT(*) FROM meeting_poll_votes v WHERE v.option_id=o.id) AS votes,EXISTS(SELECT 1 FROM meeting_poll_votes v WHERE v.option_id=o.id AND v.membership_id=?) AS selected FROM meeting_poll_options o WHERE o.poll_id=? ORDER BY o.starts_at`,[member.id,poll.id]);
-      const own=await this.db.one<RowDataPacket>('SELECT none_works AS noneWorks,voted_at AS votedAt FROM meeting_poll_participants WHERE poll_id=? AND membership_id=?',[poll.id,member.id]);
-      poll.invited=Boolean(own);poll.noneWorks=Boolean(own?.noneWorks);poll.votedAt=own?.votedAt;
+      const own=await this.db.one<RowDataPacket>('SELECT none_works AS noneWorks,voted_at AS votedAt,suggestion_note AS suggestionNote,suggested_start AS suggestedStart,suggested_end AS suggestedEnd FROM meeting_poll_participants WHERE poll_id=? AND membership_id=?',[poll.id,member.id]);
+      poll.invited=Boolean(own);poll.noneWorks=Boolean(own?.noneWorks);poll.votedAt=own?.votedAt;poll.suggestionNote=own?.suggestionNote;poll.suggestedStart=own?.suggestedStart;poll.suggestedEnd=own?.suggestedEnd;
       poll.open=!poll.closedAt&&(!poll.deadline||new Date(poll.deadline)>new Date());
-      if(poll.canManage)poll.participants=await this.db.many<RowDataPacket>(`SELECT pp.membership_id AS membershipId,p.display_name AS displayName,pp.none_works AS noneWorks,pp.voted_at AS votedAt FROM meeting_poll_participants pp JOIN memberships m ON m.id=pp.membership_id JOIN people p ON p.id=m.person_id WHERE pp.poll_id=?`,[poll.id]);
+      if(poll.canManage)poll.participants=await this.db.many<RowDataPacket>(`SELECT pp.membership_id AS membershipId,p.display_name AS displayName,pp.none_works AS noneWorks,pp.voted_at AS votedAt,pp.suggestion_note AS suggestionNote,pp.suggested_start AS suggestedStart,pp.suggested_end AS suggestedEnd FROM meeting_poll_participants pp JOIN memberships m ON m.id=pp.membership_id JOIN people p ON p.id=m.person_id WHERE pp.poll_id=?`,[poll.id]);
     }return polls;
   }
-  async vote(actor:Actor,id:string,optionIds:string[],noneWorks:boolean) {
+  async vote(actor:Actor,id:string,optionIds:string[],noneWorks:boolean,suggestion?:{note?:string;startsAt?:string;endsAt?:string}) {
+    if(suggestion?.startsAt||suggestion?.endsAt){if(!noneWorks||!suggestion.startsAt||!suggestion.endsAt||Date.parse(suggestion.endsAt)<=Date.parse(suggestion.startsAt))throw new Conflict('Informe uma alternativa com início e término válidos.');}
     const member=await this.institutional.requireMember(actor);
     if(new Set(optionIds).size!==optionIds.length||noneWorks===Boolean(optionIds.length))throw new Conflict('Selecione horários ou informe que nenhuma opção funciona.');
     await this.db.transaction(async tx=>{
@@ -47,7 +48,7 @@ export class MeetingPolls {
       if(optionIds.some(option=>!options.some(o=>o.id===option)))throw new Conflict('Opção não pertence à votação.');
       await tx.run('DELETE FROM meeting_poll_votes WHERE poll_id=? AND membership_id=?',[id,member.id]);
       for(const option of optionIds)await tx.run('INSERT INTO meeting_poll_votes (poll_id,membership_id,option_id) VALUES (?,?,?)',[id,member.id,option]);
-      await tx.run('UPDATE meeting_poll_participants SET none_works=?,voted_at=NOW(3) WHERE poll_id=? AND membership_id=?',[noneWorks,id,member.id]);
+      await tx.run('UPDATE meeting_poll_participants SET none_works=?,suggestion_note=?,suggested_start=?,suggested_end=?,voted_at=NOW(3) WHERE poll_id=? AND membership_id=?',[noneWorks,noneWorks?suggestion?.note??null:null,noneWorks&&suggestion?.startsAt?sqlInstant(suggestion.startsAt):null,noneWorks&&suggestion?.endsAt?sqlInstant(suggestion.endsAt):null,id,member.id]);
       await agendaHistory(tx,member.id,'poll',id,'voted',{optionIds,noneWorks});
     });return {id};
   }

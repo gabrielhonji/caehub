@@ -1,32 +1,21 @@
-import {useEffect,useId,useRef,useState} from 'react';
-import {clock,isTime,minutes,nextTime,presetTimes,today} from '../domain/agenda-input';
-
-const localParts=(value?:string)=>{if(!value)return {date:today(),time:''};const d=new Date(value);return {date:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,time:`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};};
-
-/** One date and bounded clock inputs, translated into the existing API timestamps. */
-export function AgendaTimeFields({startName='startsAt',endName='endsAt',startsAt,endsAt,withDate=true,startDefault='',endDefault=''}:{startName?:string;endName?:string;startsAt?:string;endsAt?:string;withDate?:boolean;startDefault?:string;endDefault?:string}) {
-  const initialStart=localParts(startsAt),initialEnd=localParts(endsAt);
-  const defaults={date:initialStart.date,endDate:endsAt?initialEnd.date:initialStart.date,start:startsAt?initialStart.time:startDefault,end:endsAt?initialEnd.time:endDefault};
-  const [date,setDate]=useState(defaults.date),[endDate,setEndDate]=useState(defaults.endDate),[start,setStart]=useState(defaults.start),[end,setEnd]=useState(defaults.end);
-  const [multipleDays,setMultipleDays]=useState(Boolean(endsAt&&initialEnd.date!==initialStart.date));
-  const [custom,setCustom]=useState(Boolean((defaults.start&&!presetTimes.includes(defaults.start))||(defaults.end&&!presetTimes.includes(defaults.end))));
-  const [error,setError]=useState('');const wrapper=useRef<HTMLDivElement>(null),id=useId();
-  useEffect(()=>{const form=wrapper.current?.closest('form');const reset=()=>{setDate(defaults.date);setEndDate(defaults.endDate);setStart(defaults.start);setEnd(defaults.end);setMultipleDays(Boolean(endsAt&&initialEnd.date!==initialStart.date));setCustom(Boolean((defaults.start&&!presetTimes.includes(defaults.start))||(defaults.end&&!presetTimes.includes(defaults.end))));setError('');};form?.addEventListener('reset',reset);return()=>form?.removeEventListener('reset',reset);},[startsAt,endsAt,startDefault,endDefault]);
-  const sameDay=!withDate||!multipleDays||endDate===date;
-  const valid=isTime(start)&&isTime(end)&&(!sameDay||end>start)&&(!withDate||Boolean(date&&(!multipleDays||endDate>=date)));
-  const changeStart=(value:string)=>{setStart(value);setError('');if(sameDay&&end&&value>=end)setEnd(nextTime(value));};
-  const changeEnd=(value:string)=>{if(value&&sameDay&&value<=start){setError('Escolha um horário final posterior ao inicial.');return;}setEnd(value);setError('');};
-  const endChoices=[...presetTimes,'23:59'].filter(t=>!sameDay||t>start);
-  if(end&&(!sameDay||end>start)&&!endChoices.includes(end))endChoices.push(end);
-  return <div ref={wrapper} className="agenda-time-fields wide-field">
-    <div className="agenda-time-grid">
-      {withDate&&<label>Data<input type="date" required value={date} onChange={e=>{setDate(e.target.value);if(!multipleDays||endDate<e.target.value){setEndDate(e.target.value);if(end<=start)setEnd(nextTime(start));}}}/></label>}
-      <label>Horário de início{custom?<input type="time" aria-label="Horário de início" required value={start} max={sameDay?'23:58':undefined} onChange={e=>changeStart(e.target.value)}/>:<select aria-label="Horário de início" required value={start} onChange={e=>changeStart(e.target.value)}><option value="" disabled>Escolha o início</option>{presetTimes.map(t=><option key={t}>{t}</option>)}</select>}</label>
-      <label>Horário de término{custom?<input type="time" aria-label="Horário de término" required value={end} disabled={!start} min={sameDay&&isTime(start)?clock(Math.min(1439,minutes(start)+1)):undefined} aria-describedby={error?id:undefined} onChange={e=>changeEnd(e.target.value)}/>:<select aria-label="Horário de término" required value={end} disabled={!start} onChange={e=>changeEnd(e.target.value)}><option value="" disabled>Escolha o término</option>{endChoices.map(t=><option key={t}>{t}</option>)}</select>}</label>
-      {withDate&&multipleDays&&<label>Data de término<input type="date" required min={date} value={endDate} onChange={e=>{if(e.target.value<date)return;setEndDate(e.target.value);if(e.target.value===date&&end<=start)setEnd(nextTime(start));}}/></label>}
-    </div>
-    <div className="agenda-time-options"><label className="inline-check"><input type="checkbox" checked={custom} onChange={e=>{setCustom(e.target.checked);if(!e.target.checked){if(start&&!presetTimes.includes(start))setStart('');if(end&&!presetTimes.includes(end))setEnd('');}}}/><span>Usar horários específicos</span></label>{withDate&&<label className="inline-check"><input type="checkbox" checked={multipleDays} onChange={e=>{setMultipleDays(e.target.checked);if(!e.target.checked&&end<=start)setEnd(nextTime(start));}}/><span>Termina em outro dia</span></label>}</div>
-    {error&&<p id={id} className="field-error" role="alert">{error}</p>}
-    <input type="hidden" name={startName} value={valid?(withDate?`${date}T${start}`:start):''}/><input type="hidden" name={endName} value={valid?(withDate?`${multipleDays?endDate:date}T${end}`:end):''}/>
-  </div>;
+import {useEffect,useRef,useState,useId} from 'react';
+import {clock,isTime,minutes,presetTimes,today} from '../domain/agenda-input';
+const parts=(value?:string)=>{if(!value)return {date:today(),time:''};const d=new Date(value);return {date:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,time:`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};};
+export function AgendaTimeFields({startName='startsAt',endName='endsAt',startsAt,endsAt,withDate=true,startDefault='',endDefault=''}:{startName?:string;endName?:string;startsAt?:string;endsAt?:string;withDate?:boolean;startDefault?:string;endDefault?:string}){
+ const a=parts(startsAt),b=parts(endsAt),initialStart=startsAt?a.time:startDefault,initialEnd=endsAt?b.time:endDefault;
+ const initialDuration=startsAt&&endsAt?Math.round((Date.parse(endsAt)-Date.parse(startsAt))/60000):initialStart&&initialEnd?minutes(initialEnd)-minutes(initialStart):60;
+ const [date,setDate]=useState(a.date),[endDate,setEndDate]=useState(endsAt?b.date:a.date),[start,setStart]=useState(initialStart),[end,setEnd]=useState(initialEnd),[duration,setDuration]=useState([60,90,120,180].includes(initialDuration)?String(initialDuration):'custom');
+ const [multipleDays,setMultipleDays]=useState(Boolean(endsAt&&a.date!==b.date));const wrapper=useRef<HTMLDivElement>(null);const listId=useId();const startInput=useRef<HTMLInputElement>(null);
+ useEffect(()=>{if(duration==='custom'||!isTime(start))return;const total=minutes(start)+Number(duration);if(!withDate&&total>=1440){setEnd('');return;}setEnd(clock(total%1440));const next=new Date(`${date}T12:00:00`);next.setDate(next.getDate()+Math.floor(total/1440));setEndDate(`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(next.getDate()).padStart(2,'0')}`);setMultipleDays(total>=1440);},[date,start,duration,withDate]);
+ useEffect(()=>{const form=wrapper.current?.closest('form');const reset=()=>{setDate(a.date);setStart(initialStart);setEnd(initialEnd);setEndDate(endsAt?b.date:a.date);setDuration([60,90,120,180].includes(initialDuration)?String(initialDuration):'custom');setMultipleDays(Boolean(endsAt&&a.date!==b.date));};form?.addEventListener('reset',reset);return()=>form?.removeEventListener('reset',reset);},[startsAt,endsAt,startDefault,endDefault]);
+ const valid=isTime(start)&&isTime(end)&&(!withDate||Boolean(date))&&((withDate&&multipleDays&&endDate>date)||end>start);
+ useEffect(()=>{startInput.current?.setCustomValidity(start&&!valid?'Confira o término. Para atravessar a meia-noite na disponibilidade, divida em dois blocos.':'');},[start,valid]);
+ return <div ref={wrapper} className="agenda-time-fields wide-field"><div className="agenda-time-grid">
+ {withDate&&<label>Data<input type="date" required value={date} onChange={e=>setDate(e.target.value)}/></label>}
+ <label>Início<input ref={startInput} type="time" step={60} required value={start} onChange={e=>setStart(e.target.value)} list={listId}/></label><datalist id={listId}>{presetTimes.map(t=><option key={t} value={t}/>)}</datalist>
+ <label>Duração<select value={duration} onChange={e=>setDuration(e.target.value)}><option value="60">1 hora</option><option value="90">1h30</option><option value="120">2 horas</option><option value="180">3 horas</option><option value="custom">Duração específica</option></select></label>
+ {duration==='custom'?<label>Término<input type="time" step={60} required value={end} onChange={e=>setEnd(e.target.value)}/></label>:<div className="time-end-preview"><small>Término automático</small><strong>{end||'Escolha o início'}{multipleDays?' · dia seguinte':''}</strong></div>}
+ {withDate&&duration==='custom'&&<label className="inline-check"><input type="checkbox" checked={multipleDays} onChange={e=>setMultipleDays(e.target.checked)}/>Termina em outro dia</label>}{withDate&&multipleDays&&duration==='custom'&&<label>Data de término<input type="date" min={date} value={endDate} required onChange={e=>setEndDate(e.target.value)}/></label>}
+ </div>{start&&!valid&&(end||(!withDate&&duration!=='custom'))&&<p className="field-error" role="alert">O término precisa ser posterior ao início. Na disponibilidade, divida em dois blocos quando atravessar a meia-noite.</p>}
+ <input type="hidden" name={startName} value={valid?(withDate?`${date}T${start}`:start):''}/><input type="hidden" name={endName} value={valid?(withDate?`${multipleDays?endDate:date}T${end}`:end):''}/></div>;
 }
