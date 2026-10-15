@@ -16,7 +16,13 @@ skip/foco, menu/acesso, prioridade/prazo, tarefa interativa, descarte/foco,
 retorno/race de filtros, carregamento, datas/meia-noite, histórico/reload,
 sugestão de voto e entrada de convocação; desktop/mobile e dois temas.
 Nenhuma sessão pessoal ou transação de produção executada.
-Publicação e resultado do canal oficial registrados na conclusão.
+Publicação concluída: fonte `f733245` em origin/honji; imagem oficial
+`honji/caehub-gabriel:1.15.1`, release `15102026-164703`, proveniência
+confirmada pelo build-app. Smoke com migração isolada, raiz/health 200 e APIs
+privadas negadas. Deploy oficial Healthy; HTTPS health confirmou 1.15.1,
+foundation/reuniões/indicadores anônimos 401. Check complementar aprovou
+salvar/fechar edição aninhada, retorno de foco e comprador externo.
+Sessão pessoal em produção não exercitada. Reservas UX-19 liberadas.
 
 
 ## UX-16 — retorno de testes com usuários, 15/10/2026
