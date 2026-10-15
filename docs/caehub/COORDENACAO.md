@@ -1,5 +1,24 @@
 # Coordenação de agentes
 
+## UX-19 — fechamento de navegação, 15/10/2026
+
+Pedido atual aprova as duas análises de navegação. Escopo: Home, shell,
+tarefas/cartões, Agenda, estados compartilhados e entradas comerciais.
+Sem alterações de hierarquia/permissões, schema ou configuração operacional.
+1.15.1: rotas/retorno, concorrência de filtros, voto alternativo, datas e
+continuidade noturna, rascunhos/edição, criação recolhida e menu móvel.
+Prazo ISO exposto na criação revelou falha anterior de gravação; conversão
+corrigida na criação/edição e coberta por teste SQL.
+
+Gate: 44/44 servidor aprovados no estado final do backend; TypeScript/Vite
+aprovados. Chromium com API/MySQL reais isolados e identidades fictícias:
+skip/foco, menu/acesso, prioridade/prazo, tarefa interativa, descarte/foco,
+retorno/race de filtros, carregamento, datas/meia-noite, histórico/reload,
+sugestão de voto e entrada de convocação; desktop/mobile e dois temas.
+Nenhuma sessão pessoal ou transação de produção executada.
+Publicação e resultado do canal oficial registrados na conclusão.
+
+
 ## UX-16 — retorno de testes com usuários, 15/10/2026
 
 Escopo: Home/tarefas/espaços/notificações; calendário, reuniões, votações e

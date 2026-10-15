@@ -27,6 +27,13 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   await ownerApp.inject({ method:'PATCH',url:`/api/workspaces/${workspaceId}`,payload:{addMembershipId:memberId} });
   const boardId=(await ownerApp.inject({method:'GET',url:`/api/workspaces/${workspaceId}/boards`})).json()[0].id;
   const board=(await ownerApp.inject({method:'GET',url:`/api/boards/${boardId}`})).json();
+  const deadline='2026-11-20T12:00:00.000Z';
+  const dated=await ownerApp.inject({method:'POST',url:`/api/boards/${boardId}/cards`,payload:{title:'Prazo fictício UX',dueAt:deadline,priority:'high'}});assert.equal(dated.statusCode,201,dated.body);
+  const datedId=dated.json().id;assert.equal(new Date((await ownerApp.inject({url:`/api/cards/${datedId}`})).json().dueAt).toISOString(),deadline);
+  const editedDeadline='2026-11-21T12:00:00.000Z';
+  assert.equal((await ownerApp.inject({method:'PATCH',url:`/api/cards/${datedId}`,payload:{dueAt:editedDeadline}})).statusCode,200);
+  assert.equal(new Date((await ownerApp.inject({url:`/api/cards/${datedId}`})).json().dueAt).toISOString(),editedDeadline);
+  assert.equal((await ownerApp.inject({method:'PATCH',url:`/api/cards/${datedId}`,payload:{dueAt:null,archived:true}})).statusCode,200);
   const created=await ownerApp.inject({method:'POST',url:`/api/boards/${boardId}/cards`,payload:{title:`Restrito ${Date.now()}`,columnId:board.columns[0].id,visibility:'directors'}});
   assert.equal(created.statusCode,201); const cardId=created.json().id;
   const moved=await ownerApp.inject({method:'POST',url:`/api/cards/${cardId}/move`,payload:{columnId:board.columns[4].id,version:1}});

@@ -13,7 +13,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   if (response.status === 204) return undefined as T;
   return response.json();
 }
-export type SessionInfo={subject:string;displayName:string;csrfToken?:string;projectAccess?:boolean;institutionalAccess?:boolean;buyerAccess?:boolean;membership?:{id:string;role:string;status?:string}|null;owner:boolean;debugView?:{available:boolean;mode:'real'|'global_admin'|'caecomp_admin'|'events_director'|'events_member'|'products_member'|'xii_admin'|'xii_secretary_member'|'xii_sports_member'}};
+export type SessionInfo={commercialWorkspaceAccess?:boolean;subject:string;displayName:string;csrfToken?:string;projectAccess?:boolean;institutionalAccess?:boolean;buyerAccess?:boolean;membership?:{id:string;role:string;status?:string}|null;owner:boolean;debugView?:{available:boolean;mode:'real'|'global_admin'|'caecomp_admin'|'events_director'|'events_member'|'products_member'|'xii_admin'|'xii_secretary_member'|'xii_sports_member'}};
 let sessionPromise:Promise<SessionInfo>|undefined;
 // Entry refreshes on every internal entry/retry; consumers share that result.
 // Backend authorization still runs for every protected request.
@@ -46,7 +46,7 @@ async function command(path:string,body:unknown):Promise<{id:string}>{
   pendingCommands.set(signature,work);return work;
 }
 
-export const createCard=(boardId:string,input:{title:string;description?:string;columnId?:string})=>command(`/boards/${boardId}/cards`,input);
+export const createCard=(boardId:string,input:{title:string;description?:string;columnId?:string;priority?:string;dueAt?:string})=>command(`/boards/${boardId}/cards`,input);
 export const moveCard=(cardId:string,columnId:string,version:number)=>api(`/cards/${cardId}/move`,{method:'POST',body:JSON.stringify({columnId,version})});
 export const volunteer=(cardId:string)=>api(`/cards/${cardId}/helpers/me`,{method:'POST'});
 export const leaveCard=(cardId:string)=>api<void>(`/cards/${cardId}/helpers/me`,{method:'DELETE'});

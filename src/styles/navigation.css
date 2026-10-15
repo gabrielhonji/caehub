@@ -1,0 +1,39 @@
+.site-header nav a{min-width:44px;justify-content:center}
+.home-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:20px}
+.dashboard-intro.dashboard-intro-action{padding:32px 0;gap:24px}
+.dashboard-intro-action h1{font-size:clamp(34px,4vw,54px);line-height:1.12}
+.dashboard-intro-action .context-note{padding:20px}
+.home-agenda{display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding:22px 0;border-bottom:1px solid var(--line)}
+.home-agenda h2{font-size:22px;margin:6px 0}.home-agenda ul{display:flex;gap:20px;flex:1;list-style:none;margin:0;padding:0}.home-agenda li{flex:1;min-width:0}.home-agenda li a{display:grid;gap:6px}.home-agenda time,.home-agenda li span{font-size:12px;color:var(--muted)}
+.task-page-heading{padding:28px 0}.task-page-heading h1{font-size:clamp(34px,4vw,48px)}
+.task-filters{align-items:end}.task-filters .button{align-self:end}
+.task-list .task-main{min-width:0}.state-description .button{margin-top:14px}
+.dashboard-grid .state{padding:24px 0;text-align:left}.dashboard-grid .state h2{font-size:28px}
+.kanban-forms form[hidden]{display:none}.kanban-forms form:has(.optional-fields){flex-basis:100%}
+.kanban-forms .optional-fields{flex-basis:100%;padding:0;background:transparent}.kanban-forms .optional-fields label{display:inline-grid;gap:6px;margin:8px 12px 8px 0}
+.kanban-forms summary,.card-edit-section>summary,.meeting-list-management>summary{cursor:pointer;min-height:44px;align-content:center}
+.card-collaboration .card-edit-section{margin:16px 0}.card-edit-section[open]>summary{margin-bottom:12px}
+.card-collaboration>fieldset>dl{margin-top:0}.card-page-navigation{flex-wrap:wrap}
+.discard-confirmation{position:sticky;top:0;z-index:2;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 4px 18px #0002}
+.discard-confirmation .form-actions{display:flex;flex-wrap:wrap;gap:10px}
+.meeting-date{font-size:13px;line-height:1.5}.calendar-event-time:has(.meeting-date){display:block}
+.meeting-list-management{margin-top:10px}.meeting-list-management>summary{font-size:12px;color:var(--muted)}
+.agenda-workflows .agenda-summary{min-height:0}.agenda-summary .summary-actions{margin-top:16px}
+#content:focus{outline:2px solid var(--accent);outline-offset:4px}
+@media(max-width:720px){
+.site-header nav{max-width:100%;overflow-x:auto;justify-content:flex-start;gap:6px;padding:0 0 6px}
+.site-header nav a{padding-left:8px;padding-right:8px;flex-shrink:0;min-height:44px}
+.dashboard-intro.dashboard-intro-action{padding:24px 0}.home-actions .button{flex:1 1 145px}
+.home-agenda{display:block}.home-agenda ul{display:grid;gap:16px;margin:16px 0}.home-agenda>a{display:inline-flex;min-height:44px;align-items:center}
+.kanban-forms>form{width:100%}.kanban-forms .optional-fields label{display:grid;margin-right:0}
+.agenda-workflows{grid-auto-rows:auto!important}.agenda-summary{min-height:0!important;padding:20px}
+}
+
+.mobile-navigation-toggle{display:none}
+@media(max-width:720px){
+.mobile-navigation-toggle{display:flex;order:3;justify-content:space-between;width:100%}
+.header-inner nav#caehub-navigation{display:none;order:4;border-top:0;padding:0;margin:0;overflow:visible}
+.header-inner nav#caehub-navigation[data-open=true]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.header-inner nav#caehub-navigation a{white-space:normal;text-align:center;min-height:44px;border:1px solid var(--line);border-radius:8px}
+.header-inner nav#caehub-navigation .home-link{width:auto}
+}

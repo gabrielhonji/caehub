@@ -1,5 +1,15 @@
 # API institucional, Kanban e Agenda — Incrementos 01 a 04
 
+## Navegação — 1.15.1
+
+`GET /api/me` inclui `commercialWorkspaceAccess`: projeção de leitura dos acessos
+já existentes ao catálogo/inventário ou indicadores. Controla a descoberta do
+destino de gestão; não concede permissões. Operações continuam verificadas
+no servidor. Prioridade e prazo da criação de cartões reutilizam o contrato
+existente; datas ISO são convertidas para Date antes da gravação MySQL,
+também na edição, preservando a remoção por null.
+
+
 ## Reenvio Kanban e participação — 14/10/2026
 
 Criação de cartões/colunas/comentários/checklist aceita header opcional

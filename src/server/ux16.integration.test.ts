@@ -5,6 +5,9 @@ import {agendaFixture} from './agenda-test-fixture.js';
 
 test('human feedback: meeting reasons, organizer projection, archive release, poll alternatives and finance boundaries',async()=>{
  const f=await agendaFixture();try{
+ assert.equal((await f.apps.owner.inject({url:'/api/me'})).json().commercialWorkspaceAccess,true);
+ assert.equal((await f.apps.member.inject({url:'/api/me'})).json().commercialWorkspaceAccess,false);
+ assert.equal((await f.apps.member.inject({url:'/api/commercial'})).statusCode,403);
  const meeting=(await f.apps.director.inject({method:'POST',url:'/api/meetings',payload:{title:'Reunião fictícia UX',startsAt:'2027-02-01T12:00:00Z',endsAt:'2027-02-01T14:00:00Z',participantIds:[f.ids.member,f.ids.other]}})).json();assert.ok(meeting.id);
  const workspace=(await f.apps.owner.inject({url:'/api/workspaces'})).json().find((w:any)=>w.name==='Eventos');
  const restricted=await f.apps.director.inject({method:'POST',url:'/api/meetings',payload:{title:'Reunião restrita fictícia UX',workspaceId:workspace.id,startsAt:'2027-02-03T12:00:00Z',endsAt:'2027-02-03T13:00:00Z',participantIds:[f.ids.owner]}});assert.equal(restricted.statusCode,201,restricted.body);
@@ -34,6 +37,7 @@ test('human feedback: meeting reasons, organizer projection, archive release, po
  assert.equal((await f.apps.owner.inject({method:'PUT',url:'/api/commercial/analytics/'+campaignId,payload:target})).statusCode,200);
  assert.equal((await f.apps.owner.inject({method:'PUT',url:'/api/commercial/analytics/'+campaignId,payload:target})).statusCode,409);
  const category=(await f.apps.owner.inject({url:'/api/commercial'})).json().categories.find((c:any)=>c.name==='Adesivos');const product=await f.apps.owner.inject({method:'POST',url:'/api/commercial/products',payload:{name:'Produto fictício UX',categoryId:category.id,costCents:200,saleCents:500,mode:'physical',campaignId,options:category.options}});assert.equal(product.statusCode,201,product.body);
+ assert.equal((await f.apps.member.inject({url:'/api/me'})).json().commercialWorkspaceAccess,true);assert.equal((await f.apps.member.inject({url:'/api/commercial'})).statusCode,403);
  const summary=(await f.apps.member.inject({url:'/api/commercial/analytics?campaignId='+campaignId})).json();assert.equal(summary.scenarios.find((s:any)=>s.id===product.json().id).breakEvenUnits,34);assert.equal(summary.scenarios.find((s:any)=>s.id===product.json().id).profitStartsAtUnits,34);
 
  const catalog=(await f.apps.owner.inject({url:'/api/commercial'})).json(),variant=catalog.variants.find((v:any)=>v.productId===product.json().id),orderId=randomUUID();

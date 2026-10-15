@@ -5,19 +5,30 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' }>(function Button({ children, variant = 'secondary', ...props }, ref) { return <button ref={ref} className={`button button-${variant}`} {...props}>{children}</button>; });
 export function Eyebrow({ children }: { children: ReactNode }) { return <span className="eyebrow">{children}</span>; }
 export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'active' | 'waiting' }) { return <span className={`badge badge-${tone}`}>{children}</span>; }
-export function LoadingState() { return <div className="loading-state" aria-live="polite"><span className="spinner" aria-hidden="true" /><div><strong>Organizando seu espaço</strong><span>Preparando as informações…</span></div></div>; }
-export function EmptyState({ title, children }: { title: string; children: ReactNode }) { return <section className="state"><Eyebrow>SEM ITENS</Eyebrow><h2>{title}</h2><p>{children}</p></section>; }
+export function LoadingState() { return <div className="loading-state" aria-live="polite"><span className="spinner" aria-hidden="true" /><div><strong>Carregando conteúdo</strong><span>Aguarde um instante…</span></div></div>; }
+export function EmptyState({ title, children }: { title: string; children: ReactNode }) { return <section className="state"><Eyebrow>SEM ITENS</Eyebrow><h2>{title}</h2><div className="state-description">{children}</div></section>; }
 export function ErrorState({ onRetry }: { onRetry: () => void }) { return <section className="state" role="alert"><Eyebrow>INDISPONÍVEL</Eyebrow><h2>Não foi possível carregar este conteúdo.</h2><p>Tente novamente. Se persistir, volte mais tarde.</p><Button onClick={onRetry}>Tentar novamente</Button></section>; }
 export function AccessDeniedState() { return <section className="state" role="alert"><Eyebrow>ACESSO RESTRITO</Eyebrow><h2>Esta consulta não está disponível para o seu perfil.</h2><p>As informações protegidas não foram exibidas. Se precisar desse acesso, procure a direção responsável.</p></section>; }
 
 let dialogCount=0;
 let originalBodyOverflow='';
-export function Dialog({ title, children, onClose, closeLabel = 'Fechar', returnFocus, open=true, size='default' }: { title: string; children: ReactNode; onClose: () => void; closeLabel?: string; returnFocus?:HTMLElement|null; open?:boolean; size?:'default'|'wide' }) {
+export function Dialog({ title, children, onClose, closeLabel = 'Fechar', returnFocus, open=true, size='default', protectChanges=false }: { title: string; children: ReactNode; onClose: () => void; closeLabel?: string; returnFocus?:HTMLElement|null; open?:boolean; size?:'default'|'wide';protectChanges?:boolean }) {
   const overlay=useRef<HTMLDialogElement>(null);
   const titleId=useId();
   const closeButton = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
-  const close=useRef(onClose);close.current=onClose;
+  const dirty=useRef(new Set<HTMLFormElement>());
+  const [discard,setDiscard]=useState(false);const continueButton=useRef<HTMLButtonElement>(null);
+  const requestClose=()=>{if(discard){setDiscard(false);return;}if(protectChanges&&dirty.current.size){setDiscard(true);return;}onClose();};
+  const close=useRef(requestClose);close.current=requestClose;
+  useEffect(()=>{if(discard)continueButton.current?.focus();},[discard]);
+  useEffect(()=>{
+    const modal=overlay.current;if(!modal||!protectChanges)return;
+    const changed=(event:Event)=>{const form=(event.target as HTMLElement).closest('form');if(form)dirty.current.add(form);};
+    const saved=(event:Event)=>{if(event.target instanceof HTMLFormElement)dirty.current.delete(event.target);};
+    modal.addEventListener('input',changed);modal.addEventListener('change',changed);modal.addEventListener('reset',saved,true);modal.addEventListener('caehub:form-saved',saved);
+    return()=>{modal.removeEventListener('input',changed);modal.removeEventListener('change',changed);modal.removeEventListener('reset',saved,true);modal.removeEventListener('caehub:form-saved',saved);};
+  },[protectChanges]);
   useEffect(() => {
     if(!open)return;
     const modal=overlay.current;
@@ -43,7 +54,7 @@ export function Dialog({ title, children, onClose, closeLabel = 'Fechar', return
       if(previousFocus.current?.isConnected)previousFocus.current.focus();
     };
   }, [open]);
-  return createPortal(<dialog ref={overlay} className="dialog-backdrop" aria-labelledby={titleId} onCancel={event=>{event.preventDefault();close.current();}} onPointerDown={(event) => { if (event.target === event.currentTarget) close.current(); }}><section className={`dialog ${size==='wide'?'dialog-wide':''}`} onPointerDown={event => event.stopPropagation()}><header><h2 id={titleId}>{title}</h2><Button ref={closeButton} onClick={onClose} aria-label="Fechar diálogo">{closeLabel} <span aria-hidden="true">×</span></Button></header><div className="dialog-content">{children}</div></section></dialog>,document.body);
+  return createPortal(<dialog ref={overlay} className="dialog-backdrop" aria-labelledby={titleId} onCancel={event=>{event.preventDefault();close.current();}} onPointerDown={(event) => { if (event.target === event.currentTarget) close.current(); }}><section className={`dialog ${size==='wide'?'dialog-wide':''}`} onPointerDown={event => event.stopPropagation()}><header><h2 id={titleId}>{title}</h2><Button ref={closeButton} onClick={requestClose} aria-label="Fechar diálogo">{closeLabel} <span aria-hidden="true">×</span></Button></header><div className="dialog-content">{discard&&<div className="discard-confirmation" role="alert"><strong>Descartar alterações não salvas?</strong><p>Você pode continuar editando para salvar seu trabalho.</p><div className="form-actions"><Button ref={continueButton} onClick={()=>setDiscard(false)}>Continuar editando</Button><Button onClick={()=>{dirty.current.clear();setDiscard(false);onClose();}}>Descartar alterações</Button></div></div>}{children}</div></section></dialog>,document.body);
 }
 
 export function Toast({message}:{message:string}) {

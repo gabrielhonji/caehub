@@ -85,7 +85,14 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.get('/api/commercial/analytics',async request=>analytics.report(await actor(request),z.object({campaignId:id.optional()}).parse(request.query).campaignId));
   app.put('/api/commercial/analytics/:id',async request=>analytics.configure(await actor(request),paramId(request),z.object({fixedCostCents:z.number().int().min(0).max(2147483647).nullable(),revenueGoalCents:z.number().int().min(0).max(2147483647).nullable(),costBudgetCents:z.number().int().min(0).max(2147483647).nullable(),profitGoalCents:z.number().int().min(0).max(2147483647).nullable(),revision:z.number().int().min(0)}).strict().parse(request.body)));
   app.get('/health', async (request) => ({ ok: true, version: manifest.version, release: manifest.release }));
-  app.get('/api/me', async (request) => { const current = await actor(request,true); const membership = current.projectAccess?await service.membership(current):undefined; return { subject: current.subject, displayName: current.displayName, projectAccess: current.projectAccess, buyerAccess:current.buyerAccess===true, institutionalAccess:Boolean(current.projectAccess&&membership?.status==='active'), owner: current.owner, csrfToken:(request as any).caehubCsrf??'', membership: membership ? { id: membership.id, role: membership.role, status: membership.status } : null, integration: 'honji-bff', debugView:current.debugView }; });
+  app.get('/api/me', async (request) => { const current = await actor(request,true); const membership = current.projectAccess?await service.membership(current):undefined;
+    let commercialWorkspaceAccess=false;
+    if(current.projectAccess&&membership?.status==='active'){
+      try{await commercial.authorize(current);commercialWorkspaceAccess=true;}catch(e){if(!(e instanceof Forbidden))throw e;}
+      if(!commercialWorkspaceAccess)commercialWorkspaceAccess=await service.canViewAll(current,membership);
+      if(!commercialWorkspaceAccess)try{await analytics.access(current);commercialWorkspaceAccess=true;}catch(e){if(!(e instanceof Forbidden))throw e;}
+    }
+    return { commercialWorkspaceAccess, subject: current.subject, displayName: current.displayName, projectAccess: current.projectAccess, buyerAccess:current.buyerAccess===true, institutionalAccess:Boolean(current.projectAccess&&membership?.status==='active'), owner: current.owner, csrfToken:(request as any).caehubCsrf??'', membership: membership ? { id: membership.id, role: membership.role, status: membership.status } : null, integration: 'honji-bff', debugView:current.debugView }; });
   app.get('/api/organization', async (request) => { await actor(request); return service.organization(); });
   app.get('/api/organization/departments', async (request) => { await actor(request); return service.departments(); });
   app.get('/api/members', async (request) => service.listMembers(await actor(request)));

@@ -1,5 +1,21 @@
 # UI React — UI-001
 
+## Continuidade de navegação — 1.15.1
+
+Agenda usa query no hash para aba, visualização, data e escopo; tarefas preservam
+filtros/retorno/posição. Respostas antigas não substituem a seleção atual.
+Atalho de conteúdo foca main sem navegar. Menu móvel expõe destinos com alvos
+de toque; lojinha e gestão possuem destinos explícitos conforme acesso.
+HomeAgenda compõe próximos compromissos reais com ações contextuais, reutilizando
+primitivas e a API de reuniões existente. Formulário de criação do quadro inicia recolhido; prioridade/prazo são opcionais. CardCollaboration é compartilhado pela
+tarefa e pelo diálogo do quadro, com consulta antes de edição.
+Dialog oferece proteção opt-in de formulários desmontados e confirmação de
+descarte; reset/salvamento confirmado libera somente o formulário salvo.
+Formulários da Agenda permanecem montados ao fechar para preservar rascunhos.
+Reuniões mostram data/semana/horário e continuação em cada dia ocupado; lista
+distingue carregando, vazio e falha. Sugestão do voto é restaurada integralmente.
+
+
 ## KanbanBoard — 14/10/2026
 
 Extrai a composição do quadro de App: cards, gestão contextual de colunas,

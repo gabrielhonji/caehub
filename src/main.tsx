@@ -9,6 +9,7 @@ import './styles/refinements.css';
 import './styles/kanban-refinements.css';
 import './styles/space-tools.css';
 import './styles/loading.css';
+import './styles/navigation.css';
 
 const App=deferred<object>(()=>import('./app/App').then(module=>({default:module.App})));
 const PublicPortal=deferred<{embedded?:boolean;institutionalDenied?:boolean}>(()=>import('./components/PublicPortal').then(module=>({default:module.PublicPortal})));

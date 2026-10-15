@@ -42,7 +42,7 @@ export function CommercialOrders({catalog,campaignId,onInventoryChange,mode='adm
   };
   const mutate=async(path:string,body:object,method='POST')=>{
     if(busy)return;setBusy(true);setFormError('');
-    setFeedback('');try{const result=await api<{id?:string}>(path,{method,body:JSON.stringify(body)});setFeedback('Operação registrada.');await load();await onInventoryChange?.();window.dispatchEvent(new Event('caehub:agenda-updated'));return result;}
+    setFeedback('');try{const result=await api<{id?:string}>(path,{method,body:JSON.stringify(body)});await load();await onInventoryChange?.();setFeedback('Operação registrada.');window.dispatchEvent(new Event('caehub:agenda-updated'));return result;}
     catch(e){setFormError(failure(e));return undefined;}finally{setBusy(false);}
   };
   const refreshDetail=async()=>{if(!detail||busy)return;setBusy(true);setFormError('');setFeedback('');try{setDetail(await api<OrderDetail>(`/commercial/${route}/${detail.order.id}`));await load();}catch(e){setFormError(failure(e));}finally{setBusy(false);}};
@@ -86,11 +86,11 @@ export function CommercialOrders({catalog,campaignId,onInventoryChange,mode='adm
       <p>{mode==='mine'?`Pedido ${o.id.slice(0,8)} · ${orderTime(o.createdAt)}`:`${o.campaignName} · ${orderTime(o.createdAt)}`}</p>
       {mode==='mine'&&<ul className="buyer-purchased-items">{o.items?.map(item=><li key={item.id}><div><strong>{item.productName}</strong><span>{item.variantName}</span></div><div><strong>{item.quantity} {item.quantity===1?'unidade':'unidades'}</strong><span>{o.deliveryStatus==='collected'?'Já retirado':o.deliveryStatus==='ready'?'Para retirada':item.fulfillment==='preorder'?(o.status==='cancelled'?'Cancelado':o.paymentStatus!=='paid'?'Aguardando pagamento':item.productionStatus==='waiting'?'Aguardando produção':orderLabels[item.productionStatus]??'Encomenda'):'Produto físico'}</span></div></li>)}</ul>}
       <div className="card-actions"><Badge>{mode==='mine'?`Pagamento: ${o.paymentStatus==='paid'?'confirmado':orderLabels[o.paymentStatus]}`:orderLabels[o.paymentStatus]}</Badge>{mode==='admin'&&<Badge>{orderLabels[o.deliveryStatus]}</Badge>}{data.canManage&&Number(o.openIssues)>0&&<Badge tone="waiting">{o.openIssues} pendência(s)</Badge>}</div>
-      <footer><div><small>Total do pedido</small><strong>{money(Number(o.totalCents))}</strong></div><Button disabled={busy||loading} onClick={()=>void open('detail',o.id)}>Ver pedido</Button></footer>
+      <footer><div><small>Total do pedido</small><strong>{money(Number(o.totalCents))}</strong></div><Button aria-label={`Ver pedido ${o.id.slice(0,8)} de ${o.campaignName}`} disabled={busy||loading} onClick={()=>void open('detail',o.id)}>Ver pedido</Button></footer>
       {mode==='admin'&&<small className="commercial-order-id">{o.id}</small>}
     </article>)}</div>}
     <div className="commercial-pagination form-fields"><p>{data.total} pedidos encontrados{data.pages>1&&` · Página ${data.page} de ${data.pages}`}</p>{(mode==='admin'||data.total>10)&&<><div className="card-actions"><Button disabled={page<=1||loading||busy} onClick={()=>setPage(page-1)}>Anterior</Button><Button disabled={page>=data.pages||loading||busy} onClick={()=>setPage(page+1)}>Próxima</Button></div><label>Por página<select value={pageSize} onChange={e=>{setPageSize(Number(e.target.value));setPage(1);}}>{[10,20,50].map(n=><option key={n} value={n}>{n}</option>)}</select></label></>}</div>
-    {flow&&<Dialog title={title} size="wide" returnFocus={returnFocus} onClose={close}>
+    {flow&&<Dialog protectChanges title={title} size="wide" returnFocus={returnFocus} onClose={close}>
       {formError&&<p role="alert" className="form-feedback error">{formError}</p>}
       {flow==='create'&&catalog&&campaignId&&<CommercialOrderForm catalog={mode==='admin'?{...catalog,reservationMinutes:settings?.reservationMinutes}:catalog} campaignId={campaignId} draft={draft} onChange={setDraft} onSubmit={()=>void create()} busy={busy} buyers={mode==='admin'?buyers:undefined} refresh={()=>void onInventoryChange?.()}/>}
       {flow==='detail'&&detail&&<CommercialOrderDetail key={`${detail.order.id}-${detail.order.version}`} detail={detail} busy={busy} refresh={()=>void refreshDetail()} onAction={act}/>}

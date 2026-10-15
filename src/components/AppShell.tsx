@@ -1,3 +1,4 @@
+import {skipToContent} from '../services/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AgendaNotifications } from './AgendaNotifications';
@@ -7,7 +8,9 @@ import { ThemeToggle } from './ThemeToggle';
 
 export function AppShell({ children, theme, onTheme }: { children: ReactNode; theme: 'light' | 'dark'; onTheme: () => void }) {
   type DebugMode = 'real'|'global_admin'|'caecomp_admin'|'events_director'|'events_member'|'products_member'|'xii_admin'|'xii_secretary_member'|'xii_sports_member';
-  const current = location.hash || '#/';
+  const current = (location.hash || '#/').split('?')[0];
+  const [commercialManager,setCommercialManager]=useState(false);
+  const [menuOpen,setMenuOpen]=useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [account, setAccount] = useState<{ displayName: string; csrfToken: string; debugView?: { available: boolean; mode: DebugMode } }>();
   const [signingOut, setSigningOut] = useState(false);
@@ -16,6 +19,7 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
   useEffect(() => {
     let active = true;
     getSessionInfo().then(value => {
+      if(active)setCommercialManager(Boolean(value?.commercialWorkspaceAccess));
       if (active && value?.displayName) setAccount({ displayName: value.displayName, csrfToken: value.csrfToken ?? '', debugView: value.debugView });
     }).catch(() => undefined);
     return () => { active = false; };
@@ -47,15 +51,15 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
   const initials = account?.displayName.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase() || 'CH';
   return (
     <div className="app-shell">
-      <a className="skip-link" href="#content">Pular para o conteúdo</a>
+      <a className="skip-link" href="#content" onClick={skipToContent}>Pular para o conteúdo</a>
       <header className="site-header">
         <div className="header-inner">
           <div className="navbar-brands"><HonjiBrand /><span className="navbar-divider" aria-hidden="true" /><Brand /></div>
-          <nav aria-label="Navegação do CAEHUB"><a className="home-link" href="#/" aria-current={current === '#/' ? 'page' : undefined} aria-label="Início"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z" /></svg></a><a href="#/minhas-tarefas" aria-current={current === '#/minhas-tarefas' ? 'page' : undefined}>Minhas tarefas</a><a href="#/agenda" aria-current={current === '#/agenda' ? 'page' : undefined}>Agenda</a><a href="#/comercial" aria-current={current === '#/comercial' ? 'page' : undefined}>Comercial</a><a href="#/meus-pedidos" aria-current={current.startsWith("#/meus-pedidos") ? "page" : undefined}>Meus pedidos</a><a href="#/espacos" aria-current={current === '#/espacos' ? 'page' : undefined}>Espaços</a></nav>
+          <button className="mobile-navigation-toggle button button-secondary" type="button" aria-controls="caehub-navigation" aria-expanded={menuOpen} onClick={()=>setMenuOpen(value=>!value)}>Menu <span aria-hidden="true">{menuOpen?'−':'+'}</span></button><nav id="caehub-navigation" data-open={menuOpen} onClick={event=>{if((event.target as HTMLElement).closest('a'))setMenuOpen(false);}} aria-label="Navegação do CAEHUB"><a className="home-link" href="#/" aria-current={current === '#/' ? 'page' : undefined} aria-label="Início"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z" /></svg></a><a href="#/minhas-tarefas" aria-current={(current === '#/minhas-tarefas'||current.startsWith('#/cartoes/')) ? 'page' : undefined}>Minhas tarefas</a><a href="#/agenda" aria-current={current.startsWith('#/agenda') ? 'page' : undefined}>Agenda</a><a href="#/comercial/comprar" aria-current={current==='#/comercial/comprar' ? 'page' : undefined}>Lojinha</a>{commercialManager&&<a href="#/comercial" aria-current={current==='#/comercial' ? 'page' : undefined}>Gestão comercial</a>}<a href="#/meus-pedidos" aria-current={current.startsWith("#/meus-pedidos") ? "page" : undefined}>Meus pedidos</a><a href="#/espacos" aria-current={(current.startsWith('#/espacos')||current.startsWith('#/departamentos')) ? 'page' : undefined}>Espaços</a></nav>
           <div className="header-actions"><AgendaNotifications/><ThemeToggle theme={theme} onTheme={onTheme}/><div className="account-control" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setProfileOpen(false); }}><button className="account-avatar" type="button" aria-label="Abrir opções da conta" aria-expanded={profileOpen} onClick={() => setProfileOpen(value => !value)}>{initials}</button>{profileOpen && <div className="account-panel"><a className="account-name" href="https://gabriel.honji.com.br/#perfil">{account?.displayName ?? 'Conta Honji'}<span>Editar perfil</span></a><a href="https://gabriel.honji.com.br/#acesso">Minha conta</a><button type="button" disabled={!account || signingOut} onClick={() => void logout()}>{signingOut ? 'Saindo…' : 'Sair'}</button>{logoutError&&<p role="alert">{logoutError}</p>}</div>}</div></div>
         </div>
       </header>
-      <main id="content" className="content">{children}</main>
+      <main tabIndex={-1} id="content" className="content">{children}</main>
       <footer className="site-footer">
         <div className="footer-inner">
           <div className="footer-brand"><Brand /></div>
