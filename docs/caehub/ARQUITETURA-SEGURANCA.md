@@ -2,9 +2,14 @@
 
 ## Integração Agente 08 — contrato D-62
 
-O botão Google envia `kc_idp_hint=google` e `prompt=login` para abrir o broker
-mesmo com SSO ativo. O provider central usa `prompt=select_account` para exibir
-a escolha de conta Google. Entrada Honji comum conserva a sessão SSO.
+O botão Google envia `kc_idp_hint=google`. O provider central usa
+`prompt=select_account` para exibir a escolha de conta no início de uma nova
+sessão. Com SSO central válido, inclusive Remember Me, o CAEHUB não força
+`prompt=login`: reaproveita a sessão e a prova MFA vigente. Trocar de conta
+deliberadamente exige encerrar a sessão central. Entrada Honji comum também
+conserva SSO. O cookie compartilhado `honji_remember` é somente uma dica de
+roteamento: não contém identidade, não valida sessão e não concede acesso; sem
+SSO Keycloak válido, o fluxo volta à autenticação normal.
 
 O BFF valida assinatura RS256/JWKS, issuer, audience, exp/iat, nonce, azp
 quando presente e sid. Authorization Code + PKCE S256 usa state e transação

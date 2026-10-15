@@ -1,5 +1,15 @@
 # Coordenação de agentes
 
+## NAV-16 — destino da Área interna, 15/10/2026
+
+Concluído por Codex `/root`, a pedido de Gabriel. Escopo:
+`src/components/PublicPortal.tsx`, teste focado e este registro. O link “Área
+interna” do portal público passa a abrir a home autenticada (`/#/`), preservando
+BFF, autorização e demais rotas. O BFF preserva SSO lembrado ao não forçar o
+broker Google quando recebe a dica não autorizativa compartilhada. Teste BFF
+9/9 em MySQL descartável e build TypeScript/Vite aprovados; reservas liberadas.
+Commit/push na conclusão, sem deploy autorizado.
+
 ## PERF-12 — auditoria de performance, 14/10/2026
 
 Concluído: Agente 12 / Codex. Base main limpa 1.14.6. Investigar carregamento,
