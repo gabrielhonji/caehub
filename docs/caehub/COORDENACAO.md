@@ -16,7 +16,14 @@ isolados e dados fictícios. Cobertura: foco/bordas/hierarquia, controles Kanban
 alinhamento/ênfase dos intervalos, disclosure e repetição parcial com confirmação
 e um único novo pedido. Percurso desktop e 390/360/320, dois temas, semana/mês/dia
 e menu. Sem compra, sessão pessoal ou movimentação financeira em produção.
-Resultado de publicação registrado na conclusão.
+Publicação concluída: fonte `cd8b7e3` enviada a origin/honji; imagem oficial
+`honji/caehub-gabriel:1.15.2`, release `15102026-175755`. Build oficial e
+proveniência confirmados; smoke com migração em MySQL isolado, raiz/health
+200 e APIs privadas negadas. Deploy Healthy; HTTPS confirmou 1.15.2,
+pedidos/foundation anônimos 401 e catálogo público 200.
+Check visual final aprovou alvos de 44 px, mês sem linha vazia, Home compacta,
+ausência de overflow e bloqueio da repetição sem itens restantes.
+Sessão pessoal em produção não exercitada. Reservas UX-20 liberadas.
 
 
 ## UX-19 — fechamento de navegação, 15/10/2026
