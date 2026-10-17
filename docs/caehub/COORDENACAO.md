@@ -19,7 +19,16 @@ aprovados: reunião direta/espaço/consulta, UTC, convidados, erro e retomada;
 enquete criada/votada/voto alterado/encerrada sem reunião; desktop/mobile e temas.
 Portal: ingresso novo/existente e revisão em lote aprovados com API fictícia;
 IAM: 34 unitários e integração SQL atômica/negativa aprovados. Sem sessão
-pessoal ou escrita de negócio em produção. Build/publicação oficial pendentes.
+pessoal ou escrita de negócio em produção.
+Publicação concluída: fonte `8f764b0` em origin/honji; imagem oficial
+`honji/caehub-gabriel:1.16.0`, release `16102026-232943`, Healthy. Imagem
+iniciada/migrada em schema descartável antes do deploy; HTTPS health 1.16.0,
+catálogo 200 e reuniões/foundation/enquetes anônimos 401. Portal 0.9.1
+(release `20261016-233916`, fonte `86469d1`) e IAM 1.5.0 (fonte `a2d1338`)
+publicados; edição em lote anônima negada. Ingresso de conta já vinculada
+inclui projetos existentes no pedido, sem trocar implicitamente seu papel.
+Reservas liberadas. Sessão pessoal e escrita operacional em produção não
+exercitadas.
 
 ## UX-20 — retorno humano e foco móvel, 15/10/2026
 
