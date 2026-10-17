@@ -26,7 +26,14 @@ rascunho preservado, reunião criada da consulta, defaults acadêmicos, escala
 3x4h/2 pessoas/pausa12–14, expiração automática; Portal filtros/paginação e
 confirmação; lojinha/ingresso com fixture e sem compra; desktop/mobile e temas.
 Sem PDF pessoal, sessão pessoal ou escrita de negócio em produção.
-Estado de publicação será registrado após os canais oficiais.
+Publicação concluída: fonte `926cd89` em origin/honji, imagem oficial
+`honji/caehub-gabriel:1.17.0`, release `17102026-124829`, Healthy. Imagem
+iniciada/migrada em MySQL descartável antes do deploy; HTTPS confirmou
+health/HTML/módulos/catálogo 200 e foundation/turnos anônimos 401. Portal
+0.10.0 fonte `d4c7d4d`, publicação `20261017-125859`, e IAM 1.6.0 da mesma
+fonte publicados e saudáveis. Integrações de contas/lote também passaram na
+imagem oficial IAM. Reservas liberadas. Registros de testes permanecem apenas
+no ambiente descartável; nenhuma conta pessoal apagada ou compra realizada.
 
 ## UX-21 — ingresso, reuniões e votações independentes, 16/10/2026
 
