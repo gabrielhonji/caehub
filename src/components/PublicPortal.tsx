@@ -1,3 +1,4 @@
+import {useRefresh} from '../hooks/useRefresh';
 import {skipToContent} from '../services/navigation';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Brand, HonjiBrand } from './Brand';
@@ -100,6 +101,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
       else setFormError(commercialOrderFailure(error));
     }finally{submitting.current=false;setBusy(false);}
   };
+  useRefresh(load);
   const accountProblem=accountFailed?<><ErrorState onRetry={()=>void checkAccount()}/><a className="button button-secondary" href="/acesso">Gerenciar minha sessão</a></>:sessionDenied?<div className="buyer-login-note"><p>Sua conta não está habilitada para comprar. O catálogo público continua disponível.</p><a className="button button-secondary" href="/acesso?status=denied">Gerenciar minha sessão</a></div>:undefined;
   const orders=<section id="pedidos" className="buyer-account-section">
     <div className="compact-heading"><div><Eyebrow>MINHA CONTA · {campaign?.name??'TODAS AS CAMPANHAS'}</Eyebrow><h2>{collection?'Seus pedidos e retiradas.':'Acompanhe suas compras.'}</h2></div>{canBuy&&<a className="button button-secondary" href="/#/meus-pedidos">Todos os meus pedidos →</a>}</div>
@@ -108,7 +110,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
   const ownOrdersRoute=location.hash.startsWith('#/meus-pedidos');
   const content=ownOrdersRoute&&!embedded?<><section className="commercial-heading buyer-page-heading"><div><Eyebrow>MINHA CONTA</Eyebrow><h1>Meus pedidos.</h1><p>Produtos, pagamento e retirada de cada compra.</p><a className="button button-secondary" href="#/comercial/comprar">← Voltar à lojinha</a></div></section>{orders}</>:<>
     {institutionalDenied&&<p className="form-feedback" role="status">Sua conta pode usar a lojinha. O acesso institucional depende de concessão por um administrador.</p>}
-    {!embedded&&<section className="buyer-login-note" aria-label="Ingressar no CAECOMP"><div><Eyebrow>PARTICIPE DO CAECOMP</Eyebrow><h2>Quer fazer parte da equipe?</h2><p>Crie sua conta ou solicite acesso com a conta que já tem. A equipe aprova seu ingresso e define seu departamento.</p></div><a className="button button-primary" href="https://gabriel.honji.com.br/#solicitar-acesso?project=CAECOMP">Quero ser membro</a><small>Para comprar na lojinha, basta entrar com Honji; não é necessário ser membro.</small></section>}
+
     {verification&&<BuyerEmailVerification onVerified={()=>void checkAccount()}/>}
     <section className={`commercial-heading public-intro ${embedded?'buyer-page-heading':''}`}><div>
       <Eyebrow>{embedded?'COMERCIAL · MINHAS COMPRAS':'01 / HONJI + CAECOMP'}</Eyebrow>
@@ -116,6 +118,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
       <p>{embedded?'Escolha a campanha e os produtos. Acompanhe pagamento, produção e retirada em Meus pedidos.':'O CAEHUB reúne as campanhas e o trabalho do CAECOMP. Desenvolvido por Honji em parceria com o Centro Acadêmico de Engenharia de Computação.'}</p>
       <div className="card-actions"><a className="button button-primary" href={embedded?'#/comercial/comprar':'#campanhas'} onClick={event=>sectionLink(event,'campanhas')}>Conhecer a lojinha ↓</a><a className="button button-secondary" href={canBuy?'/#/meus-pedidos':'/auth/login'}>{canBuy?'Meus pedidos →':'Entrar com Honji'}</a></div>
     </div><aside><Eyebrow>DO PEDIDO À RETIRADA</Eyebrow><h2>Uma campanha.<br/>Duas etapas.</h2><p>Encomende durante as vendas. Na etapa de retirada, consulte apenas os seus itens e quantidades. Produtos físicos continuam na lojinha.</p><p>O Pix é conferido manualmente pela equipe.</p></aside></section>
+    {!embedded&&account&&!account.institutionalAccess&&<section className="buyer-login-note member-account-entry" aria-label="Conta de membro do CAECOMP"><div><Eyebrow>JÁ É MEMBRO DO CAECOMP?</Eyebrow><h2>Ative seu acesso de membro.</h2><p>Se você já integra o CAECOMP, solicite o acesso institucional da sua conta Honji. A equipe confirma o vínculo e o departamento.</p></div><a className="button button-primary" href="https://gabriel.honji.com.br/#solicitar-acesso?project=CAECOMP">Solicitar conta CAEHUB</a><small>Este pedido é exclusivo para membros existentes do CAECOMP. Não é uma inscrição para entrar no centro acadêmico.</small></section>}
     {notice&&<p className="form-feedback success" role="status">{notice}</p>}
     <section id="campanhas" className="commercial-campaign-section">
       <div className="compact-heading"><div><Eyebrow>02 / CAMPANHAS</Eyebrow><h2>As campanhas do CAECOMP.</h2></div><Button onClick={()=>void load()}>Atualizar catálogo</Button></div>
@@ -132,7 +135,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
       <div className="compact-heading"><div><Eyebrow>LOJINHA · {campaign.name}</Eyebrow><h2>{collection?'Produtos físicos para comprar.':'Escolha seus produtos.'}</h2></div>{draft.items.length>0&&<a className="button button-secondary" href={embedded?'#/comercial/comprar':'#selecao'} onClick={event=>sectionLink(event,'selecao')}>Sua seleção · {draft.items.length}</a>}</div>
       {!products.length?<EmptyState title={collection?'Nenhum produto físico disponível.':'O catálogo está sendo preparado.'}>{collection?'As encomendas feitas anteriormente aparecem somente nos seus pedidos.':'Os produtos publicados aparecerão nesta campanha.'}</EmptyState>:<div className="commercial-catalog">{products.map(item=>{
         const available=catalog.variants.filter(variant=>variant.productId===item.id).some(variant=>variant.availableQuantity>0),preorder=item.mode==='preorder'&&!collection;
-        return <article className="commercial-product" key={item.id}><div className="public-product-placeholder" aria-label="Produto sem imagem cadastrada"><span>{item.category}</span></div><header><Eyebrow>{item.category}</Eyebrow><Badge tone={preorder?'waiting':'neutral'}>{preorder?'Sob encomenda':available?'Estoque físico':'Indisponível'}</Badge></header><h3>{item.name}</h3><p className="commercial-product-description">{item.description||'Consulte as variações disponíveis.'}</p><div className="commercial-product-price"><strong>{money(item.saleCents)}</strong><span>por unidade</span></div><Button onClick={()=>{setProductId(item.id);setVariantId(catalog.variants.find(variant=>variant.productId===item.id)?.id??'');setQuantity('1');setFormError('');}}>Ver produto</Button></article>;
+        return <article className="commercial-product" key={item.id}><div className="public-product-placeholder" aria-label="Produto sem imagem cadastrada"><span>{item.category}</span></div><header><Eyebrow>{item.category}</Eyebrow><Badge tone={preorder?'waiting':'neutral'}>{preorder?'Sob encomenda':available?'Estoque físico':'Indisponível'}</Badge></header><h3>{item.name}</h3><p className="commercial-product-description">{item.description||'Consulte as variações disponíveis.'}</p><div className="commercial-product-price"><strong>{money(item.saleCents)}</strong><span>por unidade</span></div><Button onClick={()=>{setProductId(item.id);setVariantId((catalog.variants.find(variant=>variant.productId===item.id&&(item.mode==='preorder'&&!collection||variant.availableQuantity>0))??catalog.variants.find(variant=>variant.productId===item.id))?.id??'');setQuantity('1');setFormError('');}}>Ver produto</Button></article>;
       })}</div>}
     </section>}
     {catalog&&draft.items.length>0&&<section id="selecao" className="commercial-catalog-section buyer-selection">
@@ -146,13 +149,13 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
     </section>}
 
     {product&&<Dialog title={product.name} onClose={()=>setProductId('')}><Eyebrow>{campaign?.name} · {product.category}</Eyebrow><p>{product.description}</p><Badge>{preorder?'Sob encomenda':'Estoque físico'}</Badge><form className="form-fields buyer-product-form" onSubmit={event=>{event.preventDefault();add();}}>
-      <label>Variação<select aria-label="Variação" value={variantId} onChange={event=>setVariantId(event.target.value)}>{variants.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      <fieldset className="product-variant-options"><legend>Escolha a variação</legend>{variants.map(item=><label key={item.id} data-selected={item.id===variantId}><input type="radio" name="variant" value={item.id} checked={item.id===variantId} onChange={()=>setVariantId(item.id)} disabled={!preorder&&item.availableQuantity<=0}/><span><strong>{item.name}</strong><small>{preorder?'Sob encomenda':item.availableQuantity>0?`${item.availableQuantity} disponíveis`:'Esgotado'}</small></span></label>)}</fieldset>
       {variant?.attributes&&<dl className="buyer-attributes">{Object.entries(variant.attributes).map(([name,value])=><div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>}
       <p>{preorder?'Produzido sob encomenda após o pagamento.':`${variant?.availableQuantity??0} unidades disponíveis`}</p><p><strong>{money(product.saleCents)}</strong> por unidade</p>
       <label>Quantidade<input type="number" min="1" max={preorder?1000000:Math.max(1,variant?.availableQuantity??0)} value={quantity} onChange={event=>setQuantity(event.target.value)} required/></label>
       {formError&&<p role="alert">{formError}</p>}<Button variant="primary" disabled={!valid||draft.items.length>=100}>Adicionar à seleção</Button>
     </form></Dialog>}
-    {checkout&&catalog&&<Dialog title="Conferir meu pedido" onClose={()=>{if(!busy)setCheckout(false);}}>
+    {checkout&&catalog&&<Dialog size="wide" title="Conferir meu pedido" onClose={()=>{if(!busy)setCheckout(false);}}>
       {accountProblem?accountProblem:canBuy?<><CommercialOrderForm catalog={catalog} campaignId={campaignId} draft={draft} onChange={changeDraft} onSubmit={()=>void submit()} busy={busy} refresh={()=>void load()}/>{formError&&<p className="form-feedback error" role="alert">{formError}</p>}</>:needsStudentEmail?<BuyerEmailVerification onVerified={()=>void checkAccount()}/>:<><p>Sua seleção fica guardada neste navegador durante esta sessão. Entre com sua conta Honji para continuar.</p><p>Compradores externos precisam confirmar um e-mail @alunos.utfpr.edu.br. Confira também a caixa de spam.</p><a className="button button-primary" href="/auth/login?provider=google">Entrar ou criar conta com Google</a><a className="button button-secondary" href="/auth/login">Entrar com Honji</a></>}
     </Dialog>}
     {detail&&<Dialog title="Pedido registrado" onClose={()=>setDetail(undefined)}><CommercialOrderDetail detail={detail} busy={busy} onAction={async()=>false} refresh={()=>void refreshDetail()}/>{formError&&<p role="alert">{formError}</p>}</Dialog>}

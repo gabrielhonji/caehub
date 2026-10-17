@@ -1,3 +1,4 @@
+import {useRefresh} from '../hooks/useRefresh';
 import {RepeatOrder} from './RepeatOrder';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../services/spaces';
@@ -29,6 +30,7 @@ export function CommercialOrders({catalog,campaignId,onInventoryChange,mode='adm
     catch(e){if(current===generation.current){setError(failure(e));setDenied((e as {code?:string}).code==='forbidden');}}
     finally{if(current===generation.current)setLoading(false);}
   },[query,route]);
+  useRefresh(load);
   useEffect(()=>{void load();return()=>{++generation.current;};},[load]);
   useEffect(()=>{setPage(1);setDraft(emptyOrderDraft());setRequestKey(newRequestKey());setReceipt({variantId:'',quantity:'',reference:''});setReceiptKey(newRequestKey());},[campaignId]);
   const filter=(patch:Partial<typeof filters>)=>{setFilters({...filters,...patch});setPage(1);};

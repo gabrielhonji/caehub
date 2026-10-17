@@ -1,3 +1,4 @@
+import {DateInput} from './DateInput';
 import {useEffect,useRef,useState,useId} from 'react';
 import {clock,isTime,minutes,presetTimes,today} from '../domain/agenda-input';
 const parts=(value?:string)=>{if(!value)return {date:today(),time:''};const d=new Date(value);return {date:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,time:`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};};
@@ -11,11 +12,11 @@ export function AgendaTimeFields({startName='startsAt',endName='endsAt',startsAt
  const valid=isTime(start)&&isTime(end)&&(!withDate||Boolean(date))&&((withDate&&multipleDays&&endDate>date)||end>start);
  useEffect(()=>{startInput.current?.setCustomValidity(start&&!valid?'Confira o término. Para atravessar a meia-noite na disponibilidade, divida em dois blocos.':'');},[start,valid]);
  return <div ref={wrapper} className="agenda-time-fields wide-field"><div className="agenda-time-grid">
- {withDate&&<label>Data<input type="date" required value={date} onChange={e=>setDate(e.target.value)}/></label>}
+ {withDate&&<label>Data<DateInput required value={date} onChange={e=>setDate(e.target.value)}/></label>}
  <label>Início<input ref={startInput} type="time" step={60} required value={start} onChange={e=>setStart(e.target.value)} list={listId}/></label><datalist id={listId}>{presetTimes.map(t=><option key={t} value={t}/>)}</datalist>
  <label>Duração<select aria-label="Duração" value={duration} onChange={e=>setDuration(e.target.value)}><option value="60">1 hora</option><option value="90">1h30</option><option value="120">2 horas</option><option value="180">3 horas</option><option value="custom">Duração específica</option></select></label>
  {duration==='custom'?<label>Término<input type="time" step={60} required value={end} onChange={e=>setEnd(e.target.value)}/></label>:<div className="time-end-preview"><small>Término automático</small><strong>{end||'Escolha o início'}{multipleDays?' · dia seguinte':''}</strong></div>}
- {withDate&&duration==='custom'&&<label className="inline-check"><input type="checkbox" checked={multipleDays} onChange={e=>setMultipleDays(e.target.checked)}/>Termina em outro dia</label>}{withDate&&multipleDays&&duration==='custom'&&<label>Data de término<input type="date" min={date} value={endDate} required onChange={e=>setEndDate(e.target.value)}/></label>}
+ {withDate&&duration==='custom'&&<label className="inline-check"><input type="checkbox" checked={multipleDays} onChange={e=>setMultipleDays(e.target.checked)}/>Termina em outro dia</label>}{withDate&&multipleDays&&duration==='custom'&&<label>Data de término<DateInput min={date} value={endDate} required onChange={e=>setEndDate(e.target.value)}/></label>}
  </div>{start&&!valid&&(end||(!withDate&&duration!=='custom'))&&<p className="field-error" role="alert">O término precisa ser posterior ao início. Na disponibilidade, divida em dois blocos quando atravessar a meia-noite.</p>}
  <input type="hidden" name={startName} value={valid?(withDate?`${date}T${start}`:start):''}/><input type="hidden" name={endName} value={valid?(withDate?`${multipleDays?endDate:date}T${end}`:end):''}/></div>;
 }

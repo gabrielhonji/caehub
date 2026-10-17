@@ -1,5 +1,33 @@
 # Coordenação de agentes
 
+## UX-22 — refinamento operacional, 17/10/2026
+
+D-72 na coordenação Honji. Início/Espaços priorizados; início destaca tarefas,
+reuniões e abertura direta de espaço único. Ingresso contextual apenas após
+login para membros já existentes. Agenda oferece visão semanal com dias da
+semana/primeiro horário livre, filtro inicial todos livres, estados visuais,
+convocação integrada e revisão por espaço. Importação sugere semestre atual e
+datas oficiais Apucarana 2026; outros anos explicitamente estimados/editáveis.
+Votações livres têm ação consistente e opções numeradas; escala de evento
+prevê vários turnos/capacidade/pausa e POST /api/shifts/batch grava tudo em
+transação, com chave de idempotência e autorização existente por item.
+Lojinha mostra variações disponíveis/esgotadas e conferência dos itens.
+
+Kanban atualiza manualmente junto às setas; atualização geral opcional a cada
+15/30/60 segundos por dez minutos, pausada com modal/campo ativo/aba oculta.
+Cartão apresenta descrição/checklist/comentários antes da administração; edição
+substitui a leitura no mesmo modal, com retorno e proteção dos rascunhos.
+Títulos e responsáveis longos são limitados na prévia. Atualização também cobre
+Agenda, início, tarefas, pedidos e catálogo sem recarregar a página.
+
+Gate: 48/48 CAEHUB, 34 IAM, duas integrações SQL de contas/lote, tipos/builds;
+Chromium em API/banco descartáveis: colega altera cartão, refresh, edição única,
+rascunho preservado, reunião criada da consulta, defaults acadêmicos, escala
+3x4h/2 pessoas/pausa12–14, expiração automática; Portal filtros/paginação e
+confirmação; lojinha/ingresso com fixture e sem compra; desktop/mobile e temas.
+Sem PDF pessoal, sessão pessoal ou escrita de negócio em produção.
+Estado de publicação será registrado após os canais oficiais.
+
 ## UX-21 — ingresso, reuniões e votações independentes, 16/10/2026
 
 D-71. Botão de ingresso CAECOMP aponta ao pedido central Honji, sem concessão

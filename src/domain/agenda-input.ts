@@ -20,3 +20,10 @@ export function timetableIssues(input:{term:string;validFrom:string;validTo:stri
   if(!input.reviewed)issues.push('Confirme que conferiu os dias e horários.');
   return issues;
 }
+
+/** Prefer a useful daytime start without claiming availability outside the returned free interval. */
+export function recommendedMeeting(startsAt:string,endsAt:string,duration:number){
+ const start=new Date(startsAt),limit=Date.parse(endsAt),length=duration*60000;
+ for(const hour of [7,6]){const candidate=new Date(start);candidate.setHours(hour,0,0,0);if(candidate>=start&&candidate.getTime()+length<=limit)return {startsAt:candidate.toISOString(),endsAt:new Date(candidate.getTime()+length).toISOString()};}
+ return {startsAt:start.toISOString(),endsAt:new Date(start.getTime()+length).toISOString()};
+}

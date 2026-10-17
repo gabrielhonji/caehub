@@ -46,4 +46,6 @@ export async function migrateAdvancedAgenda(db: Database) {
     status enum('pending','confirmed','declined','withdrawn','removed','cancelled') NOT NULL,responded_at datetime(3) NULL,
     PRIMARY KEY(shift_id,membership_id),FOREIGN KEY(shift_id) REFERENCES agenda_shifts(id),FOREIGN KEY(membership_id) REFERENCES memberships(id),
     INDEX shift_member_calendar(membership_id,status))`);
+ await db.run(`CREATE TABLE IF NOT EXISTS agenda_shift_batches(request_key char(36) PRIMARY KEY,organizer_id char(36) NOT NULL,payload_hash char(64) NOT NULL,shift_ids JSON NOT NULL)`);
+
 }

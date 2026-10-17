@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { RowDataPacket } from 'mysql2';
 import { CAECOMP_ORGANIZATION_ID, type Database } from './database.js';
 import type { Actor } from './domain.js';
@@ -22,11 +22,25 @@ export class Shifts {
     const member=await this.institutional.requireMember(actor);
     if(!await this.agenda.mayOrganize(actor,member,input.workspaceId))throw new Forbidden('Direção do espaço necessária.');
     this.validate(input);const id=randomUUID();
-    await this.db.transaction(async tx=>{
-      await this.related(tx,input);
-      await tx.run('INSERT INTO agenda_shifts (id,organization_id,workspace_id,organizer_membership_id,related_meeting_id,title,description,location,starts_at,ends_at,minimum_capacity,maximum_capacity,priority_window_hours) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',[id,CAECOMP_ORGANIZATION_ID,input.workspaceId,member.id,input.relatedMeetingId??null,input.title,input.description??null,input.location??null,sqlInstant(input.startsAt),sqlInstant(input.endsAt),input.minimumCapacity??null,input.maximumCapacity,input.priorityWindowHours??2]);
-      await agendaHistory(tx,member.id,'shift',id,'created');
-    });return {id};
+    await this.db.transaction(tx=>this.insert(tx,member.id,id,input));return {id};
+  }
+  private async insert(tx:Database,memberId:string,id:string,input:ShiftInput){
+    await this.related(tx,input);
+    await tx.run('INSERT INTO agenda_shifts (id,organization_id,workspace_id,organizer_membership_id,related_meeting_id,title,description,location,starts_at,ends_at,minimum_capacity,maximum_capacity,priority_window_hours) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',[id,CAECOMP_ORGANIZATION_ID,input.workspaceId,memberId,input.relatedMeetingId??null,input.title,input.description??null,input.location??null,sqlInstant(input.startsAt),sqlInstant(input.endsAt),input.minimumCapacity??null,input.maximumCapacity,input.priorityWindowHours??2]);
+    await agendaHistory(tx,memberId,'shift',id,'created');
+  }
+  async createMany(actor:Actor,requestKey:string,inputs:ShiftInput[]){
+    const member=await this.institutional.requireMember(actor);
+    for(const input of inputs){if(!await this.agenda.mayOrganize(actor,member,input.workspaceId))throw new Forbidden('Direção do espaço necessária.');this.validate(input);}
+    const hash=createHash('sha256').update(JSON.stringify(inputs)).digest('hex');
+    return this.db.transaction(async tx=>{
+      await tx.run('INSERT IGNORE INTO agenda_shift_batches(request_key,organizer_id,payload_hash,shift_ids) VALUES(?,?,?,JSON_ARRAY())',[requestKey,member.id,hash]);
+      const previous=await tx.one<RowDataPacket>('SELECT * FROM agenda_shift_batches WHERE request_key=? FOR UPDATE',[requestKey]);
+      if(previous!.organizer_id!==member.id||previous!.payload_hash!==hash)throw new Conflict('Esta solicitação já foi usada para outra escala.');
+      const existing=typeof previous!.shift_ids==='string'?JSON.parse(previous!.shift_ids):previous!.shift_ids;if(existing.length)return {ids:existing};
+      const ids:string[]=[];for(const input of inputs){const id=randomUUID();await this.insert(tx,member.id,id,input);ids.push(id);}
+      await tx.run('UPDATE agenda_shift_batches SET shift_ids=? WHERE request_key=?',[JSON.stringify(ids),requestKey]);return {ids};
+    });
   }
   private async access(actor:Actor,member:RowDataPacket,shift:RowDataPacket,manage=false) {
     const allowed=manage?await this.agenda.mayOrganize(actor,member,shift.workspace_id):await this.agenda.mayReadWorkspace(actor,member,shift.workspace_id)||Boolean(await this.db.one('SELECT membership_id FROM agenda_shift_participants WHERE shift_id=? AND membership_id=?',[shift.id,member.id]));
