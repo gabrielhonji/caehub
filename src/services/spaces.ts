@@ -8,7 +8,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   if(response.status===401){sessionPromise=undefined;location.assign(`/acesso?status=expired&returnTo=${encodeURIComponent(location.pathname+location.search+location.hash)}`);throw new Error('Sua sessão expirou. Entre novamente.');}
   if(response.status===403){const problem=await response.clone().json().catch(()=>({}));if(problem.error==='access_denied'){sessionPromise=undefined;location.assign('/acesso?status=denied');}else if(problem.message==='Honji identity integration is unavailable'){location.assign('/acesso');throw new Error('Sessão necessária.');}}
   if (!response.ok) { const problem = await response.json().catch(() => ({})); throw Object.assign(new Error(problem.message ?? `Falha ${response.status}`),{code:problem.error}); }
-  if (!['GET','HEAD'].includes(method)&&/^\/(?:meetings|meeting-polls|shifts|availability|agenda\/notifications)/.test(path)) window.dispatchEvent(new Event('caehub:agenda-updated'));
+  if (!['GET','HEAD'].includes(method)&&/^\/(?:meetings|meeting-polls|opinion-polls|shifts|availability|agenda\/notifications)/.test(path)) window.dispatchEvent(new Event('caehub:agenda-updated'));
   if(!['GET','HEAD'].includes(method)&&path.startsWith('/commercial/')&&!path.startsWith('/commercial/analytics'))window.dispatchEvent(new Event('caehub:commercial-updated'));
   if (response.status === 204) return undefined as T;
   return response.json();

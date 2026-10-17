@@ -1,3 +1,4 @@
+import {OpinionPolls} from './opinion-polls.js';
 import {CommercialAnalytics} from './commercial-analytics.js';
 import Fastify from 'fastify';
 import manifest from '../../package.json' with { type: 'json' };
@@ -173,6 +174,11 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.post('/api/meetings/:id/response',async request=>{const body=z.object({response:z.enum(['confirmed','maybe','declined']),justification:z.string().trim().min(1).max(1000).optional()}).parse(request.body);return agenda.respond(await actor(request),id.parse((request.params as {id:string}).id),body.response,body.justification);});
   app.get('/api/agenda/notifications',async request=>agenda.notifications(await actor(request)));
   app.post('/api/agenda/notifications/:id/read',async request=>agenda.readNotification(await actor(request),id.parse((request.params as {id:string}).id)));
+  const opinions=new OpinionPolls(service.db,service,agenda);
+  app.get('/api/opinion-polls',async request=>opinions.list(await actor(request)));
+  app.post('/api/opinion-polls',async(request,reply)=>reply.code(201).send(await opinions.create(await actor(request),z.object({title:z.string().trim().min(1).max(200),description:z.string().trim().max(10000).optional(),workspaceId:id.optional(),deadline:z.string().datetime().optional(),participantIds:z.array(id).min(1).max(100),options:z.array(z.string().trim().min(1).max(300)).min(2).max(30)}).strict().parse(request.body))));
+  app.put('/api/opinion-polls/:id/vote',async request=>opinions.act(await actor(request),paramId(request),z.object({optionId:id}).strict().parse(request.body).optionId));
+  app.post('/api/opinion-polls/:id/close',async request=>{z.object({confirmed:z.literal(true)}).strict().parse(request.body);return opinions.act(await actor(request),paramId(request));});
   const interval=z.object({startsAt:z.string().datetime(),endsAt:z.string().datetime()});
   app.get('/api/meeting-polls',async request=>polls.list(await actor(request)));
   app.post('/api/meeting-polls',async(request,reply)=>reply.code(201).send(await polls.create(await actor(request),z.object({title:z.string().trim().min(1).max(200),description:z.string().max(10000).optional(),location:z.string().max(255).optional(),workspaceId:id.optional(),deadline:z.string().datetime().optional(),participantIds:z.array(id).min(1).max(100),options:z.array(interval).min(2).max(30)}).parse(request.body))));

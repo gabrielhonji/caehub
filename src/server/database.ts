@@ -1,3 +1,4 @@
+import {migrateOpinionPolls} from './opinion-polls.js';
 import mysql, { type Pool, type RowDataPacket } from 'mysql2/promise';
 import { migrateTimetables } from './timetable-migration.js';
 import { migrateAdvancedAgenda } from './agenda-advanced-migration.js';
@@ -94,6 +95,7 @@ async function migrateSchema(db: Database): Promise<void> {
   await db.run(`CREATE TABLE IF NOT EXISTS agenda_notifications (id char(36) primary key, membership_id char(36) not null, meeting_id char(36) not null, kind enum('invited','rescheduled','removed') not null, created_at datetime(3) not null default current_timestamp(3), read_at datetime(3) null, index agenda_notification_inbox (membership_id,read_at,created_at), constraint fk_agenda_notification_membership foreign key (membership_id) references memberships(id), constraint fk_agenda_notification_meeting foreign key (meeting_id) references meetings(id))`);
   await migrateTimetables(db);
   await migrateAdvancedAgenda(db);
+  await migrateOpinionPolls(db);
   for(const [table,column,definition] of [
     ['availability_request_participants','availability_fingerprint','char(64) NULL'],
     ['meeting_participants','justification','varchar(1000) NULL'],

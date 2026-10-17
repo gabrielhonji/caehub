@@ -108,6 +108,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
   const ownOrdersRoute=location.hash.startsWith('#/meus-pedidos');
   const content=ownOrdersRoute&&!embedded?<><section className="commercial-heading buyer-page-heading"><div><Eyebrow>MINHA CONTA</Eyebrow><h1>Meus pedidos.</h1><p>Produtos, pagamento e retirada de cada compra.</p><a className="button button-secondary" href="#/comercial/comprar">← Voltar à lojinha</a></div></section>{orders}</>:<>
     {institutionalDenied&&<p className="form-feedback" role="status">Sua conta pode usar a lojinha. O acesso institucional depende de concessão por um administrador.</p>}
+    {!embedded&&<section className="buyer-login-note" aria-label="Ingressar no CAECOMP"><div><Eyebrow>PARTICIPE DO CAECOMP</Eyebrow><h2>Quer fazer parte da equipe?</h2><p>Crie sua conta ou solicite acesso com a conta que já tem. A equipe aprova seu ingresso e define seu departamento.</p></div><a className="button button-primary" href="https://gabriel.honji.com.br/#solicitar-acesso?project=CAECOMP">Quero ser membro</a><small>Para comprar na lojinha, basta entrar com Honji; não é necessário ser membro.</small></section>}
     {verification&&<BuyerEmailVerification onVerified={()=>void checkAccount()}/>}
     <section className={`commercial-heading public-intro ${embedded?'buyer-page-heading':''}`}><div>
       <Eyebrow>{embedded?'COMERCIAL · MINHAS COMPRAS':'01 / HONJI + CAECOMP'}</Eyebrow>

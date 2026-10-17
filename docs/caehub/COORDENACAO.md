@@ -1,5 +1,26 @@
 # Coordenação de agentes
 
+## UX-21 — ingresso, reuniões e votações independentes, 16/10/2026
+
+D-71. Botão de ingresso CAECOMP aponta ao pedido central Honji, sem concessão
+automática. Enquetes de texto separadas das votações de horários: convite,
+um voto alterável, resultados agregados e encerramento sem reunião. Migração
+aditiva e autorização contextual existentes. Portal/IAM mantém edição em lote
+atômica e revisada, com o mesmo alcance da edição individual.
+
+Causa reproduzida da convocação: componentes irmãos de horário e equipe
+compartilhavam chave React; alterar agendamento podia deixar dois conjuntos
+de inputs no formulário. Agora há um formulário novo por criação, um único
+intervalo, falha preserva o rascunho e sucesso fecha com confirmação.
+Equipe do espaço em carregamento/falha impede envio incompleto e permite retry.
+
+47/47 testes servidor, tipos/build e Chromium com API/MySQL descartáveis
+aprovados: reunião direta/espaço/consulta, UTC, convidados, erro e retomada;
+enquete criada/votada/voto alterado/encerrada sem reunião; desktop/mobile e temas.
+Portal: ingresso novo/existente e revisão em lote aprovados com API fictícia;
+IAM: 34 unitários e integração SQL atômica/negativa aprovados. Sem sessão
+pessoal ou escrita de negócio em produção. Build/publicação oficial pendentes.
+
 ## UX-20 — retorno humano e foco móvel, 15/10/2026
 
 Pedido atual: corrigir bordas, composição Home/tarefas, alinhamentos e gaps da

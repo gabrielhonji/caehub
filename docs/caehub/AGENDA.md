@@ -95,3 +95,20 @@ turnos concorrentes, aulas/reuniões, redução de capacidade, privacidade,
 acesso contextual e finalização duplicada. Capturas usam dados fictícios.
 Direção pode liberar participações de vínculos encerrados, sem permitir novas
 atribuições a esses vínculos. A regressão é coberta por teste de integração.
+
+## Votações independentes — D-71, 16/10/2026
+
+Opções de texto, sem vínculo com reunião: direção/administração autorizada
+cria e encerra; convidados ativos escolhem uma opção e podem alterá-la
+antes do prazo/encerramento. Não há voto público ou identidade do votante
+nos resultados: somente contagens agregadas. O backend protege acesso,
+convite, opção pertencente à votação, prazo e encerramento sob transação.
+Resultados e registros são preservados; encerrar não cria reunião nem
+ocupação na agenda. Votações de horários existentes continuam separadas.
+Tabelas aditivas opinion_polls/options/participants/votes, rotas
+/api/opinion-polls e notificações internas; sem nova autenticação.
+
+Criação de reunião usa um formulário novo por convocação, sem chaves React
+compartilhadas entre horários e participantes. Falha de envio mantém dados;
+sucesso fecha o formulário e retorna à lista. Carregamento/falha de equipe
+do espaço bloqueia submissão até resolver a seleção, com retry explícito.
