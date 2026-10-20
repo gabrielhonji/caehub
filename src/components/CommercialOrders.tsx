@@ -16,6 +16,7 @@ type Flow='create'|'settings'|'production'|'detail';
 export function CommercialOrders({catalog,campaignId,onInventoryChange,mode='admin',initialOrderId}:{catalog?:SaleCatalog;campaignId?:string;onInventoryChange?:()=>Promise<void>;mode?:'admin'|'mine';initialOrderId?:string}){
   const [data,setData]=useState<OrderList>(),[error,setError]=useState(''),[feedback,setFeedback]=useState(''),[denied,setDenied]=useState(false);
   const [repeat,setRepeat]=useState<{id:string;campaignId:string}>();
+  const [opening,setOpening]=useState('');const openingRequest=useRef(0);
   const [busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[flow,setFlow]=useState<Flow>(),[formError,setFormError]=useState('');
   const [filters,setFilters]=useState(emptyFilters),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(20);
   const [detail,setDetail]=useState<OrderDetail>(),[production,setProduction]=useState<Production>(),[settings,setSettings]=useState<OrderSettings>(),[buyers,setBuyers]=useState<{id:string;name:string}[]>([]);
@@ -35,14 +36,14 @@ export function CommercialOrders({catalog,campaignId,onInventoryChange,mode='adm
   useEffect(()=>{setPage(1);setDraft(emptyOrderDraft());setRequestKey(newRequestKey());setReceipt({variantId:'',quantity:'',reference:''});setReceiptKey(newRequestKey());},[campaignId]);
   const filter=(patch:Partial<typeof filters>)=>{setFilters({...filters,...patch});setPage(1);};
   const open=async(kind:Flow,id?:string,preserveFocus=false)=>{
-    if(!preserveFocus)setReturnFocus(document.activeElement instanceof HTMLElement?document.activeElement:null);setBusy(true);setFormError('');
+    const current=++openingRequest.current;setOpening(id??kind);if(!preserveFocus)setReturnFocus(document.activeElement instanceof HTMLElement?document.activeElement:null);setFormError('');
     try{
-      if(kind==='detail')setDetail(await api<OrderDetail>(`/commercial/${route}/${id}`));
+      if(kind==='detail'){const result=await api<OrderDetail>(`/commercial/${route}/${id}`);if(current!==openingRequest.current)return;setDetail(result);}
       if(kind==='settings')setSettings(await api<OrderSettings>('/commercial/settings'));
       if(kind==='production')setProduction(await api<Production>(`/commercial/campaigns/${campaignId}/production`));
       if(kind==='create'&&mode==='admin'){const [b,s]=await Promise.all([api<{id:string;name:string}[]>('/commercial/buyers'),api<OrderSettings>('/commercial/settings')]);setBuyers(b);setSettings(s);}
-      setFlow(kind);
-    }catch(e){setError(failure(e));}finally{setBusy(false);}
+      if(current===openingRequest.current)setFlow(kind);
+    }catch(e){if(current===openingRequest.current)setError(failure(e));}finally{if(current===openingRequest.current)setOpening('');}
   };
   const mutate=async(path:string,body:object,method='POST')=>{
     if(busy)return;setBusy(true);setFormError('');
@@ -90,7 +91,7 @@ export function CommercialOrders({catalog,campaignId,onInventoryChange,mode='adm
       <p>{mode==='mine'?`Pedido ${o.id.slice(0,8)} · ${orderTime(o.createdAt)}`:`${o.campaignName} · ${orderTime(o.createdAt)}`}</p>
       {mode==='mine'&&<ul className="buyer-purchased-items">{o.items?.map(item=><li key={item.id}><div><strong>{item.productName}</strong><span>{item.variantName}</span></div><div><strong>{item.quantity} {item.quantity===1?'unidade':'unidades'}</strong><span>{o.deliveryStatus==='collected'?'Já retirado':o.deliveryStatus==='ready'?'Para retirada':item.fulfillment==='preorder'?(o.status==='cancelled'?'Cancelado':o.paymentStatus!=='paid'?'Aguardando pagamento':item.productionStatus==='waiting'?'Aguardando produção':orderLabels[item.productionStatus]??'Encomenda'):'Produto físico'}</span></div></li>)}</ul>}
       <div className="card-actions"><Badge>{mode==='mine'?`Pagamento: ${o.paymentStatus==='paid'?'confirmado':orderLabels[o.paymentStatus]}`:orderLabels[o.paymentStatus]}</Badge>{mode==='admin'&&<Badge>{orderLabels[o.deliveryStatus]}</Badge>}{data.canManage&&Number(o.openIssues)>0&&<Badge tone="waiting">{o.openIssues} pendência(s)</Badge>}</div>
-      <footer><div><small>Total do pedido</small><strong>{money(Number(o.totalCents))}</strong></div><Button variant={mode==='mine'?'primary':'secondary'} aria-label={`Ver pedido ${o.id.slice(0,8)} de ${o.campaignName}`} disabled={busy||loading} onClick={()=>void open('detail',o.id)}>{mode==='mine'?'Acompanhar pedido':'Ver pedido'}</Button>{mode==='mine'&&o.status==='expired'&&<Button disabled={busy||loading} aria-label={`Refazer pedido ${o.id.slice(0,8)}`} onClick={()=>setRepeat({id:o.id,campaignId:o.campaignId})}>Refazer pedido</Button>}</footer>
+      <footer><div><small>Total do pedido</small><strong>{money(Number(o.totalCents))}</strong></div><Button variant={mode==='mine'?'primary':'secondary'} aria-label={`Ver pedido ${o.id.slice(0,8)} de ${o.campaignName}`} disabled={busy||loading||opening===o.id} aria-busy={opening===o.id} onClick={()=>void open('detail',o.id)}>{opening===o.id?'Consultando…':mode==='mine'?'Acompanhar pedido':'Ver pedido'}</Button>{mode==='mine'&&o.status==='expired'&&<Button disabled={busy||loading} aria-label={`Refazer pedido ${o.id.slice(0,8)}`} onClick={()=>setRepeat({id:o.id,campaignId:o.campaignId})}>Refazer pedido</Button>}</footer>
       {mode==='admin'&&<small className="commercial-order-id">{o.id}</small>}
     </article>)}</div>}
     <div className="commercial-pagination form-fields"><p>{data.total} pedidos encontrados{data.pages>1&&` · Página ${data.page} de ${data.pages}`}</p>{(mode==='admin'||data.total>10)&&<><div className="card-actions"><Button disabled={page<=1||loading||busy} onClick={()=>setPage(page-1)}>Anterior</Button><Button disabled={page>=data.pages||loading||busy} onClick={()=>setPage(page+1)}>Próxima</Button></div><label>Por página<select value={pageSize} onChange={e=>{setPageSize(Number(e.target.value));setPage(1);}}>{[10,20,50].map(n=><option key={n} value={n}>{n}</option>)}</select></label></>}</div>

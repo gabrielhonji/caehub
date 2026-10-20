@@ -22,8 +22,8 @@ function Entry(){
   useEffect(()=>{const update=()=>setRoute(location.hash);addEventListener('hashchange',update);return()=>removeEventListener('hashchange',update);},[]);
   useEffect(()=>{if(internal)load();},[internal]);
   if(!internal)return <PublicPortal key={route.startsWith('#verificar-email')?route:'public'}/>;
-  if(loading||(!session&&!error))return <LoadingState/>;
-  if(error)return <ErrorState onRetry={load}/>;
+  if(loading||(!session&&!error))return <div className="entry-state"><LoadingState/></div>;
+  if(error)return <div className="entry-state"><ErrorState onRetry={load}/></div>;
   const institutional=session?.institutionalAccess??Boolean(session?.membership&&session.membership.status!=='suspended');
   return institutional?<App/>:<PublicPortal key="buyer" institutionalDenied={!route.startsWith('#/meus-pedidos')&&!route.startsWith('#/comercial/comprar')}/>;
 }

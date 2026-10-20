@@ -1,5 +1,20 @@
 # Coordenação de agentes
 
+## UX-25 — Agente 13, 20/10/2026 — Doing
+
+Pedido atual P08/P09, K01–K10, A01–A07, V01–V04, ES01–ES02,
+PD01–PD04, N01, BUG01; D-76 no Honji. Responsável Codex /root.
+Reservas: `src/app/App.tsx`, `src/main.tsx`, componentes diretamente afetados,
+`src/styles/operational-refinement.css`, serviços/servidor de cartões para
+concorrência e testes pertinentes. Sem conflito ativo identificado nestes caminhos.
+Aceite: edição autorizada salva/cancela e preserva rascunho em conflito; detalhes
+coerentes em modal/página; criação com confirmação; horário sugerido editável;
+convidados explícitos sem seleção apagada silenciosamente; finais de semana
+ativos; escala com semana útil/preview e 0≤mínimo≤máximo; loading por pedido;
+notificações compactas sem perder conteúdo. Relatos persistidos e consultáveis,
+sem envio externo. Testes direcionados e revisão visual antes do gate/publicação.
+13 screenshots não estavam no anexo acessível, apenas o texto.
+
 ## UX-22 — refinamento operacional, 17/10/2026
 
 D-72 na coordenação Honji. Início/Espaços priorizados; início destaca tarefas,
