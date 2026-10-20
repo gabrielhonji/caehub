@@ -1,6 +1,6 @@
 # Coordenação de agentes
 
-## UX-26 — refresh contextual, 20/10/2026 — Doing
+## UX-26 — refresh contextual, 20/10/2026 — Done
 
 Retorno atual de Gabriel: SVG centralizado, rotação durante a requisição,
 sem confirmação de sucesso, dimensões iguais aos controles vizinhos e
@@ -8,7 +8,12 @@ canto superior direito do recurso. RefreshButton, reuniões, calendários e
 pedidos ajustados; tarefas/cartões seguem o mesmo padrão. Teste Chromium
 aprovou centro do SVG, altura igual às setas, animação pendente/final,
 ausência de requisição duplicada/confirmação, desktop/mobile e temas.
-Tipos/build aprovados; sem mudança de servidor. Publicação 1.19.1 pendente.
+Tipos/build e regressão de consumidores aprovados; sem mudança de servidor.
+Fonte `5b44ec4` confirmada em origin/honji main; imagem oficial testada em
+produção com banco descartável. Publicação 1.19.1/release `20102026-200219`
+Healthy. HTTPS e Chromium público confirmaram versão, desktop/mobile e ausência
+de erros/overflow; foundation/relatos anônimos 401. Containers e rede próprios
+de teste encerrados. Reservas liberadas; handoff Honji atualizado.
 
 ## UX-25 — Agente 13, 20/10/2026 — Done
 

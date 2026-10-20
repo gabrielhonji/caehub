@@ -6,7 +6,7 @@ código atual, Chromium e dados fictícios; nenhuma conta pessoal ou compra real
 
 Status: **corrigidos** os IDs desta matriz; sem correção parcial ou bloqueada.
 Portal P01–P07 também corrigidos e publicados (detalhes na coordenação Honji).
-CAEHUB 1.19.0, imagem oficial fonte `ffb1f7b`, publicado Healthy; Portal 0.12.2
+CAEHUB 1.19.1, imagem oficial fonte `5b44ec4`, publicado Healthy; Portal 0.12.2
 release `20261020-164555`. Ambos em main nos remotos oficiais. Smoke HTTPS e
 Chromium público aprovados. Não houve alteração de infraestrutura central.
 
@@ -17,7 +17,7 @@ Chromium público aprovados. Não houve alteração de infraestrutura central.
 | K01–K03 | Sem reserva vazia na linha superior; gerenciamento compacto, hover/foco; disclosure sinalizado e revelação limitada a 160px no container rolável ativo, sem scroll ao fechar e com movimento reduzido. |
 | K04–K06 | Título/descrição/tags editáveis no contexto; cancelar restaura, confirmação persiste, 409 mantém rascunho e permite reabrir versão atual. Propriedades essenciais e duas colunas de responsáveis. Edição avançada preservada; retorno curto e sem Fechar todos. |
 | K07 | Criação a partir do quadro em Dialog existente, rascunho protegido e atualização automática do quadro. |
-| K08 | RefreshButton em Kanban, detalhes, tarefas e calendários semanal/mensal: requisição pendente real e proteção contra clique repetido. Erros das telas permanecem visíveis; consulta encerrada não é confirmação de escrita. |
+| K08 / UX-26 | RefreshButton em Kanban, detalhes, tarefas, calendários, reuniões e pedidos: SVG centralizado, gira durante a requisição, para ao terminar, sem mensagem de confirmação. Geometria coerente com vizinhos, posição superior direita, bloqueio de clique repetido e erros recuperáveis. Regra futura em UI-REACT.md. |
 | K09 | Fieldset sem borda e ação para Portal com projeto/departamento reais, em nova aba; rota conferida no consumidor Hierarchy do Portal. |
 | K10 | Página e modal compartilham detalhes; removida duplicação estática da página; navegação alinhada ao container. |
 | A01–A03 | Término vazio/editável; manual muda para duração personalizada sem sobrescrita. Espaço é contexto; departamentos filtram convidados sem apagar seleção. Equipe adicionada explicitamente. Envio centralizado e pendente real. |
