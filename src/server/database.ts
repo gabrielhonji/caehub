@@ -1,3 +1,4 @@
+import {migrateProblemReports} from './problem-reports.js';
 import {migrateOpinionPolls} from './opinion-polls.js';
 import mysql, { type Pool, type RowDataPacket } from 'mysql2/promise';
 import { migrateTimetables } from './timetable-migration.js';
@@ -96,6 +97,7 @@ async function migrateSchema(db: Database): Promise<void> {
   await migrateTimetables(db);
   await migrateAdvancedAgenda(db);
   await migrateOpinionPolls(db);
+  await migrateProblemReports(db);
   for(const [table,column,definition] of [
     ['availability_request_participants','availability_fingerprint','char(64) NULL'],
     ['meeting_participants','justification','varchar(1000) NULL'],

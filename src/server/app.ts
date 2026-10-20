@@ -1,3 +1,4 @@
+import {registerProblemReports} from './problem-reports.js';
 import {OpinionPolls} from './opinion-polls.js';
 import {CommercialAnalytics} from './commercial-analytics.js';
 import Fastify from 'fastify';
@@ -42,6 +43,7 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
     return reply.code(500).send({ error: 'internal_error' });
   });
   const actor = async (request: import("fastify").FastifyRequest,accountOnly=false) => { const value = await identity.current(request); if (!value) {if(identity instanceof HonjiGateway)throw new AuthenticationFailure(401,'session_required','Sua sessão expirou. Entre novamente para continuar.');throw new Forbidden('Honji identity integration is unavailable');} if (!value.projectAccess&&!(accountOnly&&value.accountAccess)) throw new Forbidden('project.access is required'); if(value.debugView&&value.debugView.mode!=='real'&&!['GET','HEAD'].includes(request.method))throw new Forbidden('debug profiles are read-only'); if(!accountOnly)await service.requireMember(value); return value; };
+  registerProblemReports(app,service,request=>actor(request,true));
   const commercial=new CommercialService(service.db,service);
   const orders=new OrderService(service.db,service);
   app.get('/api/public/catalog',async(_request,reply)=>{reply.header('cache-control','no-store');return orders.publicCatalog();});

@@ -1,3 +1,4 @@
+import {ProblemReportEntry} from './ProblemReports';
 import {useRefresh} from '../hooks/useRefresh';
 import {skipToContent} from '../services/navigation';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
@@ -160,10 +161,11 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
     {detail&&<Dialog title="Pedido registrado" onClose={()=>setDetail(undefined)}><CommercialOrderDetail detail={detail} busy={busy} onAction={async()=>false} refresh={()=>void refreshDetail()}/>{formError&&<p role="alert">{formError}</p>}</Dialog>}
     {pendingCampaign&&<Dialog title="Trocar de campanha?" onClose={()=>setPendingCampaign('')}><p>Os itens selecionados pertencem a {campaign?.name??'outra campanha'}. Ao trocar, essa seleção será removida. Seus pedidos já registrados permanecem na sua conta.</p><div className="card-actions"><Button onClick={()=>setPendingCampaign('')}>Manter seleção</Button><Button variant="primary" onClick={()=>changeCampaign(pendingCampaign)}>Trocar campanha</Button></div></Dialog>}
   </>;
+  if(location.hash==='#relatar-problema')return <div className="entry-state"><ProblemReportEntry/></div>;
   if(embedded)return content;
   return <div className="app-shell public-portal"><a className="skip-link" href="#content" onClick={skipToContent}>Pular para o conteúdo</a>
     <header className="site-header"><div className="header-inner"><div className="navbar-brands"><HonjiBrand/><span className="navbar-divider" aria-hidden="true"/><Brand href="/"/></div><nav aria-label="Portal público"><a href="#campanhas">Lojinha</a><a href="/#/meus-pedidos">Meus pedidos</a><a className="public-internal-entry" href="/#/">Área interna do CAECOMP →</a></nav><div className="header-actions">{account&&<Button disabled={signingOut} onClick={()=>void logout()}>{signingOut?"Saindo…":"Sair do CAEHUB"}</Button>}<ThemeToggle theme={theme} onTheme={()=>setTheme(theme==='light'?'dark':'light')}/></div></div></header>
     <main tabIndex={-1} id="content" className="content">{content}</main>
-    <footer className="site-footer"><div className="footer-inner"><HonjiBrand/><div className="footer-organization"><strong>CAECOMP</strong><span>Centro Acadêmico de Engenharia de Computação</span></div><div className="footer-signature"><span>DESENVOLVIDO POR</span><a href="https://github.com/gabrielhonji">gabriel.honji</a><span>CAEHUB · {__APP_VERSION__}</span></div></div></footer>
+    <footer className="site-footer"><div className="footer-inner"><HonjiBrand/><a href="#relatar-problema">Relatar problema</a><div className="footer-organization"><strong>CAECOMP</strong><span>Centro Acadêmico de Engenharia de Computação</span></div><div className="footer-signature"><span>DESENVOLVIDO POR</span><a href="https://github.com/gabrielhonji">gabriel.honji</a><span>CAEHUB · {__APP_VERSION__}</span></div></div></footer>
   </div>;
 }

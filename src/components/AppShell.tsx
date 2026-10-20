@@ -1,3 +1,4 @@
+import {ProblemReports} from './ProblemReports';
 import {useScrollHeader} from '../hooks/useScrollHeader';
 import {skipToContent} from '../services/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -14,7 +15,7 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
   const [commercialManager,setCommercialManager]=useState(false);
   const [menuOpen,setMenuOpen]=useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [account, setAccount] = useState<{ displayName: string; csrfToken: string; debugView?: { available: boolean; mode: DebugMode } }>();
+  const [account, setAccount] = useState<{ displayName: string; csrfToken: string; owner?:boolean; debugView?: { available: boolean; mode: DebugMode } }>();
   const [signingOut, setSigningOut] = useState(false);
   const [logoutError,setLogoutError]=useState('');
   const logoutPending=useRef(false);
@@ -22,7 +23,7 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
     let active = true;
     getSessionInfo().then(value => {
       if(active)setCommercialManager(Boolean(value?.commercialWorkspaceAccess));
-      if (active && value?.displayName) setAccount({ displayName: value.displayName, csrfToken: value.csrfToken ?? '', debugView: value.debugView });
+      if (active && value?.displayName) setAccount({ displayName: value.displayName, owner:value.owner, csrfToken: value.csrfToken ?? '', debugView: value.debugView });
     }).catch(() => undefined);
     return () => { active = false; };
   }, []);
@@ -65,7 +66,7 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
       <footer className="site-footer">
         <div className="footer-inner">
           <div className="footer-brand"><Brand /></div>
-          <div className="footer-organization"><strong>CAECOMP</strong><span>Centro Acadêmico de Engenharia de Computação</span></div>
+          <ProblemReports owner={account?.owner}/><div className="footer-organization"><strong>CAECOMP</strong><span>Centro Acadêmico de Engenharia de Computação</span></div>
           <div className="footer-signature"><span>DESENVOLVIDO POR</span><a href="https://github.com/gabrielhonji" target="_blank" rel="noreferrer">gabriel.honji</a><i aria-hidden="true">·</i><span>VERSÃO {__APP_VERSION__} · {__APP_RELEASE__}</span><i aria-hidden="true">·</i><span>UTFPR / APUCARANA</span></div>
         </div>
       </footer>
