@@ -1,18 +1,34 @@
 # Coordenação de agentes
 
-## UX-25 — Agente 13, 20/10/2026 — Doing
+## UX-26 — refresh contextual, 20/10/2026 — Doing
+
+Retorno atual de Gabriel: SVG centralizado, rotação durante a requisição,
+sem confirmação de sucesso, dimensões iguais aos controles vizinhos e
+canto superior direito do recurso. RefreshButton, reuniões, calendários e
+pedidos ajustados; tarefas/cartões seguem o mesmo padrão. Teste Chromium
+aprovou centro do SVG, altura igual às setas, animação pendente/final,
+ausência de requisição duplicada/confirmação, desktop/mobile e temas.
+Tipos/build aprovados; sem mudança de servidor. Publicação 1.19.1 pendente.
+
+## UX-25 — Agente 13, 20/10/2026 — Done
 
 Pedido atual P08/P09, K01–K10, A01–A07, V01–V04, ES01–ES02,
 PD01–PD04, N01, BUG01; D-76 no Honji. Responsável Codex /root.
-Reservas: `src/app/App.tsx`, `src/main.tsx`, componentes diretamente afetados,
-`src/styles/operational-refinement.css`, serviços/servidor de cartões para
-concorrência e testes pertinentes. Sem conflito ativo identificado nestes caminhos.
+Reservas liberadas. Matriz e handoff Agente 14 em `AGENTE-13.md`.
 Aceite: edição autorizada salva/cancela e preserva rascunho em conflito; detalhes
 coerentes em modal/página; criação com confirmação; horário sugerido editável;
 convidados explícitos sem seleção apagada silenciosamente; finais de semana
 ativos; escala com semana útil/preview e 0≤mínimo≤máximo; loading por pedido;
 notificações compactas sem perder conteúdo. Relatos persistidos e consultáveis,
-sem envio externo. Testes direcionados e revisão visual antes do gate/publicação.
+sem envio externo. Gate 52 servidor + 3 domínio, tipos/build/audit zero e
+Chromium desktop/mobile/temas/teclado aprovados. SSO com Keycloak/dois BFFs/SQL
+reais e membro fictício aprovou Portal → Home sem nova autenticação; Google e
+SMTP sintéticos. Imagem oficial healthy em banco isolado, fonte `ffb1f7b` em
+origin/honji main; CAEHUB 1.19.0/release `20102026-162344` publicado Healthy.
+HTTPS confirmou versão, catálogo 200, foundation e relatos anônimos 401.
+Portal 0.12.2 publicado `20261020-164555`; Chromium público dos dois domínios
+aprovou versões, atalho de relato, desktop/mobile e ausência de erros/overflow.
+Sem sessão pessoal, transação ou teste de escrita de negócio em produção.
 13 screenshots não estavam no anexo acessível, apenas o texto.
 
 ## UX-22 — refinamento operacional, 17/10/2026

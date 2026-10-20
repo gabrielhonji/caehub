@@ -1,3 +1,4 @@
+import {RefreshButton} from './RefreshButton';
 import {useRefresh} from '../hooks/useRefresh';
 import {RepeatOrder} from './RepeatOrder';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -71,10 +72,10 @@ export function CommercialOrders({catalog,campaignId,onInventoryChange,mode='adm
   const title=flow==='create'?(mode==='mine'?'Registrar meu pedido':'Registrar pedido'):flow==='settings'?'Reservas e instruções Pix':flow==='production'?'Produção e recebimentos':'Detalhes do pedido';
   return <section className="commercial-catalog-section commercial-orders" aria-busy={loading}>
     <div className="compact-heading"><div><Eyebrow>{data.canManage?'OPERAÇÃO COMERCIAL':'MEUS PEDIDOS'}</Eyebrow><h2>{mode==='mine'?'O que você comprou.':'Da compra à retirada.'}</h2></div><div className="card-actions">
-      <Button ref={listRefresh} disabled={busy||loading} onClick={()=>void load()}>Atualizar pedidos</Button>
+
       {data.canManage&&<><Button disabled={busy} onClick={()=>void open('settings')}>Reservas e Pix</Button>{campaignId&&<Button disabled={busy} onClick={()=>void open('production')}>Produção e recebimentos</Button>}</>}
       {canCreate&&<Button variant="primary" disabled={busy} onClick={()=>void open('create')}>{mode==='mine'?'Fazer pedido':'Registrar pedido'}</Button>}
-    </div></div>
+    </div><RefreshButton buttonRef={listRefresh} scope="orders" disabled={busy||loading} label="Atualizar pedidos"/></div>
     {data.canManage&&!campaignId&&<p>Selecione uma campanha para registrar pedidos e acompanhar a produção.</p>}
     <Toast message={feedback}/>{error&&<p className="form-feedback error" role="alert">{error}<Button onClick={()=>void load()}>Atualizar</Button></p>}
     <div className={`commercial-metrics ${mode==='mine'?'buyer-metrics':''}`}><span><strong>{data.summary.total}</strong> pedidos</span><span><strong>{data.summary.paymentPending}</strong> {mode==='mine'?'aguardando pagamento':'pagamentos a conferir'}</span>{mode==='admin'&&<span><strong>{data.summary.review}</strong> em revisão</span>}<span><strong>{data.summary.ready}</strong> {mode==='mine'?'para retirada':'prontos'}</span><span><strong>{data.summary.completed}</strong> {mode==='mine'?'já retirados':'concluídos'}</span>{data.canManage&&<span><strong>{data.summary.refunds}</strong> reembolsos pendentes</span>}</div>

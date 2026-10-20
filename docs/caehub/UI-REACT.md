@@ -1,5 +1,14 @@
 # UI React — UI-001
 
+## Refresh contextual — retorno de Gabriel, 20/10/2026
+
+Reutilizar RefreshButton: SVG centralizado, girando somente durante a requisição,
+sem mensagem de confirmação de sucesso. Manter erros recuperáveis, rótulo
+acessível e bloqueio de acionamento duplicado. Usar geometria coerente com os
+controles vizinhos e posição no canto superior direito do recurso atualizado,
+como no Kanban. No mobile, reorganizar filtros sem deslocar esse controle.
+Movimento reduzido desativa a rotação e preserva aria-busy.
+
 ## Refinamento humano e móvel — 1.15.2
 
 Foco por teclado preservado; clicar no conteúdo não desenha contorno da página.

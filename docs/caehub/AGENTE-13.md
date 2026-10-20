@@ -4,6 +4,12 @@ Pedido atual e D-76 (coordenação Honji); escopo sem refatoração global React
 As 13 imagens citadas não foram anexadas ao arquivo acessível. Revisão usa o
 código atual, Chromium e dados fictícios; nenhuma conta pessoal ou compra real.
 
+Status: **corrigidos** os IDs desta matriz; sem correção parcial ou bloqueada.
+Portal P01–P07 também corrigidos e publicados (detalhes na coordenação Honji).
+CAEHUB 1.19.0, imagem oficial fonte `ffb1f7b`, publicado Healthy; Portal 0.12.2
+release `20261020-164555`. Ambos em main nos remotos oficiais. Smoke HTTPS e
+Chromium público aprovados. Não houve alteração de infraestrutura central.
+
 | IDs | Implementação / aceite |
 | --- | --- |
 | P08 | 401 inicia Authorization Code/PKCE pelo BFF, preservando retorno; a leitura permanece pendente durante navegação e não renderiza erro transitório. Falha de entrada fica centralizada. Teste real de SSO registrado na entrega. |
