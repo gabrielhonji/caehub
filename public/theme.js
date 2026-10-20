@@ -1,0 +1,2 @@
+// Apply the shared preference before React or stylesheet rendering.
+(()=>{let theme;const cookie=document.cookie.split(';').map(value=>value.trim()).find(value=>value.startsWith('honji_theme='))?.split('=')[1];try{theme=cookie||localStorage.getItem('honji-theme')||localStorage.getItem('honji-portal-theme');}catch{theme=cookie;}document.documentElement.dataset.theme=['light','dark'].includes(theme)?theme:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';})();

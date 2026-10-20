@@ -25,3 +25,10 @@ export const taskReturnRoute=()=>{
 const positions=new Map<string,number>();
 export const rememberTaskPosition=()=>positions.set(location.hash,scrollY);
 export const taskPosition=()=>positions.get(location.hash)??0;
+
+const routePositions=new Map<string,number>();
+export function useRouteScroll(route:string,ready:boolean){
+ const previous=useState(()=>({route,first:true,history:false,clicked:false}))[0];
+ useEffect(()=>{const save=()=>routePositions.set(previous.route,scrollY),click=(e:MouseEvent)=>{const a=(e.target as Element).closest?.('a[href]');if(a?.getAttribute('href')?.startsWith('#/'))previous.clicked=true;},pop=()=>{previous.history=!previous.clicked;};addEventListener('scroll',save,{passive:true});document.addEventListener('click',click,true);addEventListener('popstate',pop);return()=>{removeEventListener('scroll',save);document.removeEventListener('click',click,true);removeEventListener('popstate',pop);};},[]);
+ useEffect(()=>{if(!ready)return;const old=previous.route,changed=old.split('?')[0]!==route.split('?')[0];if(!changed&&!previous.first){previous.route=route;previous.clicked=false;return;}const restore=previous.history?routePositions.get(route):undefined;previous.route=route;previous.first=false;previous.history=false;previous.clicked=false;const frame=requestAnimationFrame(()=>{const board=route.startsWith('#/espacos')?document.querySelector<HTMLElement>('.board-section'):null;const header=document.querySelector<HTMLElement>('.site-header');scrollTo({top:restore??(board?Math.max(0,board.getBoundingClientRect().top+scrollY-(header?.offsetHeight??0)-12):0),behavior:'instant'});dispatchEvent(new Event('caehub:navigation-scroll'));});return()=>cancelAnimationFrame(frame);},[route,ready]);
+}

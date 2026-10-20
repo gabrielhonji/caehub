@@ -1,8 +1,10 @@
+import {PollTimeOptions} from './PollTimeOptions';
+import {DeadlineField} from './DeadlineField';
 import {ShiftBatch} from './ShiftBatch';
 import {OpinionPolls} from './OpinionPolls';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Space } from '../domain/types';
-import type { MemberOption } from '../services/agenda';
+import type { MemberOption,DepartmentOption } from '../services/agenda';
 import { cancelShift, closePoll, createPoll, createShift, participateShift, relatedShiftMeetings, shiftHistory, updateShift, votePoll, type MeetingPoll, type OperationalShift } from '../services/agenda-advanced';
 import { AgendaAudience } from './AgendaAudience';
 import { PollBallot } from './PollBallot';
@@ -36,9 +38,9 @@ function shiftData(data:FormData) {
   return {title:String(data.get('title')),description:String(data.get('description')||''),location:String(data.get('location')||''),workspaceId:String(data.get('workspaceId')),relatedMeetingId:String(data.get('relatedMeetingId')||'')||null,startsAt:instant(data.get('startsAt')),endsAt:instant(data.get('endsAt')),minimumCapacity:data.get('minimumCapacity')===''?null:Number(data.get('minimumCapacity')),maximumCapacity:Number(data.get('maximumCapacity')),priorityWindowHours:Number(data.get('priorityWindowHours'))};
 }
 
-export function AgendaOperations({polls,shifts,members,spaces,canManage,onSaved}:{polls:MeetingPoll[];shifts:OperationalShift[];members:MemberOption[];spaces:Space[];canManage:boolean;onSaved:()=>Promise<void>}) {
+export function AgendaOperations({polls,shifts,members,spaces,departments,canManage,onSaved,active=true}:{polls:MeetingPoll[];shifts:OperationalShift[];members:MemberOption[];departments:DepartmentOption[];spaces:Space[];canManage:boolean;onSaved:()=>Promise<void>;active?:boolean}) {
   const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[notice,setNotice]=useState('');
-  const [optionCount,setOptionCount]=useState(2),[opinionRequest,setOpinionRequest]=useState(0);
+  const [opinionRequest,setOpinionRequest]=useState(0);
   const [view,setView]=useState<'opinions'|'polls'|'shifts'>('opinions'),[archived,setArchived]=useState(false);
   const [task,setTask]=useState<'newPoll'|'newShift'|'poll'|'shift'|null>(null);
   const [selectedId,setSelectedId]=useState('');
@@ -61,16 +63,15 @@ export function AgendaOperations({polls,shifts,members,spaces,canManage,onSaved}
   const submit=(event:FormEvent<HTMLFormElement>,work:(data:FormData)=>Promise<unknown>,success:string)=>{event.preventDefault();const form=event.currentTarget,data=new FormData(form);void run(()=>work(data),success).then(saved=>{if(saved&&(task==='newPoll'||task==='newShift')){setTask(null);form.reset();}});};
   return <section className="advanced-agenda agenda-operations" aria-busy={busy}><Toast message={notice}/>
     <div className="agenda-section-heading"><div><Eyebrow>CONVITES E PARTICIPAÇÕES</Eyebrow><h2>Votações e turnos</h2><p>Consulte o que precisa da sua resposta e abra um item para participar ou gerenciar.</p></div></div>
-    <fieldset disabled={busy} className="workflow-controls agenda-operations-toolbar"><div role="group" aria-label="Tipo de participação"><Button aria-pressed={view==='opinions'} onClick={()=>setView('opinions')}>Votações livres</Button><Button aria-pressed={view==='polls'} onClick={()=>setView('polls')}>Horários ({polls.filter(p=>!p.closedAt).length})</Button><Button aria-pressed={view==='shifts'} onClick={()=>setView('shifts')}>Turnos ({shifts.filter(s=>!s.cancelledAt&&new Date(s.endsAt)>=new Date()).length})</Button></div>{canManage&&view==='opinions'&&<Button variant="primary" onClick={()=>setOpinionRequest(n=>n+1)}>Criar votação livre</Button>}{canManage&&view==='shifts'&&<ShiftBatch spaces={spaces} onSaved={onSaved}/>} {canManage&&view!=='opinions'&&<Button variant="primary" onClick={()=>setTask(view==='polls'?'newPoll':'newShift')}>{view==='polls'?'Criar votação de horários':'Criar turno'}</Button>}<div className="agenda-filter-group" role="group" aria-label="Status das participações"><Button aria-pressed={!archived} onClick={()=>setArchived(false)}>Ativos</Button><Button aria-pressed={archived} onClick={()=>setArchived(true)}>Incluir encerrados e cancelados</Button></div></fieldset>
+    <fieldset disabled={busy} className="workflow-controls agenda-operations-toolbar"><div role="group" aria-label="Tipo de participação"><Button aria-pressed={view==='opinions'} onClick={()=>setView('opinions')}>Votações livres</Button><Button aria-pressed={view==='polls'} onClick={()=>setView('polls')}>Horários ({polls.filter(p=>!p.closedAt).length})</Button><Button aria-pressed={view==='shifts'} onClick={()=>setView('shifts')}>Turnos ({shifts.filter(s=>!s.cancelledAt&&new Date(s.endsAt)>=new Date()).length})</Button></div>{canManage&&view==='opinions'&&<Button variant="primary" onClick={()=>setOpinionRequest(n=>n+1)}>Criar votação livre</Button>}{canManage&&view==='shifts'&&<ShiftBatch spaces={spaces} onSaved={onSaved}/>} {canManage&&view!=='opinions'&&<Button variant={view==='polls'?'primary':'secondary'} onClick={()=>setTask(view==='polls'?'newPoll':'newShift')}>{view==='polls'?'Criar votação de horários':'Criar turno único'}</Button>}<div className="agenda-filter-group" role="group" aria-label="Status das participações"><Button aria-pressed={!archived} onClick={()=>setArchived(false)}>Ativos</Button><Button aria-pressed={archived} onClick={()=>setArchived(true)}>Incluir encerrados e cancelados</Button></div></fieldset>
 
-    {view==='opinions'&&<OpinionPolls creationRequest={opinionRequest} spaces={spaces} members={members} canManage={canManage} archived={archived}/>}
+    {view==='opinions'&&<OpinionPolls active={active} departments={departments} creationRequest={opinionRequest} spaces={spaces} members={members} canManage={canManage} archived={archived}/>}
     {!task&&message&&<p role="alert">{message}</p>}
     <fieldset disabled={busy} className="workflow-controls">
-      {canManage&&<AgendaWorkflow busy={busy} title="Criar votação de horários" open={task==='newPoll'} onClose={()=>setTask(null)}><p role="status">{message}</p><form className="agenda-form" onSubmit={event=>submit(event,data=>createPoll({title:String(data.get('title')),description:String(data.get('description')||''),location:String(data.get('location')||''),workspaceId:String(data.get('workspaceId')||'')||undefined,deadline:data.get('deadline')?instant(data.get('deadline')):undefined,participantIds:data.getAll('participantIds').map(String),options:Array.from({length:optionCount},(_,index)=>({startsAt:instant(data.get(`start-${index}`)),endsAt:instant(data.get(`end-${index}`))}))}),'Votação criada; participantes notificados.')}>
-        <label className="wide-field">Título<input name="title" required maxLength={200}/></label><details className="optional-fields"><summary>Descrição, local e prazo (opcionais)</summary><div><label>Descrição (opcional)<textarea name="description" maxLength={10000}/></label><label>Local (opcional)<input name="location" maxLength={255}/></label><label>Prazo (opcional)<input name="deadline" type="datetime-local"/></label></div></details>
-        <AgendaAudience spaces={spaces} members={members}/>
-        {Array.from({length:optionCount},(_,index)=><fieldset key={index}><legend>Opção {index+1}</legend><AgendaTimeFields startName={`start-${index}`} endName={`end-${index}`}/></fieldset>)}
-        <div className="response-actions"><Button type="button" disabled={optionCount>=30} onClick={()=>setOptionCount(c=>c+1)}>Adicionar horário</Button><Button type="button" disabled={optionCount<=2} onClick={()=>setOptionCount(c=>c-1)}>Retirar último horário</Button></div>
+      {canManage&&<AgendaWorkflow protectChanges busy={busy} title="Criar votação de horários" open={task==='newPoll'} onClose={()=>setTask(null)}><p role="status">{message}</p><form className="agenda-form" onSubmit={event=>submit(event,data=>createPoll({title:String(data.get('title')),description:String(data.get('description')||''),location:String(data.get('location')||''),workspaceId:String(data.get('workspaceId')||'')||undefined,deadline:data.get('deadline')?instant(data.get('deadline')):undefined,participantIds:data.getAll('participantIds').map(String),options:data.getAll('start-option').map((start,index)=>({startsAt:instant(start),endsAt:instant(data.getAll('end-option')[index])}))}),'Votação criada; participantes notificados.')}>
+        <label className="wide-field">Título<input name="title" required maxLength={200}/></label><details className="optional-fields"><summary>Descrição, local e prazo (opcionais)</summary><div><label>Descrição (opcional)<textarea name="description" maxLength={10000}/></label><label>Local (opcional)<input name="location" maxLength={255}/></label><DeadlineField active={task==='newPoll'} eventField="start-*"/></div></details>
+        <AgendaAudience spaces={spaces} members={members} departments={departments}/>
+        <PollTimeOptions/>
         <Button variant="primary">Abrir votação</Button>
       </form></AgendaWorkflow>}
       {view==='polls'&&!visiblePolls.length&&<EmptyState title="Nenhuma votação">As votações dirigidas a você aparecerão aqui.</EmptyState>}

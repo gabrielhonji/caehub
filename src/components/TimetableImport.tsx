@@ -35,7 +35,7 @@ export function TimetableImport({ onSaved }: { onSaved: () => Promise<void> }) {
       try { const result = await previewTimetable(file); setRows(result.rows.map(row => ({ ...row, key: nextKey.current++ }))); setWarnings(result.warnings); setReviewed(false);setPreview(true); }
       catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível extrair a grade.'); }
       finally { setBusy(false); }
-    }}><label className="wide-field">PDF de horários<input type="file" name="pdf" accept="application/pdf,.pdf" required disabled={busy} onChange={e=>{setPdf(e.target.files?.[0]);setPreview(false);setReviewed(false);}}/></label><div className="form-actions"><Button disabled={busy||!pdf}>{busy ? 'Lendo PDF…' : 'Preparar prévia'}</Button><Button type="button" onClick={manual} disabled={busy}>Preencher manualmente</Button></div></form>
+    }}><label className="wide-field">PDF de horários<input type="file" name="pdf" accept="application/pdf,.pdf" required disabled={busy} onChange={e=>{setPdf(e.target.files?.[0]);setPreview(false);setReviewed(false);}}/></label><div className="form-actions"><Button disabled={busy||!pdf}>{busy ? 'Lendo PDF…' : 'Conferir disciplinas do PDF'}</Button><Button type="button" onClick={manual} disabled={busy}>Preencher manualmente</Button></div></form>
     {preview && <form className="agenda-form" onSubmit={async event => {
       event.preventDefault();if(issues.length||busy)return;
       setBusy(true); setMessage('');

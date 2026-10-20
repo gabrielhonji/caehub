@@ -11,7 +11,7 @@ import { CommercialOrders } from './CommercialOrders';
 import { api, type SessionInfo } from '../services/spaces';
 import { money } from '../services/commercial';
 import { emptyOrderDraft, newRequestKey, commercialOrderFailure, type OrderDetail, type OrderDraft, type SaleCatalog } from '../services/commercial-orders';
-import { readTheme, saveTheme } from '../services/theme';
+import {useSharedTheme} from '../hooks/useSharedTheme';
 import '../styles/commercial.css';
 import '../styles/public-portal.css';
 
@@ -39,7 +39,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
   const [checkout,setCheckout]=useState(false),[busy,setBusy]=useState(false),[formError,setFormError]=useState(''),[detail,setDetail]=useState<OrderDetail>();
   const submitting=useRef(false);
   const [ordersVersion,setOrdersVersion]=useState(0),[notice,setNotice]=useState(''),[pendingCampaign,setPendingCampaign]=useState('');
-  const [theme,setTheme]=useState(()=>readTheme()??(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+  const [theme,setTheme]=useSharedTheme();
   const load=async()=>{
     try{const next=await api<SaleCatalog>('/public/catalog');setCatalog(next);setCampaignId(current=>current||next.campaigns[0]?.id||'');setError(false);}
     catch{setError(true);}
@@ -48,7 +48,6 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
     void load();
     void checkAccount();
   },[]);
-  useEffect(()=>{if(!embedded){document.documentElement.dataset.theme=theme;saveTheme(theme);}},[theme,embedded]);
   useEffect(()=>{
     try{if(draft.items.length)sessionStorage.setItem(selectionKey,JSON.stringify({campaignId,items:draft.items,requestKey}));else sessionStorage.removeItem(selectionKey);}
     catch{/* No personal information is stored. */}
@@ -101,7 +100,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
       else setFormError(commercialOrderFailure(error));
     }finally{submitting.current=false;setBusy(false);}
   };
-  useRefresh(load);
+  useRefresh(load,'catalog');
   const accountProblem=accountFailed?<><ErrorState onRetry={()=>void checkAccount()}/><a className="button button-secondary" href="/acesso">Gerenciar minha sessão</a></>:sessionDenied?<div className="buyer-login-note"><p>Sua conta não está habilitada para comprar. O catálogo público continua disponível.</p><a className="button button-secondary" href="/acesso?status=denied">Gerenciar minha sessão</a></div>:undefined;
   const orders=<section id="pedidos" className="buyer-account-section">
     <div className="compact-heading"><div><Eyebrow>MINHA CONTA · {campaign?.name??'TODAS AS CAMPANHAS'}</Eyebrow><h2>{collection?'Seus pedidos e retiradas.':'Acompanhe suas compras.'}</h2></div>{canBuy&&<a className="button button-secondary" href="/#/meus-pedidos">Todos os meus pedidos →</a>}</div>
@@ -163,7 +162,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
   </>;
   if(embedded)return content;
   return <div className="app-shell public-portal"><a className="skip-link" href="#content" onClick={skipToContent}>Pular para o conteúdo</a>
-    <header className="site-header"><div className="header-inner"><div className="navbar-brands"><HonjiBrand/><span className="navbar-divider" aria-hidden="true"/><Brand href="/"/></div><nav aria-label="Portal público"><a href="#campanhas">Lojinha</a><a href="/#/meus-pedidos">Meus pedidos</a><a href="/#/">Área interna</a></nav><div className="header-actions">{account&&<Button disabled={signingOut} onClick={()=>void logout()}>{signingOut?"Saindo…":"Sair do CAEHUB"}</Button>}<ThemeToggle theme={theme} onTheme={()=>setTheme(theme==='light'?'dark':'light')}/></div></div></header>
+    <header className="site-header"><div className="header-inner"><div className="navbar-brands"><HonjiBrand/><span className="navbar-divider" aria-hidden="true"/><Brand href="/"/></div><nav aria-label="Portal público"><a href="#campanhas">Lojinha</a><a href="/#/meus-pedidos">Meus pedidos</a><a className="public-internal-entry" href="/#/">Área interna do CAECOMP →</a></nav><div className="header-actions">{account&&<Button disabled={signingOut} onClick={()=>void logout()}>{signingOut?"Saindo…":"Sair do CAEHUB"}</Button>}<ThemeToggle theme={theme} onTheme={()=>setTheme(theme==='light'?'dark':'light')}/></div></div></header>
     <main tabIndex={-1} id="content" className="content">{content}</main>
     <footer className="site-footer"><div className="footer-inner"><HonjiBrand/><div className="footer-organization"><strong>CAECOMP</strong><span>Centro Acadêmico de Engenharia de Computação</span></div><div className="footer-signature"><span>DESENVOLVIDO POR</span><a href="https://github.com/gabrielhonji">gabriel.honji</a><span>CAEHUB · {__APP_VERSION__}</span></div></div></footer>
   </div>;

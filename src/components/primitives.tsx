@@ -12,14 +12,14 @@ export function AccessDeniedState() { return <section className="state" role="al
 
 let dialogCount=0;
 let originalBodyOverflow='';
-export function Dialog({ title, children, onClose, closeLabel = 'Fechar', returnFocus, open=true, size='default', protectChanges=false }: { title: string; children: ReactNode; onClose: () => void; closeLabel?: string; returnFocus?:HTMLElement|null; open?:boolean; size?:'default'|'wide';protectChanges?:boolean }) {
+export function Dialog({ title, children, onClose, closeLabel = 'Fechar', returnFocus, open=true, size='default', protectChanges=false,busy=false }: { title: string; children: ReactNode; onClose: () => void; closeLabel?: string; returnFocus?:HTMLElement|null; open?:boolean; size?:'default'|'wide';protectChanges?:boolean;busy?:boolean }) {
   const overlay=useRef<HTMLDialogElement>(null);
   const titleId=useId();
   const closeButton = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   const dirty=useRef(new Set<HTMLFormElement>());
   const [discard,setDiscard]=useState(false);const continueButton=useRef<HTMLButtonElement>(null);
-  const requestClose=()=>{if(discard){setDiscard(false);return;}if(protectChanges&&dirty.current.size){setDiscard(true);return;}onClose();};
+  const requestClose=()=>{if(busy)return;if(discard){setDiscard(false);return;}if(protectChanges&&dirty.current.size){setDiscard(true);return;}onClose();};
   const close=useRef(requestClose);close.current=requestClose;
   useEffect(()=>{if(discard)continueButton.current?.focus();},[discard]);
   useEffect(()=>{
@@ -54,7 +54,7 @@ export function Dialog({ title, children, onClose, closeLabel = 'Fechar', return
       if(previousFocus.current?.isConnected)previousFocus.current.focus();
     };
   }, [open]);
-  return createPortal(<dialog ref={overlay} className="dialog-backdrop" aria-labelledby={titleId} onCancel={event=>{event.preventDefault();close.current();}} onPointerDown={(event) => { if (event.target === event.currentTarget) close.current(); }}><section className={`dialog ${size==='wide'?'dialog-wide':''}`} onPointerDown={event => event.stopPropagation()}><header><h2 id={titleId}>{title}</h2><Button ref={closeButton} onClick={requestClose} aria-label="Fechar diálogo">{closeLabel} <span aria-hidden="true">×</span></Button></header><div className="dialog-content">{discard&&<div className="discard-confirmation" role="alert"><strong>Descartar alterações não salvas?</strong><p>Você pode continuar editando para salvar seu trabalho.</p><div className="form-actions"><Button ref={continueButton} onClick={()=>setDiscard(false)}>Continuar editando</Button><Button onClick={()=>{dirty.current.clear();setDiscard(false);onClose();}}>Descartar alterações</Button></div></div>}{children}</div></section></dialog>,document.body);
+  return createPortal(<dialog ref={overlay} className="dialog-backdrop" aria-labelledby={titleId} onCancel={event=>{event.preventDefault();close.current();}} onPointerDown={(event) => { if (event.target === event.currentTarget) close.current(); }}><section className={`dialog ${size==='wide'?'dialog-wide':''}`} onPointerDown={event => event.stopPropagation()}><header><h2 id={titleId}>{title}</h2><Button ref={closeButton} disabled={busy} onClick={requestClose} aria-label="Fechar diálogo">{closeLabel} <span aria-hidden="true">×</span></Button></header><div className="dialog-content">{discard&&<div className="discard-confirmation" role="alert"><strong>Descartar alterações não salvas?</strong><p>Você pode continuar editando para salvar seu trabalho.</p><div className="form-actions"><Button ref={continueButton} onClick={()=>setDiscard(false)}>Continuar editando</Button><Button onClick={()=>{dirty.current.clear();setDiscard(false);onClose();}}>Descartar alterações</Button></div></div>}{children}</div></section></dialog>,document.body);
 }
 
 export function Toast({message}:{message:string}) {

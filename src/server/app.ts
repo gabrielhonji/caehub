@@ -83,6 +83,8 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.post('/api/commercial/variants/:id/movements',async(request,reply)=>reply.code(201).send(await commercial.move(await actor(request),paramId(request),movementInput.parse(request.body))));
   app.get('/api/commercial/variants/:id/movements',async request=>commercial.history(await actor(request),paramId(request)));
   const analytics=new CommercialAnalytics(service.db,service);
+  app.get('/api/commercial/dashboard-access',async request=>analytics.accessConfiguration(await actor(request)));
+  app.put('/api/commercial/dashboard-access',async request=>{const body=z.object({departmentIds:z.array(id).max(100).refine(ids=>new Set(ids).size===ids.length),revision:z.number().int().positive()}).strict().parse(request.body);return analytics.configureAccess(await actor(request),body.departmentIds,body.revision);});
   app.get('/api/commercial/analytics',async request=>analytics.report(await actor(request),z.object({campaignId:id.optional()}).parse(request.query).campaignId));
   app.put('/api/commercial/analytics/:id',async request=>analytics.configure(await actor(request),paramId(request),z.object({fixedCostCents:z.number().int().min(0).max(2147483647).nullable(),revenueGoalCents:z.number().int().min(0).max(2147483647).nullable(),costBudgetCents:z.number().int().min(0).max(2147483647).nullable(),profitGoalCents:z.number().int().min(0).max(2147483647).nullable(),revision:z.number().int().min(0)}).strict().parse(request.body)));
   app.get('/health', async (request) => ({ ok: true, version: manifest.version, release: manifest.release }));

@@ -29,6 +29,7 @@ type TaskDto={workspaceId?:string;priority?:'low'|'normal'|'high';helperCount?:n
 const taskFrom=(row:TaskDto):TaskPreview=>({id:row.id,title:row.title,priority:row.priority,workspaceId:row.workspaceId,dueAt:row.dueAt,space:row.workspace,status:row.completedAt?'Concluído':row.column??'Em andamento',due:row.dueAt?new Date(row.dueAt).toLocaleDateString('pt-BR'):'Sem prazo',helpers:Number(row.helperCount??0)});
 
 export async function getSpaces(): Promise<Space[]> { const rows=await api<WorkspaceDto[]>('/workspaces'); return rows.map(spaceFrom); }
+export const refreshBoard=(id:string)=>api<BoardDto>(`/boards/${id}`).then(boardFrom);
 export async function getBoards(): Promise<Board[]> { const spaces=await api<WorkspaceDto[]>('/workspaces'); const lists=await Promise.all(spaces.map(s=>api<Array<{id:string}>>(`/workspaces/${s.id}/boards`))); const boards=await Promise.all(lists.flat().map(b=>api<BoardDto>(`/boards/${b.id}`))); return boards.map(boardFrom); }
 export async function getBoard(spaceId:string):Promise<Board|undefined>{return (await getBoards()).find(board=>board.spaceId===spaceId);}
 export async function getTaskPreviews(filters:Record<string,string>={state:'open'}):Promise<TaskPreview[]>{const query=new URLSearchParams(filters);const rows=await api<TaskDto[]>(`/my-tasks?${query}`);return rows.map(taskFrom);}

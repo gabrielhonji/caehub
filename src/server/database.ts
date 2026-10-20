@@ -109,6 +109,8 @@ async function migrateSchema(db: Database): Promise<void> {
   await migrateCommercialCatalog(db);
   await migrateOrders(db);
   if(!await db.one("SHOW COLUMNS FROM commercial_order_items LIKE 'unit_cost_cents'"))await db.run('ALTER TABLE commercial_order_items ADD COLUMN unit_cost_cents int unsigned NULL');
+  await db.run(`CREATE TABLE IF NOT EXISTS commercial_dashboard_access (organization_id char(36) PRIMARY KEY, department_ids json NOT NULL, revision int unsigned NOT NULL DEFAULT 1, FOREIGN KEY(organization_id) REFERENCES organizations(id))`);
+  await db.run('INSERT IGNORE INTO commercial_dashboard_access (organization_id,department_ids) VALUES (?,?)',[CAECOMP_ORGANIZATION_ID,JSON.stringify(['1a4e0bd0-5f4a-4d10-8000-000000000103','1a4e0bd0-5f4a-4d10-8000-000000000106'])]);
   await db.run(`CREATE TABLE IF NOT EXISTS commercial_financial_targets (campaign_id char(36) PRIMARY KEY,fixed_cost_cents int unsigned NULL,revenue_goal_cents int unsigned NULL,cost_budget_cents int unsigned NULL,profit_goal_cents int unsigned NULL,revision int unsigned NOT NULL DEFAULT 1,FOREIGN KEY(campaign_id) REFERENCES commercial_campaigns(id))`);
 
   await db.run(`INSERT INTO boards (id,workspace_id,name,created_by_membership_id) SELECT UUID(),w.id,'Quadro principal',w.creator_membership_id FROM workspaces w WHERE NOT EXISTS (SELECT 1 FROM boards b WHERE b.workspace_id=w.id)`);

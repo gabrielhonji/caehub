@@ -150,3 +150,10 @@ compradores. Projeções de pedidos próprios excluem custos unitários internos
 Justificativas/sugestões de reuniões/votações são próprias ou reservadas à
 organização autorizada. A lista de reuniões aplica a visibilidade contextual
 no SQL e mantém a checagem por espaço, sem abrir reuniões de espaços alheios.
+
+UX-24 (19/10/2026): a direção responsável de Produtos/Financeiro e a administração
+institucional podem configurar os departamentos leitores dos indicadores.
+Produtos/Financeiro são o padrão; remover um departamento não retira os poderes
+da direção responsável nem da administração. A política é validada no backend,
+com revisão concorrente, IDs institucionais válidos e auditoria. Ela concede
+somente consulta agregada, sem dados de compradores ou gestão comercial.

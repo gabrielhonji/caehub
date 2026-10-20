@@ -59,3 +59,4 @@ section.workspace-people{padding:24px;background:var(--surface);border:1px solid
 .priority-low{color:var(--muted)}.card-collaboration>.workflow-controls>section:first-child{border-top:0;padding-top:0}
 
 .board-card[data-highlight=true]{outline:3px solid var(--focus);outline-offset:3px}.notification-target{max-width:100%;min-width:0;overflow-wrap:anywhere}
+.board-card .card-topline{min-height:24px}.board-card .card-deadline{display:block;margin:8px 0 12px;font-size:11px;color:var(--muted)}.board-card .card-deadline[data-overdue=true]{color:var(--text);font-weight:700;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}.board-card footer{gap:8px}.board-card footer>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.board-card footer>span:last-child{flex-shrink:0;font-size:11px}

@@ -1,4 +1,4 @@
-import {RefreshControls} from './RefreshControls';
+import {useScrollHeader} from '../hooks/useScrollHeader';
 import {skipToContent} from '../services/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -8,6 +8,7 @@ import { getSessionInfo } from '../services/spaces';
 import { ThemeToggle } from './ThemeToggle';
 
 export function AppShell({ children, theme, onTheme }: { children: ReactNode; theme: 'light' | 'dark'; onTheme: () => void }) {
+  useScrollHeader();
   type DebugMode = 'real'|'global_admin'|'caecomp_admin'|'events_director'|'events_member'|'products_member'|'xii_admin'|'xii_secretary_member'|'xii_sports_member';
   const current = (location.hash || '#/').split('?')[0];
   const [commercialManager,setCommercialManager]=useState(false);
@@ -56,7 +57,7 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
       <header className="site-header">
         <div className="header-inner">
           <div className="navbar-brands"><HonjiBrand /><span className="navbar-divider" aria-hidden="true" /><Brand /></div>
-          <button className="mobile-navigation-toggle button button-secondary" type="button" aria-controls="caehub-navigation" aria-expanded={menuOpen} onClick={()=>setMenuOpen(value=>!value)}>Menu <span aria-hidden="true">{menuOpen?'−':'+'}</span></button><nav id="caehub-navigation" data-open={menuOpen} onClick={event=>{if((event.target as HTMLElement).closest('a'))setMenuOpen(false);}} aria-label="Navegação do CAEHUB"><a href="#/" aria-current={current === '#/' ? 'page' : undefined}>Início</a><a href="#/espacos" aria-current={(current.startsWith('#/espacos')||current.startsWith('#/departamentos')) ? 'page' : undefined}>Espaços</a><a href="#/minhas-tarefas" aria-current={(current === '#/minhas-tarefas'||current.startsWith('#/cartoes/')) ? 'page' : undefined}>Minhas tarefas</a><a href="#/agenda" aria-current={current.startsWith('#/agenda') ? 'page' : undefined}>Agenda</a><a href="#/comercial/comprar" aria-current={current==='#/comercial/comprar' ? 'page' : undefined}>Lojinha</a>{commercialManager&&<a href="#/comercial" aria-current={current==='#/comercial' ? 'page' : undefined}>Gestão comercial</a>}<a href="#/meus-pedidos" aria-current={current.startsWith("#/meus-pedidos") ? "page" : undefined}>Meus pedidos</a></nav><RefreshControls/>
+          <button className="mobile-navigation-toggle button button-secondary" type="button" aria-controls="caehub-navigation" aria-expanded={menuOpen} onClick={()=>setMenuOpen(value=>!value)}>Menu <span aria-hidden="true">{menuOpen?'−':'+'}</span></button><nav id="caehub-navigation" data-open={menuOpen} onClick={event=>{if((event.target as HTMLElement).closest('a'))setMenuOpen(false);}} aria-label="Navegação do CAEHUB"><a href="#/" aria-current={current === '#/' ? 'page' : undefined}>Início</a><a href="#/espacos" aria-current={(current.startsWith('#/espacos')||current.startsWith('#/departamentos')) ? 'page' : undefined}>Espaços</a><a href="#/minhas-tarefas" aria-current={(current === '#/minhas-tarefas'||current.startsWith('#/cartoes/')) ? 'page' : undefined}>Minhas tarefas</a><a href="#/agenda" aria-current={current.startsWith('#/agenda') ? 'page' : undefined}>Agenda</a><a href="#/comercial/comprar" aria-current={current==='#/comercial/comprar' ? 'page' : undefined}>Lojinha</a>{commercialManager&&<a href="#/comercial" aria-current={current==='#/comercial' ? 'page' : undefined}>Gestão comercial</a>}<a href="#/meus-pedidos" aria-current={current.startsWith("#/meus-pedidos") ? "page" : undefined}>Meus pedidos</a></nav>
           <div className="header-actions"><AgendaNotifications/><ThemeToggle theme={theme} onTheme={onTheme}/><div className="account-control" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setProfileOpen(false); }}><button className="account-avatar" type="button" aria-label="Abrir opções da conta" aria-expanded={profileOpen} onClick={() => setProfileOpen(value => !value)}>{initials}</button>{profileOpen && <div className="account-panel"><a className="account-name" href="https://gabriel.honji.com.br/#perfil">{account?.displayName ?? 'Conta Honji'}<span>Editar perfil</span></a><a href="https://gabriel.honji.com.br/#acesso">Minha conta</a><button type="button" disabled={!account || signingOut} onClick={() => void logout()}>{signingOut ? 'Saindo…' : 'Sair'}</button>{logoutError&&<p role="alert">{logoutError}</p>}</div>}</div></div>
         </div>
       </header>

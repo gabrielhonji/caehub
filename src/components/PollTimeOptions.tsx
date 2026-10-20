@@ -1,0 +1,18 @@
+import {useState} from 'react';
+import {today,minutes,clock} from '../domain/agenda-input';
+import {DateInput} from './DateInput';
+import {Button} from './primitives';
+type Day={id:number;date:string;times:{id:number;start:string;end:string;custom?:boolean}[]};
+export function PollTimeOptions(){
+ const [duration,setDuration]=useState('60'),[days,setDays]=useState<Day[]>([{id:0,date:today(),times:[{id:1,start:'',end:''},{id:2,start:'',end:''}]}]),[sequence,setSequence]=useState(3);
+ const count=days.reduce((n,day)=>n+day.times.length,0);
+ const change=(id:number,work:(day:Day)=>Day)=>setDays(rows=>rows.map(day=>day.id===id?work(day):day));
+ return <fieldset className="wide-field poll-time-options"><legend>Opções de horário</legend><label>Duração para todas as opções<select value={duration} onChange={event=>setDuration(event.target.value)}>{[[60,'1 hora'],[90,'1 hora e 30 minutos'],[120,'2 horas'],[180,'3 horas']].map(([value,label])=><option key={value} value={value}>{label}</option>)}<option value="custom">Término específico por horário</option></select></label>{days.map(day=><section key={day.id} className="poll-option-day"><label>Dia<DateInput required value={day.date} onChange={event=>change(day.id,row=>({...row,date:event.target.value}))}/></label>{day.times.map(time=>{
+ const validStart=/^\d{2}:\d{2}$/.test(time.start),total=validStart?minutes(time.start)+Number(duration):0;
+ const manual=duration==='custom'||time.custom;
+ const end=manual?time.end:validStart?clock(total%1440):'';
+ const endDay=new Date(`${day.date}T12:00:00`);if(!manual&&total>=1440)endDay.setDate(endDay.getDate()+1);
+ const endDate=Number.isFinite(+endDay)?`${endDay.getFullYear()}-${String(endDay.getMonth()+1).padStart(2,'0')}-${String(endDay.getDate()).padStart(2,'0')}`:'';
+ return <div className="poll-option-time" key={time.id}><label>Início<input required type="time" step={60} value={time.start} onChange={event=>change(day.id,row=>({...row,times:row.times.map(t=>t.id===time.id?{...t,start:event.target.value}:t)}))}/></label>{manual?<label>Término<input required type="time" step={60} min={time.start} value={time.end} onChange={event=>change(day.id,row=>({...row,times:row.times.map(t=>t.id===time.id?{...t,end:event.target.value}:t)}))}/></label>:<p className="availability-hint">Termina {end||'—'}{!manual&&total>=1440?' no dia seguinte':''}</p>}{duration!=='custom'&&<Button type="button" onClick={()=>change(day.id,row=>({...row,times:row.times.map(t=>t.id===time.id?{...t,custom:!t.custom,end:t.custom?t.end:end}:t)}))}>{time.custom?'Usar duração comum':'Ajustar término'}</Button>}<Button type="button" disabled={count<=2} aria-label={`Remover horário ${time.start||'sem início'} de ${day.date}`} onClick={()=>setDays(rows=>rows.map(row=>row.id===day.id?{...row,times:row.times.filter(t=>t.id!==time.id)}:row).filter(row=>row.times.length))}>Remover</Button><input type="hidden" name="start-option" value={validStart&&day.date?`${day.date}T${time.start}`:''}/><input type="hidden" name="end-option" value={end&&endDate?`${endDate}T${end}`:''}/></div>;
+ })}<Button type="button" disabled={count>=30} onClick={()=>{change(day.id,row=>({...row,times:[...row.times,{id:sequence,start:'',end:''}]}));setSequence(n=>n+1);}}>Adicionar horário neste dia</Button></section>)}<Button type="button" disabled={count>=30} onClick={()=>{setDays(rows=>[...rows,{id:sequence,date:today(),times:[{id:sequence+1,start:'',end:''}]}]);setSequence(n=>n+2);}}>Adicionar outro dia</Button></fieldset>;
+}
