@@ -1,11 +1,11 @@
 # Coordenação de agentes
 
-## UI-14 — componentes React, 20/10/2026 — Doing
+## UI-14 — componentes React, 20/10/2026 — Done
 
 Responsável Codex /root; pedido atual autoriza implementação, main e deploy.
-Reserva: componentes CardScheduleFields, ParticipantCheckbox, AgendaPeoplePicker,
+Escopo entregue: componentes CardScheduleFields, ParticipantCheckbox, AgendaPeoplePicker,
 AgendaAudience, AvailabilityPlanning, AgendaOperations; app/App.tsx, testes de
-navegador e UI-REACT.md. Sem disputa ativa encontrada nesses caminhos.
+navegador e UI-REACT.md. Reservas liberadas.
 Aceite: mesma apresentação/contratos de formulário, seleção e filtros preservados,
 teclado/temas/mobile, gate e publicação oficiais. Sem alteração de domínio/API.
 
@@ -43,7 +43,21 @@ CSS/tokens e dependências não alterados. Audit produção zero nos dois;
 audit incluindo desenvolvimento aponta Vite/plugin-react (1 moderada/1 alta,
 sem correção disponível no relatório). Avisos preexistem no lockfile e não
 afetam dependências da imagem de produção; permanecem explicitamente registrados.
-Evidências locais: /tmp/agent14-evidence. Publicação de manutenção em andamento.
+Evidências locais: /tmp/agent14-evidence. Produto `afcfc51` confirmado em
+origin/main e honji/main; imagem oficial honji/caehub-gabriel:1.19.2, fonte
+`afcfc5168ffab0f0f76a38dcb7607ed191158551`, release `20102026-213341`,
+testada com NODE_ENV=production em banco descartável (healthy, catálogo200,
+privados401 mesmo com override dev), depois publicada Healthy pelo deploy-app.
+Portal `7613695` em github/main e honji/main, 0.12.3 publicado pelo canal
+oficial, release `20261020-213826`. Smoke HTTPS/Chromium dos dois confirmou
+versões, desktop/mobile/temas, sem overflow/erros JS, catálogo200 e privados401.
+Documentação posterior não altera a fonte das versões publicadas.
+
+Build oficial inicialmente falhou ENOSPC: partição raiz sem espaço. Resolvido
+com descarte somente de cache BuildKit sem uso há sete dias (1,951 GB), sem
+remover imagens/containers/volumes de aplicações. Nova execução passou; não
+houve alteração de DNS/proxy/permissões. Sobravam aproximadamente 1,5 GB na
+raiz após o build. Containers/rede descartáveis próprios encerrados ao fechar.
 
 ## UX-26 — refresh contextual, 20/10/2026 — Done
 
