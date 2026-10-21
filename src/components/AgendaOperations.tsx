@@ -9,7 +9,7 @@ import { cancelShift, closePoll, createPoll, createShift, participateShift, rela
 import { AgendaAudience } from './AgendaAudience';
 import { PollBallot } from './PollBallot';
 import { dateRange,shortDate } from '../domain/date-format';
-import { AgendaPeoplePicker } from './AvailabilityPlanning';
+import { AgendaPeoplePicker } from './AgendaPeoplePicker';
 import { AgendaTimeFields } from './AgendaTimeFields';
 import { AgendaWorkflow } from './AgendaWorkflow';
 import { Badge, Button, Toast, Dialog, EmptyState, Eyebrow } from './primitives';

@@ -1,5 +1,29 @@
 # UI React — UI-001
 
+## Consolidação local — Agente 14
+
+- `components/CardScheduleFields.tsx`: prioridade e prazo nativos, usados na
+  criação e edição avançada de cartão em `app/App.tsx`. Props `priority`
+  (low/normal/high, padrão normal), `dueAt` opcional e `disabled`. Preserva nomes
+  priority/dueAt, data civil YYYY-MM-DD, reset e FormData; sem estado ou conversão
+  de timestamps. O formulário continua dono da persistência e das permissões.
+- `components/ParticipantCheckbox.tsx`: opção de pessoa com label envolvente,
+  nome completo em title e truncamento existente. `displayName`, `hidden` no
+  label e atributos nativos do input; suporta checked/onChange ou defaultChecked.
+  Não mantém seleção nem filtra pessoas. Ocultar uma opção não desmarca seu valor.
+- `components/AgendaPeoplePicker.tsx`: seletor nativo não controlado usado por
+  AvailabilityPlanning e AgendaOperations; props members/name/selectedIds
+  existentes. Mudança de selectedIds remonta o fieldset, como antes. Não importar
+  esse controle da tela AvailabilityPlanning. AgendaAudience mantém sua seleção
+  controlada, filtros/equipe e utiliza apenas ParticipantCheckbox.
+
+Exemplo: `<CardScheduleFields priority={detail.priority} dueAt={detail.dueAt}
+disabled={busy}/>` dentro do formulário existente. Campos, opções e callbacks
+continuam locais ao domínio; não generalizar seleção, concorrência ou rascunhos.
+Button/Badge/Dialog/estados e RefreshButton existentes permanecem canônicos.
+Não há novos tokens, CSS global, fetches, dependências ou pacote entre apps.
+Inventário A/B/C/D e justificativas estão na atividade UI-14 de COORDENACAO.md.
+
 ## Refresh contextual — retorno de Gabriel, 20/10/2026
 
 Reutilizar RefreshButton: SVG centralizado, girando somente durante a requisição,

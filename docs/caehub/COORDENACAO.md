@@ -1,5 +1,50 @@
 # Coordenação de agentes
 
+## UI-14 — componentes React, 20/10/2026 — Doing
+
+Responsável Codex /root; pedido atual autoriza implementação, main e deploy.
+Reserva: componentes CardScheduleFields, ParticipantCheckbox, AgendaPeoplePicker,
+AgendaAudience, AvailabilityPlanning, AgendaOperations; app/App.tsx, testes de
+navegador e UI-REACT.md. Sem disputa ativa encontrada nesses caminhos.
+Aceite: mesma apresentação/contratos de formulário, seleção e filtros preservados,
+teclado/temas/mobile, gate e publicação oficiais. Sem alteração de domínio/API.
+
+Inventário (consumidores → duplicação → ação → risco):
+
+| Grupo | Padrão / consumidores | Diagnóstico e ação | Risco |
+| --- | --- | --- | --- |
+| A | Prioridade/prazo / criação e edição de cartão | Mesmo JSX e opções; extrair CardScheduleFields sem estado | Baixo: FormData/defaults |
+| A | Checkbox de pessoa / AgendaAudience e AgendaPeoplePicker | Mesmo input/nome truncado; composição ParticipantCheckbox | Médio: seleção controlada versus nativa |
+| B | Seletores da Agenda / reuniões, revisões, consultas, escalas | Preservar variantes; mover picker para módulo próprio, sem importar tela de planejamento | Baixo: imports |
+| C | Dialog, estados e refresh / páginas e módulos | Já centralizados em primitives/RefreshButton; manter contratos e CSS existentes | Mudança ampla sem benefício |
+| C | Formulários, badges e cards Comercial/Kanban/Agenda | Geometrias e ações contextuais legítimas; estilos base já em form-fields/tokens | Redesign acidental |
+| D | Estado assíncrono/edição / App e Comercial | Falhas, concorrência e rascunhos diferentes; adiar hook genérico | Alto: comportamento |
+| D | Pacote Portal/CAEHUB | Git/build/releases independentes, poucos contratos estáveis; manter separação física | Custo desproporcional |
+
+Primitivas nativas input/select/checkbox/radio/textarea usam rótulos envolventes e
+estilos contextuais; não criar wrappers globais para simples marcação. DateInput,
+DeadlineField e AgendaTimeFields já concentram comportamentos distintos. Tooltip,
+cards, accordions e agrupamentos não justificam migração global nesta amostra.
+
+Validação do incremento: 52/52 servidor + 3/3 domínio, TypeScript/Vite;
+34/34 IAM e integração central/SQL de sessões/limites passaram. Chromium em
+API/MySQL descartáveis aprovou criação/edição/limpeza de prazo e prioridade,
+FormData e teclado dos seletores semana/período, convidados preservados,
+salvar/cancelar/409, modais, notificações e refresh pendente sem duplicação.
+Portal aprovou regressão administrativa e âncoras com foco/Enter/destino.
+Desktop 1440 e mobile 390, dois temas; capturas representativas inspecionadas.
+Não houve nova sessão pessoal ou escrita de negócio em produção; SSO/OTP
+completo não foi repetido porque seus contratos/código não mudaram.
+
+Bundles comparáveis no mesmo toolchain: Portal 303058→302994 bytes JS,
+gzip 93568→93582; CAEHUB 493551→493346 bytes JS, gzip 146074→146116.
+Variação desprezível, sem alegar ganho de latência ou medição de renderizações.
+CSS/tokens e dependências não alterados. Audit produção zero nos dois;
+audit incluindo desenvolvimento aponta Vite/plugin-react (1 moderada/1 alta,
+sem correção disponível no relatório). Avisos preexistem no lockfile e não
+afetam dependências da imagem de produção; permanecem explicitamente registrados.
+Evidências locais: /tmp/agent14-evidence. Publicação de manutenção em andamento.
+
 ## UX-26 — refresh contextual, 20/10/2026 — Done
 
 Retorno atual de Gabriel: SVG centralizado, rotação durante a requisição,

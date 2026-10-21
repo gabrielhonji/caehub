@@ -1,3 +1,4 @@
+import {AgendaPeoplePicker} from "./AgendaPeoplePicker";
 import {DepartmentPicker} from './DepartmentPicker';
 import {ParticipantStatusList} from './ParticipantStatusList';
 import {DeadlineField} from './DeadlineField';
@@ -12,9 +13,6 @@ import { AgendaTimeFields } from './AgendaTimeFields';
 import { Badge, Button, EmptyState } from './primitives';
 import { AgendaSummary, AgendaWorkflow } from './AgendaWorkflow';
 
-export function AgendaPeoplePicker({members,name='participantIds',selectedIds=[]}:{members:MemberOption[];name?:string;selectedIds?:string[]}) {
-  return <fieldset className="participant-picker" key={selectedIds.join(',')}><legend>Participantes</legend>{members.map(member=><label key={member.id}><input type="checkbox" name={name} value={member.id} defaultChecked={selectedIds.includes(member.id)}/><span title={member.displayName}>{member.displayName}</span></label>)}</fieldset>;
-}
 export function AvailabilityPlanning({members,departments,spaces,requests,canManage,canRead=canManage,membershipId,onSaved,onEditAvailability,onSchedule,openQuery=false}:{spaces:Space[];openQuery?:boolean;members:MemberOption[];departments:DepartmentOption[];requests:ReviewRequest[];canManage:boolean;canRead?:boolean;membershipId?:string;onSaved:()=>Promise<void>;onEditAvailability?:(returnToReview:()=>void)=>void;onSchedule?:(start:string,end:string,ids:string[])=>void}) {
   useEffect(()=>{if(openQuery){setMode('week');setOpen(true);}},[openQuery]);
   useEffect(()=>{const check=()=>{const q=new URLSearchParams(location.hash.split('?')[1]);if(q.get('kind')==='availability_request'){setMode('requests');setOpen(true);}};check();window.addEventListener('hashchange',check);return()=>window.removeEventListener('hashchange',check);},[]);
