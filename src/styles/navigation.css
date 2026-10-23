@@ -14,8 +14,9 @@
 .kanban-forms summary,.card-edit-section>summary,.meeting-list-management>summary{cursor:pointer;min-height:44px;align-content:center}
 .card-collaboration .card-edit-section{margin:16px 0}.card-edit-section[open]>summary{margin-bottom:12px}
 .card-collaboration>fieldset>dl{margin-top:0}.card-page-navigation{flex-wrap:wrap}
-.discard-confirmation{position:sticky;top:0;z-index:2;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 4px 18px #0002}
+.dialog-confirming-discard::backdrop{background:#061224c7}.discard-confirmation{position:sticky;top:0;z-index:2;background:var(--surface);border:2px solid var(--danger,#a43838);border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 8px 30px #0005}
 .discard-confirmation .form-actions{display:flex;flex-wrap:wrap;gap:10px}
+.button-danger{border-color:var(--danger,#a43838);background:var(--danger,#a43838);color:#fff}.button-danger:hover,.button-danger:focus-visible{background:color-mix(in srgb,var(--danger,#a43838) 86%,#000);border-color:color-mix(in srgb,var(--danger,#a43838) 86%,#000)}
 .meeting-date{font-size:13px;line-height:1.5}.calendar-event-time:has(.meeting-date){display:block}
 .meeting-list-management{margin-top:10px}.meeting-list-management>summary{font-size:12px;color:var(--muted)}
 .agenda-workflows .agenda-summary{min-height:0}.agenda-summary .summary-actions{margin-top:16px}

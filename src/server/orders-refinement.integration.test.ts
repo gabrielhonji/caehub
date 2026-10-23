@@ -25,6 +25,12 @@ test('commercial refinement: own checkout, privacy, stale operations, incidents,
     assert.equal((await send('POST','/api/commercial/my-orders',{...body,paymentStatus:'paid'},'member')).statusCode,400);
     assert.equal((await send('POST','/api/commercial/my-orders',{...body,items:[{...body.items[0],expectedPriceCents:0}]},'member')).statusCode,409);
     const created=await send('POST','/api/commercial/my-orders',body,'member');assert.equal(created.statusCode,201,created.body);const id=created.json().id;
+    const receipt=Buffer.from('%PDF-1.4\nfixture');
+    const uploaded=await send('POST',`/api/commercial/my-orders/${id}/payment-receipts`,{name:'comprovante-ficticio.pdf',mime:'application/pdf',data:receipt.toString('base64')},'member');assert.equal(uploaded.statusCode,201,uploaded.body);
+    assert.equal((await send('POST',`/api/commercial/my-orders/${id}/payment-receipts`,{name:'falso.png',mime:'image/png',data:receipt.toString('base64')},'member')).statusCode,409);
+    assert.equal((await send('POST',`/api/commercial/my-orders/${id}/payment-receipts`,{name:'intruso.pdf',mime:'application/pdf',data:receipt.toString('base64')},'other')).statusCode,404);
+    const receiptId=uploaded.json().id,download=await send('GET',`/api/commercial/orders/${id}/payment-receipts/${receiptId}`,undefined,'member');assert.equal(download.statusCode,200);assert.deepEqual(download.rawPayload,receipt);
+    assert.equal((await send('GET',`/api/commercial/orders/${id}/payment-receipts/${receiptId}`,undefined,'other')).statusCode,404);
     assert.equal((await send('POST','/api/commercial/my-orders',body,'member')).json().id,id);
     assert.equal((await send('GET',`/api/commercial/my-orders/${id}`,undefined,'other')).statusCode,404);
     assert.equal((await send('GET',`/api/commercial/my-orders/${id}`)).statusCode,404); // Owner storefront also scopes to their own identity.
@@ -34,7 +40,7 @@ test('commercial refinement: own checkout, privacy, stale operations, incidents,
     assert.equal((await send('POST',`/api/commercial/orders/${id}/actions`,incidentBody)).statusCode,200);
     assert.equal((await send('POST',`/api/commercial/orders/${id}/actions`,incidentBody)).statusCode,200);
     const incident=await detail(id);assert.equal(incident.incidents.length,1);assert.equal(incident.order.version,original.order.version+1);
-    const publicDetail=(await send('GET',`/api/commercial/my-orders/${id}`,undefined,'member')).json();assert.equal(publicDetail.incidents.length,0);assert.ok(!JSON.stringify(publicDetail).includes('NOTA INTERNA'));assert.ok(publicDetail.events.every((e:any)=>e.actor===undefined&&e.note===undefined));
+    const publicDetail=(await send('GET',`/api/commercial/my-orders/${id}`,undefined,'member')).json();assert.equal(publicDetail.incidents.length,0);assert.equal(publicDetail.paymentReceipts.length,1);assert.ok(!JSON.stringify(publicDetail).includes('NOTA INTERNA'));assert.ok(publicDetail.events.every((e:any)=>e.actor===undefined&&e.note===undefined));
     assert.equal((await send('POST',`/api/commercial/orders/${id}/actions`,{action:'pay',note:'Tela antiga',version:original.order.version,requestKey:randomUUID()})).statusCode,409);
     assert.equal((await send('POST',`/api/commercial/orders/${id}/actions`,{...incidentBody,note:'Outro conteúdo'})).statusCode,409);
     const payBody={action:'pay',note:'Recebimento real conferido na fixture',version:incident.order.version,requestKey:randomUUID()};

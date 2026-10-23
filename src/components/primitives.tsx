@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' }>(function Button({ children, variant = 'secondary', ...props }, ref) { return <button ref={ref} className={`button button-${variant}`} {...props}>{children}</button>; });
+export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' }>(function Button({ children, variant = 'secondary', ...props }, ref) { return <button ref={ref} className={`button button-${variant}`} {...props}>{children}</button>; });
 export function Eyebrow({ children }: { children: ReactNode }) { return <span className="eyebrow">{children}</span>; }
 export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'active' | 'waiting' }) { return <span className={`badge badge-${tone}`}>{children}</span>; }
 export function LoadingState() { return <div className="loading-state" aria-live="polite"><span className="spinner" aria-hidden="true" /><div><strong>Carregando conteúdo</strong><span>Aguarde um instante…</span></div></div>; }
@@ -19,7 +19,7 @@ export function Dialog({ title, children, onClose, closeLabel = 'Fechar', return
   const previousFocus = useRef<HTMLElement | null>(null);
   const dirty=useRef(new Set<HTMLFormElement>());
   const [discard,setDiscard]=useState(false);const continueButton=useRef<HTMLButtonElement>(null);
-  const requestClose=()=>{if(busy)return;if(discard){setDiscard(false);return;}if(protectChanges&&dirty.current.size){setDiscard(true);return;}onClose();};
+  const requestClose=()=>{if(busy)return;if(discard){dirty.current.clear();setDiscard(false);onClose();return;}if(protectChanges&&dirty.current.size){setDiscard(true);return;}onClose();};
   const close=useRef(requestClose);close.current=requestClose;
   useEffect(()=>{if(discard)continueButton.current?.focus();},[discard]);
   useEffect(()=>{
@@ -54,7 +54,7 @@ export function Dialog({ title, children, onClose, closeLabel = 'Fechar', return
       if(previousFocus.current?.isConnected)previousFocus.current.focus();
     };
   }, [open]);
-  return createPortal(<dialog ref={overlay} className="dialog-backdrop" aria-labelledby={titleId} onCancel={event=>{event.preventDefault();close.current();}} onPointerDown={(event) => { if (event.target === event.currentTarget) close.current(); }}><section className={`dialog ${size==='wide'?'dialog-wide':''}`} onPointerDown={event => event.stopPropagation()}><header><h2 id={titleId}>{title}</h2><Button ref={closeButton} disabled={busy} onClick={requestClose} aria-label="Fechar diálogo">{closeLabel} <span aria-hidden="true">×</span></Button></header><div className="dialog-content">{discard&&<div className="discard-confirmation" role="alert"><strong>Descartar alterações não salvas?</strong><p>Você pode continuar editando para salvar seu trabalho.</p><div className="form-actions"><Button ref={continueButton} onClick={()=>setDiscard(false)}>Continuar editando</Button><Button onClick={()=>{dirty.current.clear();setDiscard(false);onClose();}}>Descartar alterações</Button></div></div>}{children}</div></section></dialog>,document.body);
+  return createPortal(<dialog ref={overlay} className={`dialog-backdrop ${discard?'dialog-confirming-discard':''}`} aria-labelledby={titleId} onCancel={event=>{event.preventDefault();close.current();}} onPointerDown={(event) => { if (event.target === event.currentTarget) close.current(); }}><section className={`dialog ${size==='wide'?'dialog-wide':''}`} onPointerDown={event => event.stopPropagation()}><header><h2 id={titleId}>{title}</h2><Button ref={closeButton} disabled={busy} onClick={requestClose} aria-label="Fechar diálogo">{closeLabel} <span aria-hidden="true">×</span></Button></header><div className="dialog-content">{discard&&<div className="discard-confirmation" role="alert"><strong>Descartar alterações não salvas?</strong><p>Você pode continuar editando para salvar seu trabalho.</p><div className="form-actions"><Button ref={continueButton} onClick={()=>setDiscard(false)}>Continuar editando</Button><Button variant="danger" onClick={()=>{dirty.current.clear();setDiscard(false);onClose();}}>Descartar alterações</Button></div></div>}{children}</div></section></dialog>,document.body);
 }
 
 export function Toast({message}:{message:string}) {

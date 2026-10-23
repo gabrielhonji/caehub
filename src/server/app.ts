@@ -15,7 +15,7 @@ import { MeetingPolls } from './meeting-polls.js';
 import { Shifts, ScheduleConflict } from './shifts.js';
 import { CommercialService, productInput, productFields, variantInput, movementInput } from './commercial.js';
 import { optionsInput } from './commercial-catalog.js';
-import { OrderService, orderInput, purchaseInput, orderAction, orderListInput, receiptInput, settingsInput } from './orders.js';
+import { OrderService, orderInput, purchaseInput, orderAction, orderListInput, receiptInput, paymentReceiptInput, settingsInput } from './orders.js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -60,6 +60,8 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.get('/api/commercial/my-orders',async request=>orders.list(await actor(request,true),undefined,orderListInput.parse({...request.query as object,mine:'true'})));
   app.get('/api/commercial/my-orders/:id',async request=>orders.detail(await actor(request,true),paramId(request),true));
   app.post('/api/commercial/my-orders',async(request,reply)=>reply.code(201).send(await orders.buy(await actor(request,true),purchaseInput.parse(request.body))));
+  app.post('/api/commercial/my-orders/:id/payment-receipts',async(request,reply)=>reply.code(201).send(await orders.uploadPaymentReceipt(await actor(request,true),paramId(request),paymentReceiptInput.parse(request.body))));
+  app.get('/api/commercial/orders/:orderId/payment-receipts/:receiptId',async(request,reply)=>{const params=z.object({orderId:id,receiptId:id}).parse(request.params);const file=await orders.paymentReceipt(await actor(request,true),params.orderId,params.receiptId);return reply.type(file.mime).header('content-disposition',`attachment; filename="${String(file.name).replace(/["\\\r\n]/g,'_')}"`).send(file.content);});
   app.post('/api/commercial/orders',async(request,reply)=>reply.code(201).send(await orders.create(await actor(request),orderInput.parse(request.body))));
   app.get('/api/commercial/orders/:id',async request=>orders.detail(await actor(request),paramId(request)));
   app.post('/api/commercial/orders/:id/actions',async request=>orders.act(await actor(request),paramId(request),orderAction.parse(request.body)));
