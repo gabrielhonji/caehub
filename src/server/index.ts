@@ -3,6 +3,7 @@ import { buildApp } from './app.js';
 import { configFromEnv, connect, migrate } from './database.js';
 import { InstitutionalService } from './service.js';
 import { OrderService } from './orders.js';
+import {purgeExpiredProblemReportAttachments} from './problem-reports.js';
 
 const db = await connect(configFromEnv(process.env));
 await migrate(db);
@@ -12,6 +13,8 @@ await orders.reconcile();
 let reconciling=false;
 const reconciliation=setInterval(async()=>{if(reconciling)return;reconciling=true;try{await orders.reconcile();}catch{console.error('Reservation reconciliation failed; availability still excludes expired holds.');}finally{reconciling=false;}},60000);
 reconciliation.unref();
+const retention=setInterval(async()=>{try{const now=new Date();await purgeExpiredProblemReportAttachments(db,now);await db.run('UPDATE commercial_payment_receipts SET content=NULL,deleted_at=? WHERE content IS NOT NULL AND expires_at<=?',[now,now]);}catch{console.error('Attachment retention cleanup failed.');}},60*60*1000);
+retention.unref();
 await app.listen({ host: '0.0.0.0', port: Number(process.env.PORT ?? 8080) });
-const close = async () => { clearInterval(reconciliation);await app.close(); await db.close(); };
+const close = async () => { clearInterval(reconciliation);clearInterval(retention);await app.close(); await db.close(); };
 process.on('SIGTERM', close); process.on('SIGINT', close);

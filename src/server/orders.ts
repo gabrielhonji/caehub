@@ -39,7 +39,7 @@ export class OrderService {
   async event(db:Database,orderId:string,actor:Actor,action:string,note=''){const id=randomUUID();await db.run('INSERT INTO commercial_order_events(id,order_id,action,actor_subject,actor_name,note) VALUES (?,?,?,?,?,?)',[id,orderId,action,actor.subject,actor.displayName,note]);if(action!=='order.created')await db.run('UPDATE commercial_orders SET version=version+1 WHERE id=?',[orderId]);return id;}
   async expire(db:Database){
     const expired=await db.many<RowDataPacket>(`SELECT DISTINCT o.id FROM commercial_orders o JOIN commercial_order_items i ON i.order_id=o.id WHERE i.allocation_status='provisional' AND i.expires_at<=NOW(3) ORDER BY o.id`);
-    for(const o of expired){await db.run("UPDATE commercial_order_items SET allocation_status='released',allocated_quantity=0 WHERE order_id=? AND allocation_status='provisional'",[o.id]);await db.run("UPDATE commercial_orders SET status='expired' WHERE id=? AND status='pending'",[o.id]);await this.event(db,o.id,{subject:'system:reservations',displayName:'Reconciliação de reservas',projectAccess:false,owner:false},'reservation.expired','Prazo encerrado; unidades liberadas.');}
+    for(const o of expired){await db.run("UPDATE commercial_order_items SET allocation_status='released',allocated_quantity=0 WHERE order_id=? AND allocation_status='provisional'",[o.id]);await db.run("UPDATE commercial_orders SET status='expired' WHERE id=? AND status='pending'",[o.id]);await db.run('UPDATE commercial_payment_receipts SET expires_at=DATE_ADD(NOW(3),INTERVAL 1 MONTH) WHERE order_id=? AND content IS NOT NULL',[o.id]);await this.event(db,o.id,{subject:'system:reservations',displayName:'Reconciliação de reservas',projectAccess:false,owner:false},'reservation.expired','Prazo encerrado; unidades liberadas.');}
   }
   async reconcile(){return this.db.transaction(async db=>{await lockCommercial(db);await this.expire(db);},'READ COMMITTED');}
   async create(actor:Actor,input:z.infer<typeof orderInput>){
@@ -129,7 +129,7 @@ export class OrderService {
     const events=await db.many<RowDataPacket>(`SELECT id,action,actor_name AS actor,note,created_at AS createdAt FROM commercial_order_events WHERE order_id=? ${canManage?'':"AND action NOT IN ('administrative.exception','administrative.resolved')"} ORDER BY created_at,id`,[id]);
     const config=await db.one<RowDataPacket>('SELECT pix_instructions FROM commercial_operations WHERE organization_id=?',[org]);
     const incidents=canManage?await db.many<RowDataPacket>('SELECT id,status,note,actor_name AS actor,resolution,resolved_by AS resolvedBy,created_at AS createdAt,resolved_at AS resolvedAt FROM commercial_order_incidents WHERE order_id=? ORDER BY created_at,id',[id]):[];
-    const paymentReceipts=await db.many<RowDataPacket>(`SELECT id,original_name AS name,mime,created_at AS createdAt${canManage?',uploader_name AS uploader':''} FROM commercial_payment_receipts WHERE order_id=? ORDER BY created_at DESC`,[id]);
+    const paymentReceipts=await db.many<RowDataPacket>(`SELECT id,original_name AS name,mime,created_at AS createdAt,(content IS NOT NULL) AS hasContent,deleted_at AS deletedAt${canManage?',uploader_name AS uploader':''} FROM commercial_payment_receipts WHERE order_id=? ORDER BY created_at DESC`,[id]);
     // Internal identity subjects/contact are returned only to the operator.
     if(!canManage){delete o.buyer_contact;delete o.payment_actor;delete o.delivery_actor;delete o.request_key;delete o.request_hash;delete o.buyer_person_id;for(const event of events){delete event.actor;delete event.note;}}
     return {order:o,items,events,incidents,paymentReceipts,availableActions:canManage?this.actions(o,items):[],pixInstructions:config?.pix_instructions??'',canManage};
@@ -188,6 +188,7 @@ export class OrderService {
         if(!['pending','problem'].includes(o.payment_status)||['cancelled','completed'].includes(o.status))throw new Conflict('Este pedido não aceita confirmação de pagamento.');
         const late=items.some(i=>i.fulfillment==='stock'&&i.allocation_status!=='provisional');
         await db.run("UPDATE commercial_orders SET payment_status='paid',payment_actor=?,paid_at=NOW(3),status=? WHERE id=?",[actor.subject,late?'review':'confirmed',id]);
+        await db.run('UPDATE commercial_payment_receipts SET expires_at=DATE_ADD(NOW(3),INTERVAL 1 MONTH) WHERE order_id=? AND content IS NOT NULL',[id]);
         if(!late)await db.run("UPDATE commercial_order_items SET allocation_status='committed',expires_at=NULL WHERE order_id=? AND allocation_status='provisional'",[id]);
         await this.event(db,id,actor,late?'payment.confirmed_late':'payment.confirmed',input.note);
         return finish();
