@@ -14,7 +14,8 @@ const unavailable=()=>new AuthenticationFailure(503,'identity_unavailable','A au
 const denied=()=>new AuthenticationFailure(403,'access_denied','Sua conta não tem acesso ao CAEHUB.');
 const csrfFailure=()=>new AuthenticationFailure(403,'csrf_invalid','Atualize a página antes de tentar novamente.');
 
-export interface IdentityGateway { current(request?: FastifyRequest): Promise<Actor | undefined>; register?(app: FastifyInstance): void; }
+export type ReportNotification={eventKey:string;reportId:string;reporterId:string;title:string;status:'open'|'resolved'|'archived';feedback:string};
+export interface IdentityGateway { current(request?: FastifyRequest): Promise<Actor | undefined>; notifyProblemReport?(event:ReportNotification):Promise<void>; register?(app: FastifyInstance): void; }
 export class UnavailableHonjiGateway implements IdentityGateway { async current(): Promise<Actor | undefined> { return undefined; } }
 export class DevelopmentIdentityGateway implements IdentityGateway { constructor(private readonly actor: Actor | undefined) {} async current(): Promise<Actor | undefined> { return this.actor; } }
 type Config={publicOrigin:string;issuer:string;identityOrigin:string;clientId:string;clientSecret:string;serviceClientId:string;serviceClientSecret:string;authorizationOrigin:string;ownerId:string};
@@ -53,6 +54,7 @@ export class HonjiGateway implements IdentityGateway {
     }).finally(()=>{this.serviceTokenRequest=undefined;});
     return this.serviceTokenRequest;
   }
+  async notifyProblemReport(event:ReportNotification){const token=await this.serviceAccessToken();if(!token)throw unavailable();const response=await fetch(`${this.config.authorizationOrigin}/internal/problem-report-events`,{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify({...event,integrationId:'caehub',link:`${this.config.publicOrigin}/#relatar-problema`}),signal:AbortSignal.timeout(10000)});if(!response.ok)throw unavailable();}
   async current(request?:FastifyRequest):Promise<Actor|undefined>{
     if(!request)return;
     const sid=cookie(request,this.cookieName),session=await this.session(request);if(!sid||!session)return;
