@@ -58,7 +58,8 @@ export class HonjiGateway implements IdentityGateway {
   async current(request?:FastifyRequest):Promise<Actor|undefined>{
     if(!request)return;
     const sid=cookie(request,this.cookieName),session=await this.session(request);if(!sid||!session)return;
-    const now=Date.now();if(now-new Date(session.lastActivity).getTime()>=3600000||now>=new Date(session.expiresAt).getTime()){await this.db.run('DELETE FROM caehub_sessions WHERE session_hash=?',[digest(sid)]);return;}
+    const now=Date.now(),absoluteExpired=now>=new Date(session.expiresAt).getTime(),idleExpired=now-new Date(session.lastActivity).getTime()>=8*60*60*1000;
+    if(absoluteExpired||idleExpired){await this.db.run('DELETE FROM caehub_sessions WHERE session_hash=?',[digest(sid)]);throw new AuthenticationFailure(401,absoluteExpired?'session_absolute_expired':'session_idle_expired',absoluteExpired?'Sua sessão atingiu o limite de 12 horas. Entre novamente.':'Sua sessão expirou após 8 horas sem atividade. Entre novamente.');}
     if(!session.identitySessionId){await this.db.run('DELETE FROM caehub_sessions WHERE session_hash=?',[digest(sid)]);return;}
     let authorization:{allowed:boolean;projectAccess:boolean;studentEmailVerified?:boolean;hierarchy?:unknown;institutionalAdmin?:boolean};
     try {
@@ -104,8 +105,8 @@ export class HonjiGateway implements IdentityGateway {
       const query=request.query as Record<string,unknown>;
       let status=query.status;
       try {const actor=await this.current(request);if(actor?.accountAccess||actor?.projectAccess)return reply.redirect(safeReturnTo(query.returnTo));}
-      catch(error){if(!(error instanceof AuthenticationFailure))throw error;status=error.status===503?'unavailable':'denied';}
-      const messages:Record<string,[string,string]>={expired:['Sua sessão expirou.','Entre novamente com Honji para continuar de onde parou.'],denied:['Acesso não autorizado.','Sua conta não tem acesso ao CAEHUB. Solicite acesso à equipe responsável.'],unavailable:['Tente novamente em instantes.','A autenticação está temporariamente indisponível. Você pode tentar novamente.'],cancelled:['Entrada cancelada.','Você pode entrar novamente quando quiser.']};
+      catch(error){if(!(error instanceof AuthenticationFailure))throw error;status=error.status===503?'unavailable':error.code==='session_idle_expired'?'idle-expired':error.code==='session_absolute_expired'?'absolute-expired':'denied';}
+      const messages:Record<string,[string,string]>={expired:['Sua sessão expirou.','Entre novamente com Honji para continuar de onde parou.'],'idle-expired':['Sessão encerrada por inatividade.','Entre novamente para continuar. O limite de inatividade é de 8 horas.'],'absolute-expired':['Limite da sessão atingido.','Entre novamente para continuar. Cada sessão local dura no máximo 12 horas.'],logged_out:['Você saiu da sua conta.','Entre novamente ou escolha outra conta quando quiser.'],denied:['Acesso não autorizado.','Sua conta não tem acesso ao CAEHUB. Solicite acesso à equipe responsável.'],unavailable:['Tente novamente em instantes.','A autenticação está temporariamente indisponível. Você pode tentar novamente.'],cancelled:['Entrada cancelada.','Você pode entrar novamente quando quiser.']};
       const message=messages[String(status)];
       const html=accessPage.replace('Entre para continuar.',message?.[0]??'Entre para continuar.').replace('Use uma conta com acesso ao projeto CAECOMP. Seus espaços e ações serão mostrados conforme o seu vínculo.',message?.[1]??'Use sua conta Honji ou entre com Google. Compradores externos precisam confirmar um e-mail @alunos.utfpr.edu.br. A área institucional depende de acesso concedido por um administrador.');
       const returnTo=safeReturnTo(query.returnTo);
@@ -169,7 +170,7 @@ export class HonjiGateway implements IdentityGateway {
       const mode=(request.body as {mode?:unknown}|undefined)?.mode??'local';
       if(mode!=='local'&&mode!=='provider')return reply.code(400).send({error:'invalid_request'});
       await this.db.run('DELETE FROM caehub_sessions WHERE session_hash=?',[digest(cookie(request,this.cookieName)!)]);
-      const redirect=mode==='local'?'/acesso':`${this.config.issuer}/protocol/openid-connect/logout?${form({client_id:this.config.clientId,post_logout_redirect_uri:`${this.config.publicOrigin}/acesso`})}`;
+      const redirect=mode==='local'?'/acesso?status=logged_out':`${this.config.issuer}/protocol/openid-connect/logout?${form({client_id:this.config.clientId,post_logout_redirect_uri:`${this.config.publicOrigin}/acesso?status=logged_out`})}`;
       return reply.header('set-cookie',`${this.cookieName}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`).send({redirect});
     });
   }

@@ -118,15 +118,15 @@ test('Honji BFF validates callbacks, rotates sessions and enforces live authoriz
       decision='malformed';assert.equal((await app.inject({url:'/api/me',headers:{cookie}})).statusCode,503);
       const count=decisionCalls;
       const logout=await app.inject({method:'POST',url:'/auth/logout',headers});
-      assert.equal(logout.statusCode,200);assert.equal(logout.json().redirect,'/acesso');assert.equal(decisionCalls,count);
+      assert.equal(logout.statusCode,200);assert.equal(logout.json().redirect,'/acesso?status=logged_out');assert.equal(decisionCalls,count);
       assert.equal((await app.inject({url:'/api/me',headers:{cookie}})).statusCode,401);
       decision='allow';
     });
     await t.test('idle and absolute session expiry reject protected requests',async()=>{
-      for(const expiry of ['last_activity_at=DATE_SUB(NOW(3),INTERVAL 2 HOUR)','expires_at=DATE_SUB(NOW(3),INTERVAL 1 SECOND)']){
+      for(const [expiry,code] of [['last_activity_at=DATE_SUB(NOW(3),INTERVAL 8 HOUR)','session_idle_expired'],['expires_at=DATE_SUB(NOW(3),INTERVAL 1 SECOND)','session_absolute_expired']]){
         const response=await callback(await login()),cookie=String(response.headers['set-cookie']).split(';')[0];
         await db.run(`UPDATE caehub_sessions SET ${expiry} WHERE session_hash=?`,[digest(cookie.split('=')[1])]);
-        assert.equal((await app.inject({url:'/api/me',headers:{cookie}})).statusCode,401);
+        const expired=await app.inject({url:'/api/me',headers:{cookie}});assert.equal(expired.statusCode,401);assert.equal(expired.json().error,code);
       }
     });
     await t.test('global provider logout invalidates a still-present local cookie',async()=>{

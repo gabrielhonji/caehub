@@ -14,7 +14,7 @@ SSO Keycloak válido, o fluxo volta à autenticação normal.
 O BFF valida assinatura RS256/JWKS, issuer, audience, exp/iat, nonce, azp
 quando presente e sid. Authorization Code + PKCE S256 usa state e transação
 OAuth persistente de 10 minutos, consumida sob lock antes do token exchange.
-Login válido rotaciona o identificador e o CSRF; sessão expira por 1h inativa
+Login válido rotaciona o identificador e o CSRF; sessão expira por 8h inativa
 ou 12h absoluta. Cookie `__Host-caehub.sid`: host-only, Path=/, HttpOnly,
 Secure, SameSite=Lax. Destino de retorno é interno. Tokens OIDC não são
 armazenados nem enviados ao navegador; sessões anteriores sem sid exigem login.
