@@ -1,7 +1,7 @@
 {
   "name": "caehub",
-  "version": "1.22.0",
-  "release": "23102026-203000",
+  "version": "1.23.0",
+  "release": "23102026-210000",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,13 +13,13 @@
     "test:server": "tsx --test --test-concurrency=1 src/server/**/*.test.ts"
   },
   "dependencies": {
-    "fastify": "^5.12.5",
+    "fastify": "^5.12.6",
     "jose": "6.2.12",
     "mysql2": "^3.24.5",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "tsx": "^4.23.15",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/node": "^24.19.1",

@@ -47,14 +47,14 @@ async function command(path:string,body:unknown):Promise<{id:string}>{
   pendingCommands.set(signature,work);return work;
 }
 
-export const createCard=(boardId:string,input:{title:string;description?:string;columnId?:string;priority?:string;dueAt?:string})=>command(`/boards/${boardId}/cards`,input);
+export const createCard=(boardId:string,input:{title:string;description?:string;columnId?:string;priority?:string;dueAt?:string;tags?:string[]})=>command(`/boards/${boardId}/cards`,input);
 export const moveCard=(cardId:string,columnId:string,version:number)=>api(`/cards/${cardId}/move`,{method:'POST',body:JSON.stringify({columnId,version})});
 export const volunteer=(cardId:string)=>api(`/cards/${cardId}/helpers/me`,{method:'POST'});
 export const leaveCard=(cardId:string)=>api<void>(`/cards/${cardId}/helpers/me`,{method:'DELETE'});
 export const addColumn=(boardId:string,name:string)=>command(`/boards/${boardId}/columns`,{name});
 export const renameColumn=(columnId:string,name:string)=>api(`/columns/${columnId}`,{method:'PATCH',body:JSON.stringify({name})});
 export const deleteColumn=(columnId:string,targetColumnId:string)=>api(`/columns/${columnId}?targetColumnId=${targetColumnId}`,{method:'DELETE'});
-export type CardDetailDto={version:number;id:string;title:string;description:string;priority:'low'|'normal'|'high';tags:string[];responsibleName?:string;responsibleMembershipId?:string;visibility:'members'|'directors';dueAt?:string;archivedAt?:string;helpers:Array<{membershipId:string;displayName:string}>;eligibleParticipants:Array<{membershipId:string;displayName:string}>;checklist:Array<{id:string;content:string;completed:boolean}>;comments:Array<{id:string;body:string;author:string;createdAt:string}>;activities:Array<{id:string;action:string;actor:string;createdAt:string}>;pendingTransfer:null|{id:string;toMembershipId:string;status:string};permissions:{edit:boolean;manage:boolean;volunteer:boolean};currentMembershipId:string};
+export type CardDetailDto={version:number;id:string;title:string;description:string;priority:'low'|'normal'|'high';tags:string[];responsibleName?:string;responsibleMembershipId?:string;visibility:'members'|'directors';dueAt?:string;archivedAt?:string;helpers:Array<{membershipId:string;displayName:string}>;eligibleParticipants:Array<{membershipId:string;displayName:string}>;checklist:Array<{id:string;content:string;completed:boolean}>;comments:Array<{id:string;body:string;author:string;createdAt:string;canDelete:boolean}>;activities:Array<{id:string;action:string;actor:string;createdAt:string}>;pendingTransfer:null|{id:string;toMembershipId:string;status:string};permissions:{edit:boolean;manage:boolean;comment:boolean;volunteer:boolean};currentMembershipId:string};
 export const getCardDetail=(cardId:string)=>api<CardDetailDto>(`/cards/${cardId}`);
 export type ArchivedCardDto={id:string;title:string;description?:string;archivedAt:string;responsibleName?:string};
 export const getArchivedCards=(boardId:string)=>api<ArchivedCardDto[]>(`/boards/${boardId}/archived-cards`);
@@ -65,3 +65,6 @@ export const decideTransfer=(transferId:string,decision:'accepted'|'declined'|'c
 export const addChecklistItem=(cardId:string,content:string)=>command(`/cards/${cardId}/checklist`,{content});
 export const toggleChecklistItem=(itemId:string,completed:boolean)=>api(`/checklist/${itemId}`,{method:'PATCH',body:JSON.stringify({completed})});
 export const addComment=(cardId:string,body:string)=>command(`/cards/${cardId}/comments`,{body});
+export const deleteChecklistItem=(itemId:string)=>api<void>(`/checklist/${itemId}`,{method:'DELETE'});
+export const deleteComment=(commentId:string)=>api<void>(`/comments/${commentId}`,{method:'DELETE'});
+export const removeCardHelper=(cardId:string,membershipId:string)=>api<void>(`/cards/${cardId}/helpers/${membershipId}`,{method:'DELETE'});

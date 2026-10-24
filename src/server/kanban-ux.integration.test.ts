@@ -19,6 +19,12 @@ test('Kanban retries create one record and auxiliary join/leave is idempotent an
     assert.equal((await f.db.one<any>('SELECT COUNT(*) n FROM cards WHERE id=?',[cardId])).n,1);
     assert.equal((await f.db.one<any>("SELECT COUNT(*) n FROM card_activities WHERE card_id=? AND action='card.created'",[cardId])).n,1);
     assert.equal((await f.apps.owner.inject({method:'POST',url,headers,payload:{...payload,title:'Outro título fictício'}})).statusCode,409);
+    const viewerComment=await f.apps.member.inject({method:'POST',url:'/api/cards/'+cardId+'/comments',payload:{body:'Comentário de quem apenas visualiza'}});
+    assert.equal(viewerComment.statusCode,201,viewerComment.body);
+    let viewerDetail=(await f.apps.member.inject({url:'/api/cards/'+cardId})).json();
+    assert.equal(viewerDetail.permissions.edit,false);assert.equal(viewerDetail.permissions.comment,true);
+    assert.equal(viewerDetail.comments.find((comment:any)=>comment.id===viewerComment.json().id)?.canDelete,true);
+    assert.equal((await f.apps.member.inject({method:'DELETE',url:'/api/comments/'+viewerComment.json().id})).statusCode,204);
     for(const [endpoint,body] of [['checklist',{content:'Item fictício'}],['comments',{body:'Comentário fictício'}]] as const){
       const commandKey=randomUUID(),commandUrl='/api/cards/'+cardId+'/'+endpoint;
       const results=await Promise.all(Array.from({length:4},()=>f.apps.owner.inject({method:'POST',url:commandUrl,headers:{'idempotency-key':commandKey},payload:body})));
@@ -42,6 +48,10 @@ test('Kanban retries create one record and auxiliary join/leave is idempotent an
     assert.equal(projection.isHelper,false);assert.equal(projection.canMove,false);
     assert.equal((await join()).statusCode,200);detail=(await f.apps.member.inject({url:'/api/cards/'+cardId})).json();assert.equal(detail.helpers.length,1);
     assert.equal(detail.activities.filter((a:any)=>a.action==='helper.joined').length,2);
+    assert.equal((await f.apps.owner.inject({method:'DELETE',url:'/api/cards/'+cardId+'/helpers/'+f.ids.member})).statusCode,204);
+    assert.equal((await f.apps.member.inject({url:'/api/cards/'+cardId})).json().helpers.length,0);
+    const disposableItem=(await f.apps.owner.inject({method:'POST',url:'/api/cards/'+cardId+'/checklist',payload:{content:'Item removível'}})).json().id;
+    assert.equal((await f.apps.owner.inject({method:'DELETE',url:'/api/checklist/'+disposableItem})).statusCode,204);
     const restricted=(await f.apps.owner.inject({method:'POST',url,payload:{...payload,visibility:'directors'}})).json().id;
     assert.equal((await f.apps.member.inject({method:'POST',url:'/api/cards/'+restricted+'/helpers/me'})).statusCode,404);
     assert.equal((await f.apps.other.inject({method:'POST',url:helperUrl})).statusCode,404);
