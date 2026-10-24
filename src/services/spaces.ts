@@ -1,10 +1,13 @@
 import type { Board, Space, TaskPreview } from '../domain/types';
 import {newRequestKey} from './request-key';
 
+let lastInteraction=0;
+if(typeof window!=='undefined')for(const event of ['pointerdown','keydown','touchstart'])window.addEventListener(event,()=>{lastInteraction=Date.now();},{passive:true,capture:true});
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const method=(init?.method??'GET').toUpperCase();
   const csrf=['GET','HEAD'].includes(method)?'':await sessionToken();
-  const response = await fetch(`/api${path}`, { ...init, headers: { ...(init?.body != null ? { 'content-type': 'application/json' } : {}),...(csrf?{'x-csrf-token':csrf}:{}), ...init?.headers } });
+  const response = await fetch(`/api${path}`, { ...init, headers: { ...(init?.body != null ? { 'content-type': 'application/json' } : {}),...(csrf?{'x-csrf-token':csrf}:{}),...(Date.now()-lastInteraction<120000?{'x-honji-activity':'1'}:{}), ...init?.headers } });
   if(response.status===401){sessionPromise=undefined;location.replace(`/auth/login?returnTo=${encodeURIComponent(location.pathname+location.search+location.hash)}`);return new Promise<T>(()=>{});}
   if(response.status===403){const problem=await response.clone().json().catch(()=>({}));if(problem.error==='access_denied'){sessionPromise=undefined;location.assign('/acesso?status=denied');}else if(problem.message==='Honji identity integration is unavailable'){location.assign('/acesso');throw new Error('Sessão necessária.');}}
   if (!response.ok) { const problem = await response.json().catch(() => ({})); throw Object.assign(new Error(problem.message ?? `Falha ${response.status}`),{code:problem.error}); }

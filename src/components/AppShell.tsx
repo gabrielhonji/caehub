@@ -39,7 +39,7 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
     if (!account || logoutPending.current) return;
     logoutPending.current=true;setSigningOut(true);setLogoutError('');
     try {
-      const response = await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': account.csrfToken } });
+      const response = await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': account.csrfToken, 'Content-Type':'application/json' }, body:JSON.stringify({mode:'provider'}) });
       const result = await response.json();
       if (response.ok && result.redirect) location.assign(result.redirect);
       else throw new Error();

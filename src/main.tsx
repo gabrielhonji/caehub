@@ -14,8 +14,10 @@ import './styles/operational-refinement.css';
 
 const App=deferred<object>(()=>import('./app/App').then(module=>({default:module.App})));
 const PublicPortal=deferred<{embedded?:boolean;institutionalDenied?:boolean}>(()=>import('./components/PublicPortal').then(module=>({default:module.PublicPortal})));
+const ProblemReportEntry=deferred<object>(()=>import('./components/ProblemReports').then(module=>({default:module.ProblemReportEntry})));
 
 function Entry(){
+  if(location.pathname==='/relatos')return <ProblemReportEntry/>;
   const [route,setRoute]=useState(location.hash),[session,setSession]=useState<SessionInfo>(),[error,setError]=useState(false),[loading,setLoading]=useState(false);
   const internal=route.startsWith('#/');
   const load=()=>{setLoading(true);setError(false);void getSessionInfo(true).then(setSession).catch(()=>setError(true)).finally(()=>setLoading(false));};

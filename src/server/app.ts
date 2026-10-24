@@ -24,7 +24,7 @@ const role = z.enum(['president', 'vice_president', 'counselor', 'director', 'me
 export function buildApp(service: InstitutionalService, identity: IdentityGateway) {
   const app = Fastify({ logger: false });
   identity.register?.(app);
-  app.addHook('onSend',async(_request,reply,payload)=>{reply.header('x-content-type-options','nosniff').header('referrer-policy','same-origin').header('content-security-policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");return payload;});
+  app.addHook('onSend',async(request,reply,payload)=>{const frameAncestors=request.url.startsWith('/relatos')?"https://gabriel.honji.com.br":"'none'";reply.header('x-content-type-options','nosniff').header('referrer-policy','same-origin').header('content-security-policy',`default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors ${frameAncestors}`);return payload;});
   app.addHook('onSend',async(request,reply,payload)=>{if(request.url.startsWith('/api/')||request.url.startsWith('/auth/')||request.url.startsWith('/acesso'))reply.header('cache-control','no-store');return payload;});
   const kanban = new KanbanService(service.db, service);
   const agenda = new AgendaService(service.db, service);
@@ -219,5 +219,6 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
     }
   });
   app.get('/',async(_request,reply)=>reply.type('text/html').send(await readFile(resolve('dist/index.html'))));
+  app.get('/relatos',async(_request,reply)=>reply.type('text/html').send(await readFile(resolve('dist/index.html'))));
   return app;
 }

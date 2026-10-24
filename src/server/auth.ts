@@ -14,7 +14,7 @@ const unavailable=()=>new AuthenticationFailure(503,'identity_unavailable','A au
 const denied=()=>new AuthenticationFailure(403,'access_denied','Sua conta não tem acesso ao CAEHUB.');
 const csrfFailure=()=>new AuthenticationFailure(403,'csrf_invalid','Atualize a página antes de tentar novamente.');
 
-export type ReportNotification={eventKey:string;reportId:string;reporterId:string;title:string;status:'open'|'resolved'|'archived';feedback:string};
+export type ReportNotification={eventKey:string;reportId:string;reporterId:string;title:string;status:'open'|'resolved'|'archived';transition?:'created'|'reopened'|'updated';feedback:string};
 export interface IdentityGateway { current(request?: FastifyRequest): Promise<Actor | undefined>; notifyProblemReport?(event:ReportNotification):Promise<void>; register?(app: FastifyInstance): void; }
 export class UnavailableHonjiGateway implements IdentityGateway { async current(): Promise<Actor | undefined> { return undefined; } }
 export class DevelopmentIdentityGateway implements IdentityGateway { constructor(private readonly actor: Actor | undefined) {} async current(): Promise<Actor | undefined> { return this.actor; } }
@@ -75,7 +75,8 @@ export class HonjiGateway implements IdentityGateway {
     if(request.method!=='GET'&&request.method!=='HEAD'&&(request.headers.origin!==this.config.publicOrigin||request.headers['x-csrf-token']!==session.csrfToken))throw csrfFailure();
     const owner=session.subject===this.config.ownerId;
     if(owner&&!this.provisionedOwners.has(session.subject)){await this.db.run('INSERT IGNORE INTO people(id,honji_subject,display_name) VALUES(UUID(),?,?)',[session.subject,session.displayName]);await this.db.run("INSERT IGNORE INTO memberships(id,organization_id,person_id,role,status) SELECT UUID(),'1a4e0bd0-5f4a-4d10-8000-000000000001',id,'president','active' FROM people WHERE honji_subject=?",[session.subject]);this.provisionedOwners.add(session.subject);}
-    if(now-new Date(session.lastActivity).getTime()>=60000)await this.db.run('UPDATE caehub_sessions SET last_activity_at=NOW(3) WHERE session_hash=?',[digest(sid)]);(request as any).caehubCsrf=session.csrfToken;
+    const explicitActivity=request.method!=='GET'&&request.method!=='HEAD'||request.headers['x-honji-activity']==='1';
+    if(explicitActivity&&now-new Date(session.lastActivity).getTime()>=60000)await this.db.run('UPDATE caehub_sessions SET last_activity_at=NOW(3) WHERE session_hash=?',[digest(sid)]);(request as any).caehubCsrf=session.csrfToken;
     const mode=owner?normalizeDebugMode(session.debugMode):'real';const template=owner&&mode!=='real'?debugProfile(mode):undefined;
     return {subject:template?.subject??session.subject,displayName:template?.name??session.displayName,projectAccess:template?.access??authorization.projectAccess,accountAccess:authorization.allowed,buyerAccess:authorization.studentEmailVerified===true,owner:owner&&mode==='real',institutionalAdmin:template?.admin??authorization.institutionalAdmin===true,centralHierarchy:Boolean(authorization.hierarchy),realSubject:session.subject,debugView:{available:owner,mode:owner?mode:'real'}};
   }
