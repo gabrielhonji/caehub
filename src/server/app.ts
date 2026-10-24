@@ -137,9 +137,11 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.get('/api/my-tasks',async request=>{const query=z.object({workspaceId:id.optional(),state:z.enum(['open','completed']).optional(),participation:z.enum(['created','responsible','helper']).optional()}).parse(request.query);return kanban.myTasks(await actor(request),query);});
   app.get('/api/foundation',async request=>{
     const current=await actor(request);
+    const membership=await service.requireMember(current);
     const workspaces=await service.listWorkspaces(current) as Array<{id:string;departmentId?:string|null}>;
     const [tasks,boards]=await Promise.all([kanban.myTasks(current,{state:'open'}),kanban.boardsForWorkspaces(current,workspaces)]);
-    return {workspaces,tasks,boards};
+    const canManageStructure=(!current.debugView||current.debugView.mode==='real')&&(await service.isAdmin(current,membership)||await service.isDirector(membership.id));
+    return {workspaces,tasks,boards,canManageStructure};
   });
   const availabilityInput=z.object({kind:z.enum(['weekly','date']),weekday:z.number().int().min(0).max(6).optional(),date:z.string().date().optional(),startTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),endTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),note:z.string().trim().max(255).optional()}).superRefine((value,context)=>{if(value.kind==='weekly'&&value.weekday===undefined)context.addIssue({code:'custom',message:'weekday is required for weekly blocks'});if(value.kind==='date'&&!value.date)context.addIssue({code:'custom',message:'date is required for date blocks'});});
   app.get('/api/availability/me',async request=>agenda.myAvailability(await actor(request)));

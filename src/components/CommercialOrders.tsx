@@ -86,7 +86,7 @@ export function CommercialOrders({catalog,campaignId,onInventoryChange,mode='adm
       <label>Retirada<select value={filters.deliveryStatus} onChange={e=>filter({deliveryStatus:e.target.value})}><option value="">Todas</option>{['waiting','ready','collected'].map(s=><option key={s} value={s}>{orderLabels[s]}</option>)}</select></label>
       {data.canManage&&<label>Pendências<select value={filters.issues} onChange={e=>filter({issues:e.target.value})}><option value="">Todos os pedidos</option><option value="open">Com pendência aberta</option></select></label>}
     </div></details>
-    {loading&&<p role="status">Atualizando pedidos…</p>}
+    {loading&&<span className="sr-only" role="status">Atualizando pedidos…</span>}
     {!data.orders.length?<EmptyState title="Nenhum pedido neste filtro.">{mode==='mine'?'Se você já comprou, confira os filtros ou consulte todos os seus pedidos.':'Ajuste os filtros ou registre um pedido na campanha selecionada.'}</EmptyState>:<div className={`commercial-order-list ${mode==='mine'?'buyer-order-list':''}`}>{data.orders.map(o=><article className={`commercial-product ${mode==='mine'?'buyer-order-card':''}`} key={o.id}>
       <header><strong>{mode==='mine'?o.campaignName:o.buyerName}</strong><Badge tone={o.deliveryStatus==='ready'?'active':o.status==='review'||o.status==='expired'?'waiting':'neutral'}>{mode==='mine'?buyerOrderLabel(o):orderLabels[o.status]}</Badge></header>
       <p>{mode==='mine'?`Pedido ${o.id.slice(0,8)} · ${orderTime(o.createdAt)}`:`${o.campaignName} · ${orderTime(o.createdAt)}`}</p>

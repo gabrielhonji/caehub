@@ -50,9 +50,25 @@ abertura também notifica os administradores competentes. O e-mail usa o módulo
 transacional central do Honji e não bloqueia a operação de negócio quando o
 transportador está indisponível. Enfileiramento não equivale a entrega.
 
+## Complemento de fechamento — 24/10/2026
+
+- A seleção de variações com múltiplos atributos foi separada por dimensão,
+  sempre reconciliando para uma combinação real e disponível do catálogo.
+- Atualizações de catálogo usam o controle contextual compartilhado; remoção do
+  carrinho é destrutiva, iconográfica e mantém nome acessível.
+- “Meus pedidos” usa uma única hierarquia, lista interna rolável e atualização
+  sem deslocar o conteúdo.
+- A consulta institucional de departamentos passou a devolver somente nome,
+  tipo de vínculo e identificador local de participação para qualquer membro
+  ativo. O atalho de gestão central só aparece quando a autoridade real é
+  confirmada pelo servidor; perfis de visualização nunca recebem essa ação.
+- A cobertura dirigida inclui combinações de produto, bloqueio de refresh,
+  remoção do carrinho, diretório institucional seguro, responsividade e os dois
+  temas.
+
 ## Evidências e limites
 
-- Build TypeScript/Vite da 1.23.0 aprovado em imagem de desenvolvimento.
+- Build TypeScript/Vite da 1.24.0 aprovado em imagem de desenvolvimento.
 - Suíte servidor/MySQL isolado: 52/52 testes, concorrência serializada.
 - Chromium com fixtures fictícias: cartão, permissões, tags/prioridade,
   comentários de leitor, convidados da Agenda, refresh contextual e retorno do

@@ -4,6 +4,7 @@
 .public-product-placeholder{min-height:150px;display:grid;place-items:center;background:var(--soft);border-bottom:1px solid var(--line);color:var(--muted);margin-bottom:20px}
 .public-product-placeholder span{font:italic 24px var(--font-editorial);text-align:center;padding:12px}
 .public-selection-line{display:flex;align-items:center;gap:20px;padding:20px 0;border-bottom:1px solid var(--line)}
+.selection-remove{width:44px;min-width:44px;padding:0;justify-content:center;gap:0}.selection-remove svg{width:18px;height:18px}
 .public-selection-product{flex:1;min-width:0;display:grid;gap:5px;overflow-wrap:anywhere}
 .public-selection-product span{font-size:13px;color:var(--muted)}
 .public-selection-product small{color:var(--accent-strong)}

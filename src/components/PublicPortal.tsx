@@ -9,6 +9,7 @@ import { Badge, Button, Dialog, EmptyState, ErrorState, Eyebrow, LoadingState } 
 import { CommercialOrderForm } from './CommercialOrderForm';
 import { CommercialOrderDetail } from './CommercialOrderDetail';
 import { CommercialOrders } from './CommercialOrders';
+import { RefreshButton } from './RefreshButton';
 import { api, type SessionInfo } from '../services/spaces';
 import { money } from '../services/commercial';
 import { emptyOrderDraft, newRequestKey, commercialOrderFailure, type OrderDetail, type OrderDraft, type SaleCatalog } from '../services/commercial-orders';
@@ -107,7 +108,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
   useRefresh(load,'catalog');
   const accountProblem=accountFailed?<><ErrorState onRetry={()=>void checkAccount()}/><a className="button button-secondary" href="/acesso">Gerenciar minha sessão</a></>:sessionDenied?<div className="buyer-login-note"><p>Sua conta não está habilitada para comprar. O catálogo público continua disponível.</p><a className="button button-secondary" href="/acesso?status=denied">Gerenciar minha sessão</a></div>:undefined;
   const orders=<section id="pedidos" className="buyer-account-section">
-    <div className="compact-heading"><div><Eyebrow>MINHA CONTA · {campaign?.name??'TODAS AS CAMPANHAS'}</Eyebrow><h2>{collection?'Seus pedidos e retiradas.':'Acompanhe suas compras.'}</h2></div>{canBuy&&<a className="button button-secondary" href="/#/meus-pedidos">Todos os meus pedidos →</a>}</div>
+    <div className="compact-heading"><div><Eyebrow>MINHA CONTA · {campaign?.name??'TODAS AS CAMPANHAS'}</Eyebrow><h2>Seus pedidos e retiradas.</h2></div>{canBuy&&!location.hash.startsWith('#/meus-pedidos')&&<a className="button button-secondary" href="/#/meus-pedidos">Todos os meus pedidos →</a>}</div>
     {checkingAccount?<LoadingState/>:accountProblem??(canBuy?<CommercialOrders key={`${ordersVersion}-${campaignId}`} mode="mine" campaignId={ownOrderId?undefined:campaign?.id} initialOrderId={ownOrderId}/>:needsStudentEmail?<BuyerEmailVerification onVerified={()=>void checkAccount()}/>:<div className="buyer-login-note"><p>Entre com Honji para consultar suas encomendas e as quantidades do seu pedido. Nesta etapa, a equipe informa quando estão prontas para retirada.</p><a className="button button-primary" href={googleLogin}>Entrar ou criar conta com Google</a><a className="button button-secondary" href={honjiLogin}>Entrar com Honji</a><small>Compradores externos devem confirmar um e-mail @alunos.utfpr.edu.br. Confira também a caixa de spam.</small></div>)}
   </section>;
   const ownOrdersRoute=location.hash.startsWith('#/meus-pedidos');
@@ -124,7 +125,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
     {!embedded&&account&&!account.institutionalAccess&&<section className="buyer-login-note member-account-entry" aria-label="Conta de membro do CAECOMP"><div><Eyebrow>JÁ É MEMBRO DO CAECOMP?</Eyebrow><h2>Ative seu acesso de membro.</h2><p>Se você já integra o CAECOMP, solicite o acesso institucional da sua conta Honji. A equipe confirma o vínculo e o departamento.</p></div><a className="button button-primary" href="https://gabriel.honji.com.br/#solicitar-acesso?project=CAECOMP">Solicitar conta CAEHUB</a><small>Este pedido é exclusivo para membros existentes do CAECOMP. Não é uma inscrição para entrar no centro acadêmico.</small></section>}
     {notice&&<p className="form-feedback success" role="status">{notice}</p>}
     <section id="campanhas" className="commercial-campaign-section">
-      <div className="compact-heading"><div><Eyebrow>02 / CAMPANHAS</Eyebrow><h2>As campanhas do CAECOMP.</h2></div><Button onClick={()=>void load()}>Atualizar catálogo</Button></div>
+      <div className="compact-heading"><div><Eyebrow>02 / CAMPANHAS</Eyebrow><h2>As campanhas do CAECOMP.</h2></div><RefreshButton label="Atualizar catálogo" onRefresh={load}/></div>
       {!catalog?(error?<ErrorState onRetry={()=>void load()}/>:<LoadingState/>):<>
         {error&&<p role="alert">Não foi possível atualizar. Confira novamente antes de comprar.</p>}
         {!catalog.campaigns.length?<EmptyState title="Novas campanhas vêm por aí.">Seus pedidos anteriores continuam disponíveis na sua conta.</EmptyState>:<>
@@ -146,13 +147,13 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
       {selected.map(item=><div className="public-selection-line form-fields" key={item.line.variantId}>
         <div className="public-selection-product"><strong>{item.product?.name??'Produto indisponível'}</strong><span>{item.variant?.name??'Variação indisponível'} · {item.preorder?'Sob encomenda':'Produto físico'}</span>{!item.valid&&<small role="alert">Remova o item indisponível ou corrija a quantidade.</small>}</div>
         <QuantityStepper label={`Quantidade de ${item.product?.name??'item'}`} value={item.count} max={item.preorder?1000000:item.variant?.availableQuantity??1} onChange={value=>changeDraft({...draft,items:draft.items.map(line=>line===item.line?{...line,quantity:String(value)}:line)})}/>
-        <strong>{money((item.product?.saleCents??0)*(Number.isFinite(item.count)?item.count:0))}</strong><Button variant="danger" aria-label={`Remover ${item.product?.name??'item'}`} onClick={()=>changeDraft({...draft,items:draft.items.filter(line=>line!==item.line)})}>Remover</Button>
+        <strong>{money((item.product?.saleCents??0)*(Number.isFinite(item.count)?item.count:0))}</strong><Button className="selection-remove" variant="danger" aria-label={`Remover ${item.product?.name??'item'} da seleção`} title="Remover da seleção" onClick={()=>changeDraft({...draft,items:draft.items.filter(line=>line!==item.line)})}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16m-10 4v6m4-6v6M9 7l1-3h4l1 3m3 0-1 14H7L6 7"/></svg><span className="sr-only">Remover</span></Button>
       </div>)}
       <div className="buyer-selection-footer"><div className="commercial-total"><span>Total estimado</span><strong>{money(total)}</strong></div><Button variant="primary" disabled={!selected.every(item=>item.valid)||!campaign} onClick={()=>{setFormError('');setCheckout(true);}}>Conferir e concluir</Button></div>
     </section>}
 
     {product&&<Dialog title={product.name} onClose={()=>setProductId('')}><Eyebrow>{campaign?.name} · {product.category}</Eyebrow><p>{product.description}</p><Badge>{preorder?'Sob encomenda':'Estoque físico'}</Badge><form className="form-fields buyer-product-form" onSubmit={event=>{event.preventDefault();add();}}>
-      <fieldset className="product-variant-options"><legend>Escolha a variação</legend>{variants.map(item=><label key={item.id} data-selected={item.id===variantId}><input type="radio" name="variant" value={item.id} checked={item.id===variantId} onChange={()=>setVariantId(item.id)} disabled={!preorder&&item.availableQuantity<=0}/><span><strong>{item.name}</strong><small>{preorder?'Sob encomenda':item.availableQuantity>0?`${item.availableQuantity} disponíveis`:'Esgotado'}</small></span></label>)}</fieldset>
+      <VariantPicker variants={variants} value={variantId} preorder={Boolean(preorder)} onChange={setVariantId}/>
       {variant?.attributes&&<dl className="buyer-attributes">{Object.entries(variant.attributes).map(([name,value])=><div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>}
       <p>{preorder?'Produzido sob encomenda após o pagamento.':`${variant?.availableQuantity??0} unidades disponíveis`}</p><p><strong>{money(product.saleCents)}</strong> por unidade</p>
       <QuantityStepper label="Quantidade" value={Number(quantity)} max={preorder?1000000:Math.max(1,variant?.availableQuantity??0)} onChange={value=>setQuantity(String(value))}/>
@@ -174,3 +175,11 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
 }
 
 function QuantityStepper({label,value,max,onChange}:{label:string;value:number;max:number;onChange:(value:number)=>void}){const safe=Number.isFinite(value)?Math.min(max,Math.max(1,value)):1;return <div className="quantity-stepper"><span>{label}</span><div role="group" aria-label={label}><Button type="button" disabled={safe<=1} aria-label={`Diminuir ${label.toLowerCase()}`} onClick={()=>onChange(safe-1)}>−</Button><output aria-live="polite">{safe}</output><Button type="button" disabled={safe>=max} aria-label={`Aumentar ${label.toLowerCase()}`} onClick={()=>onChange(safe+1)}>+</Button></div></div>}
+
+function VariantPicker({variants,value,preorder,onChange}:{variants:SaleCatalog['variants'];value:string;preorder:boolean;onChange:(id:string)=>void}){
+  const active=variants.filter(item=>item.status==='active'),selected=active.find(item=>item.id===value);
+  const dimensions=[...new Set(active.flatMap(item=>Object.keys(item.attributes??{})))];
+  const eligible=(item:SaleCatalog['variants'][number])=>preorder||item.availableQuantity>0;
+  if(dimensions.length<2)return <fieldset className="product-variant-options"><legend>Escolha a variação</legend>{active.map(item=><label key={item.id} data-selected={item.id===value}><input type="radio" name="variant" value={item.id} checked={item.id===value} onChange={()=>onChange(item.id)} disabled={!eligible(item)}/><span><strong>{item.name}</strong><small>{preorder?'Sob encomenda':item.availableQuantity>0?`${item.availableQuantity} disponíveis`:'Esgotado'}</small></span></label>)}</fieldset>;
+  return <div className="variant-dimensions">{dimensions.map(dimension=><fieldset className="product-variant-options" key={dimension}><legend>{dimension}</legend>{[...new Set(active.map(item=>item.attributes?.[dimension]).filter((item):item is string=>Boolean(item)))].map(option=>{const exact=active.find(item=>eligible(item)&&item.attributes?.[dimension]===option&&dimensions.every(other=>other===dimension||!selected?.attributes?.[other]||item.attributes?.[other]===selected.attributes[other]));const candidate=exact??active.find(item=>eligible(item)&&item.attributes?.[dimension]===option);return <Button type="button" key={option} disabled={!candidate} aria-pressed={selected?.attributes?.[dimension]===option} onClick={()=>candidate&&onChange(candidate.id)}>{option}</Button>;})}</fieldset>)}</div>;
+}

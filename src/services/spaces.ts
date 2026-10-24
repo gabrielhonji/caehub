@@ -33,7 +33,7 @@ export const refreshBoard=(id:string)=>api<BoardDto>(`/boards/${id}`).then(board
 export async function getBoards(): Promise<Board[]> { const spaces=await api<WorkspaceDto[]>('/workspaces'); const lists=await Promise.all(spaces.map(s=>api<Array<{id:string}>>(`/workspaces/${s.id}/boards`))); const boards=await Promise.all(lists.flat().map(b=>api<BoardDto>(`/boards/${b.id}`))); return boards.map(boardFrom); }
 export async function getBoard(spaceId:string):Promise<Board|undefined>{return (await getBoards()).find(board=>board.spaceId===spaceId);}
 export async function getTaskPreviews(filters:Record<string,string>={state:'open'}):Promise<TaskPreview[]>{const query=new URLSearchParams(filters);const rows=await api<TaskDto[]>(`/my-tasks?${query}`);return rows.map(taskFrom);}
-export async function getFoundation(){const value=await api<{workspaces:WorkspaceDto[];tasks:TaskDto[];boards:BoardDto[]}>('/foundation');return {spaces:value.workspaces.map(spaceFrom),tasks:value.tasks.map(taskFrom),boards:value.boards.map(boardFrom)};}
+export async function getFoundation(){const value=await api<{workspaces:WorkspaceDto[];tasks:TaskDto[];boards:BoardDto[];canManageStructure:boolean}>('/foundation');return {spaces:value.workspaces.map(spaceFrom),tasks:value.tasks.map(taskFrom),boards:value.boards.map(boardFrom),canManageStructure:value.canManageStructure};}
 
 // Keep the key on failure: a lost response can be retried without creating another record.
 const commandKeys=new Map<string,string>();

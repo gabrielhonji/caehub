@@ -24,13 +24,14 @@ const CommercialShop=deferred<object>(()=>import('../components/CommercialShop')
 const BuyerOrdersPage=deferred<{orderId?:string}>(()=>import('../components/BuyerOrdersPage').then(module=>({default:module.BuyerOrdersPage})));
 
 type Status = 'loading' | 'ready' | 'error';
-type FoundationData = { status: Status; spaces: Space[]; tasks: TaskPreview[]; boards: Board[]; refreshError: boolean; refreshing: boolean; refreshBoard:(id:string)=>Promise<void>; load: () => Promise<void> };
+type FoundationData = { status: Status; spaces: Space[]; tasks: TaskPreview[]; boards: Board[]; canManageStructure:boolean; refreshError: boolean; refreshing: boolean; refreshBoard:(id:string)=>Promise<void>; load: () => Promise<void> };
 
 function useFoundationData(): FoundationData {
   const [status, setStatus] = useState<Status>('loading');
   const [spaceList, setSpaces] = useState<Space[]>([]);
   const [taskList, setTasks] = useState<TaskPreview[]>([]);
   const [boardList, setBoards] = useState<Board[]>([]);
+  const [canManageStructure,setCanManageStructure]=useState(false);
   const loaded=useRef(false),generation=useRef(0);
   const [refreshError,setRefreshError]=useState(false),[refreshing,setRefreshing]=useState(false);
   const load = async () => {
@@ -40,7 +41,7 @@ function useFoundationData(): FoundationData {
     try {
       const next=await getFoundation();
       if(current!==generation.current)return;
-      setSpaces(next.spaces);setTasks(next.tasks);setBoards(next.boards);
+      setSpaces(next.spaces);setTasks(next.tasks);setBoards(next.boards);setCanManageStructure(next.canManageStructure);
       loaded.current=true;setStatus('ready');setRefreshError(false);
     } catch {
       if(current!==generation.current)return;
@@ -49,7 +50,7 @@ function useFoundationData(): FoundationData {
   };
   useEffect(() => { void load(); }, []);
   const refreshOne=async(id:string)=>{try{const board=await refreshBoard(id);setBoards(previous=>previous.map(value=>value.id===id?board:value));setRefreshError(false);}catch(error){if(['forbidden','not_found'].includes((error as {code?:string}).code??'')){setBoards(previous=>previous.filter(value=>value.id!==id));const spaceId=boardList.find(value=>value.id===id)?.spaceId;setSpaces(previous=>previous.filter(value=>value.id!==spaceId));setRefreshError(false);}else setRefreshError(true);}};
-  return { status, spaces: spaceList, tasks: taskList, boards: boardList, refreshError, refreshing, refreshBoard:refreshOne, load };
+  return { status, spaces: spaceList, tasks: taskList, boards: boardList, canManageStructure, refreshError, refreshing, refreshBoard:refreshOne, load };
 }
 
 function useActionFeedback(onChanged:()=>Promise<void>,backgroundRefresh=false) {
@@ -180,7 +181,7 @@ export function App() {
   else if (parts[0] === 'meus-pedidos' && !parts[2]) content = <BuyerOrdersPage orderId={parts[1]}/>;
   else if (parts[0] === 'comercial' && !parts[1]) content = <CommercialPage />;
   else if (parts[0] === 'comercial' && parts[1] === 'comprar' && !parts[2]) content = <CommercialShop />;
-  else if (parts[0] === 'departamentos') content = <DepartmentsPage active={parts[1]} spaces={data.spaces}/>;
+  else if (parts[0] === 'departamentos') content = <DepartmentsPage active={parts[1]} spaces={data.spaces} canManageStructure={data.canManageStructure}/>;
   else if (parts[0] === 'minhas-tarefas' && !parts[1]) content = <MyTasksPage spaces={data.spaces}/>;
   else if (parts[0] === 'espacos' && !parts[1]) content = data.spaces.length===1?<SpacePage key={data.spaces[0].id} single space={data.spaces[0]} board={data.boards.find(b=>b.spaceId===data.spaces[0].id)} onOpenCard={card=>setActiveCardId(card.id)} onChanged={data.load}/>:<SpacesPage spaces={data.spaces}/>;
   else if (parts[0] === 'espacos' && parts[1]) { const space = data.spaces.find((item) => item.id === parts[1]); content = space ? <SpacePage key={space.id} space={space} board={data.boards.find((item) => item.spaceId === space.id)} onOpenCard={card=>setActiveCardId(card.id)} onChanged={data.load} /> : <NotFound resource="space" />; }

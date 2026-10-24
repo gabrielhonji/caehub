@@ -1,8 +1,9 @@
 import type { OrderDraft, SaleCatalog } from '../services/commercial-orders';
 import { money } from '../services/commercial';
 import { Button } from './primitives';
+import { RefreshButton } from './RefreshButton';
 
-export function CommercialOrderForm({catalog,campaignId,draft,onChange,onSubmit,busy,buyers,refresh}:{catalog:SaleCatalog;campaignId:string;draft:OrderDraft;onChange:(draft:OrderDraft)=>void;onSubmit:()=>void;busy:boolean;buyers?:{id:string;name:string}[];refresh:()=>void}){
+export function CommercialOrderForm({catalog,campaignId,draft,onChange,onSubmit,busy,buyers,refresh}:{catalog:SaleCatalog;campaignId:string;draft:OrderDraft;onChange:(draft:OrderDraft)=>void;onSubmit:()=>void;busy:boolean;buyers?:{id:string;name:string}[];refresh:()=>void|Promise<void>}){
   const campaign=catalog.campaigns.find(c=>c.id===campaignId);
   const variants=catalog.variants.filter(v=>v.status==='active'&&catalog.products.some(p=>p.id===v.productId&&p.status==='active'&&p.saleCents!==null&&(buyers!==undefined||p.mode==='physical'||campaign?.stage==='orders')&&catalog.links.some(l=>l.productId===p.id&&l.campaignId===campaignId)));
   const selected=draft.items.map(line=>{const v=variants.find(v=>v.id===line.variantId),p=catalog.products.find(p=>p.id===v?.productId);return {v,p,quantity:Number(line.quantity),preorder:p?.mode==='preorder'&&campaign?.stage==='orders'};});
@@ -20,7 +21,7 @@ export function CommercialOrderForm({catalog,campaignId,draft,onChange,onSubmit,
       {row.p&&<p className="commercial-line-total">{row.preorder?'Sob encomenda':`${row.v?.availableQuantity??0} unidades livres`} · subtotal {money(Number.isFinite(row.quantity)?(row.p.saleCents??0)*row.quantity:0)}{row.v&&!row.preorder&&row.quantity>row.v.availableQuantity&&<span role="alert">Quantidade maior que o estoque livre. Atualize ou reduza o item.</span>}</p>}
       {draft.items.length>1&&<Button variant="danger" type="button" onClick={()=>onChange({...draft,items:draft.items.filter((_,i)=>i!==index)})}>Remover {index+1}º item</Button>}
     </div>})}
-    <div className="card-actions"><Button type="button" disabled={draft.items.length>=100||draft.items.some(item=>!item.variantId)} onClick={()=>onChange({...draft,items:[...draft.items,{variantId:'',quantity:'1'}]})}>Adicionar item</Button><Button type="button" onClick={refresh}>Atualizar catálogo</Button></div>
+    <div className="card-actions"><Button type="button" disabled={draft.items.length>=100||draft.items.some(item=>!item.variantId)} onClick={()=>onChange({...draft,items:[...draft.items,{variantId:'',quantity:'1'}]})}>Adicionar item</Button><RefreshButton label="Atualizar catálogo" disabled={busy} onRefresh={async()=>refresh()}/></div>
     <div className="commercial-total" role="status"><span>Total previsto</span><strong>{money(Number.isFinite(total)?total:0)}</strong><small>O sistema valida preço e disponibilidade novamente ao registrar.</small></div>
     {missingReservation&&<p role="alert">O prazo da reserva ainda precisa ser configurado pela equipe para vender produtos físicos.</p>}
     <Button variant="primary" disabled={busy||!valid||missingReservation||campaign?.status!=='active'}>{busy?'Registrando…':buyers?'Registrar pedido':'Confirmar meu pedido'}</Button>
