@@ -154,6 +154,14 @@ export class AgendaService {
     return this.db.many<RowDataPacket>(`SELECT m.id,m.role,p.display_name AS displayName,COALESCE((SELECT JSON_ARRAYAGG(dm.department_id) FROM department_memberships dm WHERE dm.membership_id=m.id AND dm.ended_at IS NULL),JSON_ARRAY()) AS departmentIds FROM memberships m JOIN people p ON p.id=m.person_id WHERE m.organization_id=? AND m.status='active' AND p.honji_subject NOT LIKE 'caehub-debug-%' ORDER BY p.display_name`,[CAECOMP_ORGANIZATION_ID]);
   }
 
+  async recommendedWorkspace(actor:Actor) {
+    const member=await this.institutional.requireMember(actor);
+    const departments=await this.db.many<RowDataPacket>(`SELECT DISTINCT dm.department_id AS id FROM department_memberships dm JOIN departments d ON d.id=dm.department_id WHERE dm.membership_id=? AND dm.kind='director' AND dm.ended_at IS NULL AND d.organization_id=? ORDER BY dm.department_id`,[member.id,CAECOMP_ORGANIZATION_ID]);
+    if(departments.length!==1)return {departmentId:null,workspaceId:null};
+    const workspaces=await this.db.many<RowDataPacket>("SELECT id FROM workspaces WHERE department_id=? AND organization_id=? AND status='active' ORDER BY id",[departments[0].id,CAECOMP_ORGANIZATION_ID]);
+    return {departmentId:departments[0].id,workspaceId:workspaces.length===1?workspaces[0].id:null};
+  }
+
   async createMeeting(actor: Actor, input: MeetingInput) {
     const organizer = await this.institutional.requireMember(actor);
     if (!await this.mayOrganize(actor, organizer, input.workspaceId)) throw new Forbidden('director or institutional administrator required');

@@ -61,6 +61,8 @@ test('Agenda persists meetings, resets confirmations and protects private availa
   assert.equal(foundation.statusCode,200,foundation.body);
   assert.equal(identityChecks,1,'agenda foundation must cross the identity boundary only once');
   assert.ok(Array.isArray(foundation.json().calendar));
+  const directorFoundation=await directorApp.inject({method:'GET',url:'/api/agenda/foundation?scope=personal&from=2026-11-16T00:00:00.000Z&to=2026-11-17T00:00:00.000Z'});
+  assert.equal(directorFoundation.statusCode,200,directorFoundation.body);assert.equal(directorFoundation.json().recommendedDepartmentId,'1a4e0bd0-5f4a-4d10-8000-000000000104');
   await foundationApp.close();
   assert.equal((await directorApp.inject({method:'PATCH',url:`/api/meetings/${meetingId}`,payload:{expectedRevision:2,participantIds:[memberId,guestId]}})).statusCode,200);
   assert.equal((await directorApp.inject({method:'PATCH',url:`/api/meetings/${meetingId}`,payload:{expectedRevision:3,participantIds:[memberId]}})).statusCode,200);

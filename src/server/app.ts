@@ -13,7 +13,7 @@ import { TimetableService } from './timetable-service.js';
 import { AvailabilityRequests } from './availability-requests.js';
 import { MeetingPolls } from './meeting-polls.js';
 import { Shifts, ScheduleConflict } from './shifts.js';
-import { CommercialService, productInput, productFields, variantInput, movementInput } from './commercial.js';
+import { CommercialService, productInput, productFields, variantInput, movementInput, comboInput } from './commercial.js';
 import { optionsInput } from './commercial-catalog.js';
 import { OrderService, orderInput, purchaseInput, orderAction, orderListInput, receiptInput, paymentReceiptInput, settingsInput } from './orders.js';
 import { readFile } from 'node:fs/promises';
@@ -80,6 +80,7 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.patch('/api/commercial/campaigns/:id',async request=>commercial.updateCampaign(await actor(request),paramId(request),campaignInput.extend({status:z.enum(['active','archived']),version:z.number().int().positive()}).strict().parse(request.body)));
   app.delete('/api/commercial/products/:id/campaigns/:campaignId',async request=>commercial.unlink(await actor(request),paramId(request),id.parse((request.params as {campaignId:string}).campaignId)));
   app.post('/api/commercial/products',async(request,reply)=>reply.code(201).send(await commercial.products.create(await actor(request),productInput.parse(request.body))));
+  app.post('/api/commercial/combos',async(request,reply)=>reply.code(201).send(await commercial.createCombo(await actor(request),comboInput.parse(request.body))));
   app.patch('/api/commercial/products/:id',async request=>commercial.products.update(await actor(request),paramId(request),productFields.extend({status:z.enum(['active','archived']),version:z.number().int().positive()}).strict().parse(request.body)));
   app.post('/api/commercial/products/:id/variants',async(request,reply)=>reply.code(201).send(await commercial.products.addVariants(await actor(request),paramId(request),z.object({options:optionsInput,version:z.number().int().positive()}).strict().parse(request.body))));
   app.patch('/api/commercial/products/:id/variants/:variantId',async request=>{const input=variantInput.extend({status:z.enum(['active','archived'])}).strict().parse(request.body);return commercial.products.editVariant(await actor(request),paramId(request),id.parse((request.params as {variantId:string}).variantId),input);});
@@ -116,6 +117,7 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.post('/api/workspaces/:id/boards', async (request, reply) => { const body=z.object({name:z.string().trim().min(1).max(160)}).parse(request.body); return reply.code(201).send(await kanban.createBoard(await actor(request),id.parse((request.params as {id:string}).id),body.name)); });
   app.get('/api/boards/:id', async (request) => kanban.board(await actor(request),id.parse((request.params as {id:string}).id)));
   app.get('/api/boards/:id/archived-cards', async (request) => kanban.archived(await actor(request),id.parse((request.params as {id:string}).id)));
+  app.post('/api/kanban/retention/reconcile',async request=>kanban.reconcileRetention(await actor(request)));
   app.post('/api/boards/:id/columns', async (request,reply)=>{const body=z.object({name:z.string().trim().min(1).max(120)}).parse(request.body);return reply.code(201).send(await kanban.addColumn(await actor(request),id.parse((request.params as {id:string}).id),body.name,z.string().uuid().optional().parse(request.headers['idempotency-key'])));});
   app.patch('/api/columns/:id', async(request)=>{const body=z.object({name:z.string().trim().min(1).max(120).optional(),position:z.number().int().min(0).optional()}).refine(v=>Object.keys(v).length>0).parse(request.body);return kanban.updateColumn(await actor(request),id.parse((request.params as {id:string}).id),body);});
   app.delete('/api/columns/:id',async(request,reply)=>{const query=z.object({targetColumnId:id}).parse(request.query);await kanban.deleteColumn(await actor(request),id.parse((request.params as {id:string}).id),query.targetColumnId);return reply.code(204).send();});
@@ -173,8 +175,8 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   app.get('/api/agenda/foundation',async request=>{
     const current=await actor(request),query=agendaQuery.parse(request.query),membership=await service.requireMember(current);
     const canManage=await service.isAdmin(current,membership)||await service.isDirector(membership.id);const canReadAll=await service.canViewAll(current,membership);
-    const [calendar,availability,members,departments,notifications,requests,meetingPolls,operationalShifts]=await Promise.all([agenda.calendar(current,query),agenda.myAvailability(current),canManage||canReadAll?agenda.options(current):Promise.resolve([]),service.departments(),agenda.notifications(current),availabilityRequests.list(current),polls.list(current),shifts.list(current)]);
-    return {calendar,availability,members,departments,notifications,requests,polls:meetingPolls,shifts:operationalShifts,session:{membership:{id:membership.id,role:membership.role},owner:current.owner,canManage,canReadAll}};
+    const [calendar,availability,members,departments,notifications,requests,meetingPolls,operationalShifts,recommended]=await Promise.all([agenda.calendar(current,query),agenda.myAvailability(current),canManage||canReadAll?agenda.options(current):Promise.resolve([]),service.departments(),agenda.notifications(current),availabilityRequests.list(current),polls.list(current),shifts.list(current),agenda.recommendedWorkspace(current)]);
+    return {calendar,availability,members,departments,notifications,requests,polls:meetingPolls,shifts:operationalShifts,recommendedDepartmentId:recommended.departmentId,recommendedWorkspaceId:recommended.workspaceId,session:{membership:{id:membership.id,role:membership.role},owner:current.owner,canManage,canReadAll}};
   });
   const meetingInput=z.object({title:z.string().trim().min(1).max(200),description:z.string().max(10000).optional(),location:z.string().trim().max(255).optional(),workspaceId:id.optional(),startsAt:z.string().datetime(),endsAt:z.string().datetime(),participantIds:z.array(id).max(100).default([])});
   app.get('/api/meetings',async request=>agenda.meetingList(await actor(request),z.object({archived:z.enum(['true','false']).optional()}).parse(request.query).archived==='true'));

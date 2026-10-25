@@ -8,8 +8,9 @@ import { CommercialService } from './commercial.js';
 import { lockCommercial, reserved } from './commercial-inventory.js';
 import { notify } from './agenda-common.js';
 
-const purchaseFields={campaignId:z.string().uuid(),requestKey:z.string().uuid(),items:z.array(z.object({variantId:z.string().uuid(),quantity:z.number().int().positive().max(1000000),expectedPriceCents:z.number().int().min(0).max(2147483647).optional()}).strict()).min(1).max(100)};
-const uniqueItems=(v:{items:{variantId:string}[]})=>new Set(v.items.map(i=>i.variantId)).size===v.items.length;
+const purchaseItem=z.union([z.object({variantId:z.string().uuid(),quantity:z.number().int().positive().max(1000000),expectedPriceCents:z.number().int().min(0).max(2147483647).optional()}).strict(),z.object({comboId:z.string().uuid(),quantity:z.number().int().positive().max(1000000),expectedPriceCents:z.number().int().min(0).max(2147483647).optional()}).strict()]);
+const purchaseFields={campaignId:z.string().uuid(),requestKey:z.string().uuid(),items:z.array(purchaseItem).min(1).max(100)};
+const uniqueItems=(v:{items:z.infer<typeof purchaseItem>[]})=>new Set(v.items.map(i=>'variantId'in i?`v:${i.variantId}`:`c:${i.comboId}`)).size===v.items.length;
 export const purchaseInput=z.object(purchaseFields).strict().refine(uniqueItems,{message:'Não repita variações.'});
 export const orderInput=z.object({...purchaseFields,buyerPersonId:z.string().uuid().optional(),buyerName:z.string().trim().min(1).max(255).optional(),buyerContact:z.string().trim().max(255).default('')}).strict().refine(uniqueItems,{message:'Não repita variações.'});
 export const orderAction=z.object({action:z.enum(['pay','payment_problem','allocate','ready','collect','cancel','refund','exception','resolve_exception']),note:z.string().trim().min(1).max(1000),version:z.number().int().positive().optional(),requestKey:z.string().uuid().optional(),incidentId:z.string().uuid().optional()}).strict();
@@ -54,7 +55,8 @@ export class OrderService {
   private async persistOrder(actor:Actor,input:z.infer<typeof orderInput>,selfService=false){
     return this.db.transaction(async db=>{
       await lockCommercial(db);await this.expire(db);
-      const items=[...input.items].sort((a,b)=>a.variantId.localeCompare(b.variantId)),hash=requestHash({...input,items});
+      const itemKey=(item:z.infer<typeof purchaseItem>)=>'variantId'in item?`v:${item.variantId}`:`c:${item.comboId}`;
+      const items=[...input.items].sort((a,b)=>itemKey(a).localeCompare(itemKey(b))),hash=requestHash({...input,items});
       // 1.10 hashed the schema's property order. Preserve replays across upgrade.
       const legacyHash=createHash('sha256').update(JSON.stringify({campaignId:input.campaignId,requestKey:input.requestKey,...(input.buyerPersonId?{buyerPersonId:input.buyerPersonId}:{}),...(input.buyerName!==undefined?{buyerName:input.buyerName}:{}),buyerContact:input.buyerContact,items})).digest('hex');
       const existing=await db.one<RowDataPacket>('SELECT id,request_hash FROM commercial_orders WHERE request_key=?',[input.requestKey]);if(existing){if(existing.request_hash!==hash&&existing.request_hash!==legacyHash)throw new Conflict('Identificador do pedido já usado com outros dados.');return {id:existing.id};}
@@ -64,7 +66,29 @@ export class OrderService {
       if(input.buyerPersonId&&!buyer)throw new Conflict('Selecione um comprador cadastrado no projeto.');
       if(!buyer&&!input.buyerName)throw new Conflict('Informe o nome do comprador externo.');
       const rows:RowDataPacket[]=[];let total=0;
-      for(const item of [...input.items].sort((a,b)=>a.variantId.localeCompare(b.variantId))){
+      for(const item of items){
+        if('comboId'in item){
+          const combo=await db.one<RowDataPacket>(`SELECT c.*,(SELECT SUM(p.sale_cents*ci.quantity) FROM commercial_combo_items ci JOIN commercial_variants v ON v.id=ci.variant_id JOIN commercial_products p ON p.id=v.product_id WHERE ci.combo_id=c.id) AS base_cents FROM commercial_combos c WHERE c.id=? AND c.campaign_id=? AND c.status='active' FOR UPDATE`,[item.comboId,input.campaignId]);
+          if(!combo)throw new Conflict('Combo indisponível nesta campanha.');
+          const comboPrice=combo.pricing_mode==='manual'?Number(combo.manual_price_cents):Math.floor((Number(combo.base_cents)*(10000-Number(combo.discount_basis_points))+5000)/10000);
+          if(item.expectedPriceCents!==undefined&&item.expectedPriceCents!==comboPrice)throw new Conflict('O preço do combo mudou. Atualize o catálogo e confira o total antes de registrar.');
+          const components=await db.many<RowDataPacket>(`SELECT v.*,p.name AS product_name,p.sale_cents,p.cost_cents,p.mode,p.campaign_id,ci.quantity AS component_quantity FROM commercial_combo_items ci JOIN commercial_variants v ON v.id=ci.variant_id JOIN commercial_products p ON p.id=v.product_id JOIN commercial_campaign_products l ON l.product_id=p.id AND l.campaign_id=? WHERE ci.combo_id=? AND p.status='active' AND v.status='active' ORDER BY v.id FOR UPDATE`,[input.campaignId,item.comboId]);
+          if(!components.length)throw new Conflict('Os itens deste combo não estão disponíveis.');
+          const componentTotal=components.reduce((sum,v)=>sum+Number(v.sale_cents)*Number(v.component_quantity),0);let allocated=0;
+          for(const [index,v] of components.entries()){
+            if(selfService&&v.mode==='preorder'&&campaign.stage!=='orders')throw new Conflict('As encomendas encerraram.');
+            if(v.mode==='preorder'&&v.campaign_id!==input.campaignId)throw new Conflict('Encomenda de outra campanha.');
+            const quantity=Number(v.component_quantity)*item.quantity,fulfillment=v.mode==='preorder'&&campaign.stage==='orders'?'preorder':'stock';
+            if(fulfillment==='stock'){
+              if(!config?.reservation_minutes)throw new Conflict('Configure o prazo de reserva antes de registrar pedidos de estoque.');
+              if(v.physical_quantity-await reserved(db,v.id)<quantity)throw new Conflict('Estoque livre insuficiente. Nenhum item foi reservado.');
+            }
+            const unitComboComponent=index===components.length-1?comboPrice-allocated:Math.floor((comboPrice*Number(v.sale_cents)*Number(v.component_quantity)+Math.floor(componentTotal/2))/componentTotal);allocated+=unitComboComponent;
+            rows.push({...v,quantity,fulfillment,sale_cents:Math.floor(unitComboComponent/Number(v.component_quantity)),combo_id:item.comboId,combo_name:combo.name} as RowDataPacket);
+          }
+          total+=comboPrice*item.quantity;if(!Number.isSafeInteger(total))throw new Conflict('Total acima do limite.');
+          continue;
+        }
         const v=await db.one<RowDataPacket>(`SELECT v.*,p.name AS product_name,p.sale_cents,p.cost_cents,p.mode,p.campaign_id FROM commercial_variants v JOIN commercial_products p ON p.id=v.product_id JOIN commercial_campaign_products l ON l.product_id=p.id WHERE v.id=? AND p.organization_id=? AND l.campaign_id=? AND p.status='active' AND v.status='active' FOR UPDATE`,[item.variantId,org,input.campaignId]);
         if(!v||v.sale_cents===null)throw new Conflict('Produto indisponível nesta campanha ou preço ainda não definido.');
         if(selfService&&v.mode==='preorder'&&campaign.stage!=='orders')throw new Conflict('As encomendas encerraram. Consulte a quantidade do seu pedido em Meus pedidos para acompanhar a retirada.');
@@ -79,7 +103,7 @@ export class OrderService {
         rows.push({...v,quantity:item.quantity,fulfillment} as RowDataPacket);
       }
       const id=randomUUID();await db.run('INSERT INTO commercial_orders(id,campaign_id,buyer_person_id,buyer_name,buyer_contact,request_key,request_hash,total_cents) VALUES (?,?,?,?,?,?,?,?)',[id,input.campaignId,buyer?.id??null,buyer?.display_name??input.buyerName,input.buyerContact,input.requestKey,hash,total]);
-      for(const v of rows)await db.run(`INSERT INTO commercial_order_items(id,order_id,variant_id,product_name,variant_name,fulfillment,quantity,unit_price_cents,unit_cost_cents,allocation_status,allocated_quantity,expires_at,production_status) VALUES (?,?,?,?,?,?,?,?,?,?,?,IF(? IS NULL,NULL,TIMESTAMPADD(MINUTE,?,NOW(3))),?)`,[randomUUID(),id,v.id,v.product_name,v.name,v.fulfillment,v.quantity,v.sale_cents,v.cost_cents,v.fulfillment==='stock'?'provisional':'none',v.fulfillment==='stock'?v.quantity:0,v.fulfillment==='stock'?config!.reservation_minutes:null,config?.reservation_minutes??null,v.fulfillment==='preorder'?'waiting':'not_needed']);
+      for(const v of rows)await db.run(`INSERT INTO commercial_order_items(id,order_id,variant_id,product_name,variant_name,fulfillment,quantity,unit_price_cents,unit_cost_cents,allocation_status,allocated_quantity,expires_at,production_status,combo_id,combo_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,IF(? IS NULL,NULL,TIMESTAMPADD(MINUTE,?,NOW(3))),?,?,?)`,[randomUUID(),id,v.id,v.product_name,v.name,v.fulfillment,v.quantity,v.sale_cents,v.cost_cents,v.fulfillment==='stock'?'provisional':'none',v.fulfillment==='stock'?v.quantity:0,v.fulfillment==='stock'?config!.reservation_minutes:null,config?.reservation_minutes??null,v.fulfillment==='preorder'?'waiting':'not_needed',v.combo_id??null,v.combo_name??null]);
       await this.event(db,id,actor,'order.created');return {id};
     },'READ COMMITTED');
   }
@@ -92,8 +116,10 @@ export class OrderService {
     const products=await this.db.many<RowDataPacket>(`SELECT DISTINCT p.id,p.name,p.description,p.sku,p.category,p.mode,p.campaign_id AS campaignId,p.sale_cents AS saleCents,p.status FROM commercial_products p JOIN commercial_campaign_products l ON l.product_id=p.id JOIN commercial_campaigns c ON c.id=l.campaign_id WHERE p.organization_id=? AND p.status='active' AND p.sale_cents IS NOT NULL AND c.status='active' AND (p.mode='physical' OR c.stage='orders') ORDER BY p.name`,[org]);
     const variants=await this.db.many<RowDataPacket>(`SELECT v.id,v.product_id AS productId,v.name,v.status,v.attributes,CAST(v.physical_quantity-COALESCE(r.quantity,0) AS SIGNED) AS availableQuantity FROM commercial_variants v JOIN commercial_products p ON p.id=v.product_id LEFT JOIN (SELECT variant_id,SUM(allocated_quantity) AS quantity FROM commercial_order_items WHERE allocation_status='committed' OR (allocation_status='provisional' AND expires_at>NOW(3)) GROUP BY variant_id) r ON r.variant_id=v.id WHERE p.organization_id=? AND p.status='active' AND p.sale_cents IS NOT NULL AND v.status='active' AND EXISTS(SELECT 1 FROM commercial_campaign_products l JOIN commercial_campaigns c ON c.id=l.campaign_id WHERE l.product_id=p.id AND c.status='active' AND (p.mode='physical' OR c.stage='orders')) ORDER BY v.name`,[org]);
     const links=await this.db.many<RowDataPacket>(`SELECT l.campaign_id AS campaignId,l.product_id AS productId FROM commercial_campaign_products l JOIN commercial_campaigns c ON c.id=l.campaign_id JOIN commercial_products p ON p.id=l.product_id WHERE c.organization_id=? AND c.status='active' AND (p.mode='physical' OR c.stage='orders') AND p.status='active' AND p.sale_cents IS NOT NULL`,[org]);
+    const combos=await this.db.many<RowDataPacket>(`SELECT c.id,c.campaign_id AS campaignId,c.name,c.description,c.pricing_mode AS pricingMode,c.manual_price_cents AS manualPriceCents,c.discount_basis_points AS discountBasisPoints,CAST(SUM(p.sale_cents*ci.quantity) AS SIGNED) AS baseCents,CAST(CASE WHEN c.pricing_mode='manual' THEN c.manual_price_cents ELSE FLOOR((SUM(p.sale_cents*ci.quantity)*(10000-c.discount_basis_points)+5000)/10000) END AS SIGNED) AS priceCents,c.version FROM commercial_combos c JOIN commercial_combo_items ci ON ci.combo_id=c.id JOIN commercial_variants v ON v.id=ci.variant_id JOIN commercial_products p ON p.id=v.product_id JOIN commercial_campaigns campaign ON campaign.id=c.campaign_id WHERE campaign.organization_id=? AND campaign.status='active' AND c.status='active' AND v.status='active' AND p.status='active' GROUP BY c.id ORDER BY c.name`,[org]);
+    const comboItems=await this.db.many<RowDataPacket>(`SELECT ci.combo_id AS comboId,ci.variant_id AS variantId,ci.quantity FROM commercial_combo_items ci JOIN commercial_combos c ON c.id=ci.combo_id JOIN commercial_campaigns campaign ON campaign.id=c.campaign_id WHERE campaign.organization_id=? AND campaign.status='active' AND c.status='active' ORDER BY ci.combo_id,ci.variant_id`,[org]);
     const config=await this.db.one<RowDataPacket>('SELECT reservation_minutes FROM commercial_operations WHERE organization_id=?',[org]);
-    return {campaigns,products,variants,links,reservationMinutes:config?.reservation_minutes??null};
+    return {campaigns,products,variants,links,combos,comboItems,reservationMinutes:config?.reservation_minutes??null};
   }
   async list(actor:Actor,campaignId?:string,query?:z.infer<typeof orderListInput>){
     const member=await this.buyer(actor),canManage=await this.canManage(actor);

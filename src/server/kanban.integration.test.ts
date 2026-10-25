@@ -66,6 +66,13 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${authored.json().id}`,payload:{archived:true}})).statusCode,200,'author can archive own card');
   assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${authored.json().id}`,payload:{archived:false}})).statusCode,403,'only a manager can restore an archived card');
   assert.equal((await ownerApp.inject({method:'PATCH',url:`/api/cards/${authored.json().id}`,payload:{archived:false}})).statusCode,200);
+  assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${authored.json().id}`,payload:{archived:true}})).statusCode,200);
+  await db.run('UPDATE cards SET archived_at=? WHERE id=?',[new Date('2026-01-31T12:00:00Z'),authored.json().id]);
+  assert.equal((await memberApp.inject({method:'POST',url:'/api/kanban/retention/reconcile'})).statusCode,403);
+  const retained=await new KanbanService(db,new InstitutionalService(db)).reconcileRetention(owner,new Date('2026-04-30T11:59:59Z'));assert.equal(retained.purged,0);
+  const purged=await new KanbanService(db,new InstitutionalService(db)).reconcileRetention(owner,new Date('2026-04-30T12:00:00Z'));assert.equal(purged.purged,1);
+  const tombstone=await db.one<any>('SELECT title,purged_at AS purgedAt FROM cards WHERE id=?',[authored.json().id]);assert.equal(tombstone.title,'Cartão removido por retenção');assert.ok(tombstone.purgedAt);
+  assert.equal((await ownerApp.inject({url:`/api/boards/${boardId}/archived-cards`})).json().some((card:any)=>card.id===authored.json().id),false);
   assert.equal((await memberApp.inject({method:'POST',url:`/api/cards/${publicId}/transfers`,payload:{toMembershipId:'00000000-0000-4000-8000-000000000099'}})).statusCode,403);
   await new KanbanService(db,new InstitutionalService(db)).myTasks(member,{participation:'helper'});
   const tasks=await memberApp.inject({method:'GET',url:'/api/my-tasks?participation=helper'});
