@@ -167,7 +167,7 @@ export function buildApp(service: InstitutionalService, identity: IdentityGatewa
   });
   app.get('/api/availability/requests',async request=>availabilityRequests.list(await actor(request)));
   app.post('/api/availability/requests',async request=>availabilityRequests.create(await actor(request),z.object({title:z.string().trim().min(1).max(200),workspaceId:id.optional(),from:z.string().datetime(),to:z.string().datetime(),deadline:z.string().datetime().optional(),participantIds:z.array(id).min(1).max(100)}).parse(request.body)));
-  app.post('/api/availability/requests/:id/review',async request=>availabilityRequests.review(await actor(request),id.parse((request.params as {id:string}).id),z.object({kind:z.enum(['unchanged','updated'])}).parse(request.body).kind));
+  app.post('/api/availability/requests/:id/review',async request=>availabilityRequests.review(await actor(request),id.parse((request.params as {id:string}).id),z.object({kind:z.enum(['unchanged','updated','cancelled'])}).parse(request.body).kind));
   const agendaQuery=z.object({from:z.string().datetime(),to:z.string().datetime(),scope:z.enum(['personal','general','workspace']).default('personal'),workspaceId:id.optional(),offsetMinutes:z.coerce.number().int().min(-840).max(840).optional()}).refine(value=>new Date(value.from)<new Date(value.to),{message:'invalid interval'});
   app.get('/api/agenda',async request=>agenda.calendar(await actor(request),agendaQuery.parse(request.query)));
   app.get('/api/agenda/foundation',async request=>{

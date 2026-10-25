@@ -32,17 +32,20 @@ export class AvailabilityRequests {
       request.canManage=Boolean((request.isOrganizer||await this.institutional.isAdmin(actor,member))&&await this.agenda.mayOrganize(actor,member,request.workspaceId??undefined));delete request.isOrganizer;
       request.participants=await this.db.many<RowDataPacket>(`SELECT rp.membership_id AS membershipId,p.display_name AS displayName,rp.reviewed_at AS reviewedAt,rp.review_kind AS reviewKind,rp.availability_fingerprint AS fingerprint,EXISTS(SELECT 1 FROM institutional_audit_events a JOIN availability_requests original ON original.id=rp.request_id WHERE a.actor_subject=p.honji_subject AND a.action LIKE 'availability.%' AND a.created_at>original.created_at) AS legacyChanged FROM availability_request_participants rp JOIN memberships m ON m.id=rp.membership_id JOIN people p ON p.id=m.person_id WHERE rp.request_id=? ${request.canManage?'':'AND rp.membership_id=?'}`,request.canManage?[request.id]:[request.id,member.id]);
       for(const participant of request.participants){participant.changedSinceRequest=participant.membershipId===member.id&&Boolean(participant.fingerprint?participant.fingerprint!==currentFingerprint:participant.legacyChanged);delete participant.fingerprint;delete participant.legacyChanged;}
+      for(const participant of request.participants)participant.canReviewAgain=participant.membershipId===member.id&&participant.reviewKind==='cancelled'&&(!request.deadline||new Date(request.deadline)>new Date());
       request.pendingCount=request.participants.filter((p:RowDataPacket)=>!p.reviewedAt).length;
     }
     return requests;
   }
-  async review(actor:Actor,id:string,kind:'unchanged'|'updated') {
+  async review(actor:Actor,id:string,kind:'unchanged'|'updated'|'cancelled') {
     const member=await this.institutional.requireMember(actor);
     await this.db.transaction(async tx=>{
       const request=await tx.one<RowDataPacket>('SELECT * FROM availability_requests WHERE id=? AND organization_id=? FOR UPDATE',[id,CAECOMP_ORGANIZATION_ID]);
       if(!request) throw new NotFound('availability request');
       const invitation=await tx.one<RowDataPacket>('SELECT membership_id,availability_fingerprint AS fingerprint FROM availability_request_participants WHERE request_id=? AND membership_id=?',[id,member.id]);
       if(!invitation) throw new Forbidden('A solicitação não foi dirigida a você.');
+      if(request.deadline&&new Date(request.deadline)<=new Date())throw new Conflict('O prazo desta revisão terminou.');
+      if(kind==='cancelled'&&!await tx.one('SELECT membership_id FROM availability_request_participants WHERE request_id=? AND membership_id=? AND reviewed_at IS NOT NULL AND review_kind<>\'cancelled\'',[id,member.id]))throw new Conflict('Não há confirmação ativa para cancelar.');
       if(kind==='updated'&&invitation.fingerprint&&invitation.fingerprint===await availabilityFingerprint(tx,member.id))throw new Conflict('Revise seus horários antes de informar uma atualização.');
       await tx.run('UPDATE availability_request_participants SET reviewed_at=NOW(3),review_kind=? WHERE request_id=? AND membership_id=?',[kind,id,member.id]);
       await notify(tx,[request.organizer_membership_id],'availability_reviewed','availability_request',id,request.title);

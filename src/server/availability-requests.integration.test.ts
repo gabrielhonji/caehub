@@ -17,7 +17,7 @@ test('weekly occupancy unions departments and people, protects privacy and persi
     const slot=grid.json().slots.find((slot:any)=>slot.startsAt==='2026-11-02T08:00:00.000Z');
     assert.equal(slot.statuses.find((m:any)=>m.membershipId===f.ids.member).status,'busy');assert.equal(slot.statuses.find((m:any)=>m.membershipId===f.ids.other).status,'unknown');
     assert.equal(grid.body.includes('Nota privada'),false);assert.equal((await f.apps.member.inject({method:'GET',url:`/api/availability/week?${query}`})).statusCode,403);
-    const input={title:'Organizando reunião fictícia',from:'2026-11-02T00:00:00.000Z',to:'2026-11-09T00:00:00.000Z',deadline:'2020-01-01T00:00:00.000Z',participantIds:[f.ids.member,f.ids.other]};
+    const input={title:'Organizando reunião fictícia',from:'2026-11-02T00:00:00.000Z',to:'2026-11-09T00:00:00.000Z',deadline:'2027-01-01T00:00:00.000Z',participantIds:[f.ids.member,f.ids.other]};
     assert.equal((await f.apps.member.inject({method:'POST',url:'/api/availability/requests',payload:input})).statusCode,403);
     const created=await f.apps.director.inject({method:'POST',url:'/api/availability/requests',payload:input});assert.equal(created.statusCode,200,created.body);const id=created.json().id;
     assert.equal((await f.apps.member.inject({method:'POST',url:`/api/availability/requests/${id}/review`,payload:{kind:'unchanged'}})).statusCode,200);
@@ -25,6 +25,11 @@ test('weekly occupancy unions departments and people, protects privacy and persi
     const list=(await f.apps.director.inject({method:'GET',url:'/api/availability/requests'})).json().find((r:any)=>r.id===id);assert.equal(list.pendingCount,1);assert.equal(list.participants.find((p:any)=>p.membershipId===f.ids.member).reviewKind,'unchanged');
     const own=(await f.apps.member.inject({method:'GET',url:'/api/availability/requests'})).json().find((r:any)=>r.id===id);assert.equal(own.participants.length,1);
     assert.equal(own.participants[0].changedSinceRequest,false);
+    assert.equal((await f.apps.member.inject({method:'POST',url:`/api/availability/requests/${id}/review`,payload:{kind:'cancelled'}})).statusCode,200);
+    const cancelled=(await f.apps.member.inject({url:'/api/availability/requests'})).json().find((r:any)=>r.id===id);assert.equal(cancelled.participants[0].reviewKind,'cancelled');assert.equal(cancelled.participants[0].canReviewAgain,true);
+    assert.equal((await f.apps.member.inject({method:'POST',url:`/api/availability/requests/${id}/review`,payload:{kind:'unchanged'}})).statusCode,200);
+    await f.db.run('UPDATE availability_requests SET deadline=DATE_SUB(NOW(3),INTERVAL 1 SECOND) WHERE id=?',[id]);
+    assert.equal((await f.apps.member.inject({method:'POST',url:`/api/availability/requests/${id}/review`,payload:{kind:'cancelled'}})).statusCode,409);
     const edited=await f.apps.member.inject({method:'POST',url:'/api/availability/me',payload:{kind:'weekly',weekday:2,startTime:'09:00',endTime:'10:00'}});assert.equal(edited.statusCode,201,edited.body);
     const changed=(await f.apps.member.inject({url:'/api/availability/requests'})).json().find((r:any)=>r.id===id);assert.equal(changed.participants[0].changedSinceRequest,true);
     const notice=(await f.apps.member.inject({method:'GET',url:'/api/agenda/notifications'})).json().find((n:any)=>n.resourceId===id);assert.equal(notice.kind,'availability_requested');

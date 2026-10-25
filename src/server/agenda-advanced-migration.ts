@@ -17,7 +17,7 @@ export async function migrateAdvancedAgenda(db: Database) {
     FOREIGN KEY(organization_id) REFERENCES organizations(id), FOREIGN KEY(organizer_membership_id) REFERENCES memberships(id),
     FOREIGN KEY(workspace_id) REFERENCES workspaces(id), CHECK(starts_at<ends_at))`);
   await db.run(`CREATE TABLE IF NOT EXISTS availability_request_participants (request_id char(36) NOT NULL, membership_id char(36) NOT NULL,
-    reviewed_at datetime(3) NULL, review_kind enum('unchanged','updated') NULL, PRIMARY KEY(request_id,membership_id),
+    reviewed_at datetime(3) NULL, review_kind enum('unchanged','updated','cancelled') NULL, PRIMARY KEY(request_id,membership_id),
     FOREIGN KEY(request_id) REFERENCES availability_requests(id), FOREIGN KEY(membership_id) REFERENCES memberships(id))`);
   await db.run(`CREATE TABLE IF NOT EXISTS meeting_polls (id char(36) PRIMARY KEY, organization_id char(36) NOT NULL,
     organizer_membership_id char(36) NOT NULL, workspace_id char(36) NULL, title varchar(200) NOT NULL, description text NULL,
@@ -47,5 +47,6 @@ export async function migrateAdvancedAgenda(db: Database) {
     PRIMARY KEY(shift_id,membership_id),FOREIGN KEY(shift_id) REFERENCES agenda_shifts(id),FOREIGN KEY(membership_id) REFERENCES memberships(id),
     INDEX shift_member_calendar(membership_id,status))`);
  await db.run(`CREATE TABLE IF NOT EXISTS agenda_shift_batches(request_key char(36) PRIMARY KEY,organizer_id char(36) NOT NULL,payload_hash char(64) NOT NULL,shift_ids JSON NOT NULL)`);
+ await db.run("ALTER TABLE availability_request_participants MODIFY COLUMN review_kind enum('unchanged','updated','cancelled') NULL");
 
 }

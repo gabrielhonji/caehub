@@ -10,6 +10,7 @@ test('poll authorization, multi-vote, deadline, ties and atomic meeting confirma
     const input={title:'Reunião fictícia por votação',participantIds:[f.ids.member,f.ids.other],options};
     assert.equal((await f.apps.member.inject({method:'POST',url:'/api/meeting-polls',payload:input})).statusCode,403);
     assert.equal((await f.apps.director.inject({method:'POST',url:'/api/meeting-polls',payload:{...input,options:[options[0],options[0]]}})).statusCode,409);
+    assert.equal((await f.apps.director.inject({method:'POST',url:'/api/meeting-polls',payload:{...input,options:[options[0],{startsAt:'2027-03-01T15:00:00Z',endsAt:'2027-03-01T16:00:00Z'}]}})).statusCode,409);
     assert.equal((await f.apps.director.inject({method:'POST',url:'/api/meeting-polls',payload:{...input,options:[{startsAt:'2020-03-01T12:00:00Z',endsAt:'2020-03-01T13:00:00Z'},options[1]]}})).statusCode,409);
     const created=await f.apps.director.inject({method:'POST',url:'/api/meeting-polls',payload:input});assert.equal(created.statusCode,201);
     const id=created.json().id,rows=(await f.apps.member.inject({url:'/api/meeting-polls'})).json(),poll=rows.find((p:any)=>p.id===id),[a,b]=poll.options;

@@ -15,7 +15,7 @@ export class MeetingPolls {
     const now=Date.now();
     if(input.deadline&&Date.parse(input.deadline)<=now)throw new Conflict('O prazo da votação precisa estar no futuro.');
     if(input.options.some(o=>Date.parse(o.startsAt)<=now))throw new Conflict('As opções da votação precisam estar no futuro.');
-    if(input.options.some(o=>Date.parse(o.startsAt)>=Date.parse(o.endsAt))||new Set(input.options.map(o=>`${sqlInstant(o.startsAt)}/${sqlInstant(o.endsAt)}`)).size!==input.options.length)throw new Conflict('Informe opções distintas com intervalos válidos.');
+    if(input.options.some(o=>Date.parse(o.startsAt)>=Date.parse(o.endsAt))||new Set(input.options.map(o=>sqlInstant(o.startsAt).slice(0,10))).size!==input.options.length)throw new Conflict('Informe dias distintos com intervalos válidos.');
     const id=randomUUID();
     await this.db.transaction(async tx=>{
       const participants=await activeParticipants(tx,input.participantIds);
