@@ -28,6 +28,7 @@ test('commercial refinement: own checkout, privacy, stale operations, incidents,
     const receipt=Buffer.from('%PDF-1.4\nfixture');
     const uploaded=await send('POST',`/api/commercial/my-orders/${id}/payment-receipts`,{name:'comprovante-ficticio.pdf',mime:'application/pdf',data:receipt.toString('base64')},'member');assert.equal(uploaded.statusCode,201,uploaded.body);
     assert.equal((await send('POST',`/api/commercial/my-orders/${id}/payment-receipts`,{name:'falso.png',mime:'image/png',data:receipt.toString('base64')},'member')).statusCode,409);
+    assert.equal((await send('POST',`/api/commercial/my-orders/${id}/payment-receipts`,{name:'duplicado.pdf',mime:'application/pdf',data:receipt.toString('base64')},'member')).statusCode,409);
     assert.equal((await send('POST',`/api/commercial/my-orders/${id}/payment-receipts`,{name:'intruso.pdf',mime:'application/pdf',data:receipt.toString('base64')},'other')).statusCode,404);
     const receiptId=uploaded.json().id,download=await send('GET',`/api/commercial/orders/${id}/payment-receipts/${receiptId}`,undefined,'member');assert.equal(download.statusCode,200);assert.deepEqual(download.rawPayload,receipt);
     assert.equal((await send('GET',`/api/commercial/orders/${id}/payment-receipts/${receiptId}`,undefined,'other')).statusCode,404);
