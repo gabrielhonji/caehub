@@ -12,6 +12,9 @@ export class MeetingPolls {
   async create(actor:Actor,input:PollInput) {
     const member=await this.institutional.requireMember(actor);
     if(!await this.agenda.mayOrganize(actor,member,input.workspaceId))throw new Forbidden('Organização exige direção autorizada.');
+    const now=Date.now();
+    if(input.deadline&&Date.parse(input.deadline)<=now)throw new Conflict('O prazo da votação precisa estar no futuro.');
+    if(input.options.some(o=>Date.parse(o.startsAt)<=now))throw new Conflict('As opções da votação precisam estar no futuro.');
     if(input.options.some(o=>Date.parse(o.startsAt)>=Date.parse(o.endsAt))||new Set(input.options.map(o=>`${sqlInstant(o.startsAt)}/${sqlInstant(o.endsAt)}`)).size!==input.options.length)throw new Conflict('Informe opções distintas com intervalos válidos.');
     const id=randomUUID();
     await this.db.transaction(async tx=>{
