@@ -1,4 +1,4 @@
-import {ProblemReports} from './ProblemReports';
+import {UnifiedProblemReports} from './UnifiedProblemReports';
 import {useScrollHeader} from '../hooks/useScrollHeader';
 import {skipToContent} from '../services/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -64,7 +64,7 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
         </div>
       </header>
       <main tabIndex={-1} id="content" className="content">{children}</main>
-      <AppFooter reportAction={<ProblemReports owner={account?.owner}/>}/>
+      <AppFooter reportAction={<UnifiedProblemReports owner={account?.owner}/>}/>
       {account?.debugView?.available&&<aside className="debug-view-switcher"><label>Visualizar como<select aria-label="Perfil de visualização" value={account.debugView.mode} onChange={e=>void setDebugView(e.target.value as DebugMode)}><optgroup label="Administração"><option value="real">Minha conta</option><option value="global_admin">Administrador global</option></optgroup><optgroup label="CAECOMP"><option value="caecomp_admin">Administração / Presidência</option><option value="events_director">Diretor de Eventos</option><option value="events_member">Membro de Eventos</option><option value="products_member">Membro de Produtos</option></optgroup><optgroup label="XII"><option value="xii_admin">Administração / Presidência</option><option value="xii_secretary_member">Membro da Secretaria</option><option value="xii_sports_member">Membro de Esportes</option></optgroup></select></label></aside>}
     </div>
   );

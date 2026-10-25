@@ -1,4 +1,4 @@
-import {ProblemReportEntry} from './ProblemReports';
+import {UnifiedReportEntry} from './UnifiedProblemReports';
 import {useRefresh} from '../hooks/useRefresh';
 import {skipToContent} from '../services/navigation';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
@@ -169,7 +169,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
     {detail&&<Dialog title="Pedido registrado" onClose={()=>setDetail(undefined)}><CommercialOrderDetail detail={detail} busy={busy} onAction={async()=>false} refresh={()=>void refreshDetail()}/>{formError&&<p role="alert">{formError}</p>}</Dialog>}
     {pendingCampaign&&<Dialog title="Trocar de campanha?" onClose={()=>setPendingCampaign('')}><p>Os itens selecionados pertencem a {campaign?.name??'outra campanha'}. Ao trocar, essa seleção será removida. Seus pedidos já registrados permanecem na sua conta.</p><div className="card-actions"><Button onClick={()=>setPendingCampaign('')}>Manter seleção</Button><Button variant="primary" onClick={()=>changeCampaign(pendingCampaign)}>Trocar campanha</Button></div></Dialog>}
   </>;
-  if(location.hash==='#relatar-problema')return <div className="entry-state"><ProblemReportEntry/></div>;
+  if(location.hash==='#relatar-problema')return <div className="entry-state"><UnifiedReportEntry/></div>;
   if(embedded)return content;
   return <div className="app-shell public-portal"><a className="skip-link" href="#content" onClick={skipToContent}>Pular para o conteúdo</a>
     <header className="site-header"><div className="header-inner"><div className="navbar-brands"><HonjiBrand/><span className="navbar-divider" aria-hidden="true"/><Brand href="/"/></div><nav aria-label="Portal público"><a href="#campanhas">Lojinha</a><a href="/#/meus-pedidos">Meus pedidos</a>{account?.institutionalAccess&&<a className="public-internal-entry" href="/#/">Área interna do CAECOMP →</a>}</nav><div className="header-actions"><ThemeToggle theme={theme} onTheme={()=>setTheme(theme==='light'?'dark':'light')}/>{account&&<AgendaNotifications/>}{account&&<div className="account-control" onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget))setProfileOpen(false);}}><button className="account-avatar" type="button" aria-label="Abrir opções da conta" aria-expanded={profileOpen} onClick={()=>setProfileOpen(value=>!value)}>{account.displayName.split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join('').toUpperCase()}</button>{profileOpen&&<div className="account-panel"><a className="account-name" href="https://gabriel.honji.com.br/#perfil"><strong title={account.displayName}>{account.displayName}</strong><span>Editar perfil</span></a><a href="https://gabriel.honji.com.br/#acesso">Minha conta</a><button type="button" disabled={signingOut} onClick={()=>void logout()}>{signingOut?'Desconectando…':'Desconectar'}</button></div>}</div>}</div></div></header>

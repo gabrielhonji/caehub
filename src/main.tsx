@@ -14,7 +14,7 @@ import './styles/operational-refinement.css';
 
 const App=deferred<object>(()=>import('./app/App').then(module=>({default:module.App})));
 const PublicPortal=deferred<{embedded?:boolean;institutionalDenied?:boolean}>(()=>import('./components/PublicPortal').then(module=>({default:module.PublicPortal})));
-const ProblemReportEntry=deferred<object>(()=>import('./components/ProblemReports').then(module=>({default:module.ProblemReportEntry})));
+const ProblemReportEntry=deferred<object>(()=>import('./components/UnifiedProblemReports').then(module=>({default:module.UnifiedReportEntry})));
 
 function Entry(){
   if(location.pathname==='/relatos')return <ProblemReportEntry/>;
