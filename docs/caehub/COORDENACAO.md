@@ -1,5 +1,16 @@
 # Coordenação de agentes
 
+## FE-17 — frontend e integração, 25/10/2026 — Doing
+
+Responsável Codex /root. Escopo autorizado: F1, consumidores FE de F2,
+F3–F7 e auditoria integrada F8 do pacote mestre em
+`/home/gabriel/workdir/CAEHUB_planejamento_mestre`, sem produção ou deploy.
+Caminhos reservados nesta etapa: `src/app/`, `src/components/`, `src/hooks/`,
+`src/services/`, `src/styles/`, testes frontend/navegador pertinentes e este
+registro. Contratos CT01–CT08 vêm do Agent 16; frontend não altera regra,
+permissão, persistência ou arquivos de servidor. Q050/Q175 permanecem adiados.
+Primeiro lote: F1 G01+C01, base de navbar/footer e consumidores público/interno.
+
 ## UI-14 — componentes React, 20/10/2026 — Done
 
 Responsável Codex /root; pedido atual autoriza implementação, main e deploy.

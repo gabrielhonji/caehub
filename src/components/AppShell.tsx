@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AgendaNotifications } from './AgendaNotifications';
 import { Brand, HonjiBrand } from './Brand';
+import {AppFooter} from './AppFooter';
 import { getSessionInfo } from '../services/spaces';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -59,17 +60,11 @@ export function AppShell({ children, theme, onTheme }: { children: ReactNode; th
         <div className="header-inner">
           <div className="navbar-brands"><HonjiBrand /><span className="navbar-divider" aria-hidden="true" /><Brand /></div>
           <button className="mobile-navigation-toggle button button-secondary" type="button" aria-controls="caehub-navigation" aria-expanded={menuOpen} onClick={()=>setMenuOpen(value=>!value)}>Menu <span aria-hidden="true">{menuOpen?'−':'+'}</span></button><nav id="caehub-navigation" data-open={menuOpen} onClick={event=>{if((event.target as HTMLElement).closest('a'))setMenuOpen(false);}} aria-label="Navegação do CAEHUB"><a href="#/" aria-current={current === '#/' ? 'page' : undefined}>Início</a><a href="#/espacos" aria-current={(current.startsWith('#/espacos')||current.startsWith('#/departamentos')) ? 'page' : undefined}>Espaços</a><a href="#/minhas-tarefas" aria-current={(current === '#/minhas-tarefas'||current.startsWith('#/cartoes/')) ? 'page' : undefined}>Minhas tarefas</a><a href="#/agenda" aria-current={current.startsWith('#/agenda') ? 'page' : undefined}>Agenda</a><a href="#/comercial/comprar" aria-current={current==='#/comercial/comprar' ? 'page' : undefined}>Lojinha</a>{commercialManager&&<a href="#/comercial" aria-current={current==='#/comercial' ? 'page' : undefined}>Gestão comercial</a>}<a href="#/meus-pedidos" aria-current={current.startsWith("#/meus-pedidos") ? "page" : undefined}>Meus pedidos</a></nav>
-          <div className="header-actions"><AgendaNotifications/><ThemeToggle theme={theme} onTheme={onTheme}/><div className="account-control" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setProfileOpen(false); }}><button className="account-avatar" type="button" aria-label="Abrir opções da conta" aria-expanded={profileOpen} onClick={() => setProfileOpen(value => !value)}>{initials}</button>{profileOpen && <div className="account-panel"><a className="account-name" href="https://gabriel.honji.com.br/#perfil">{account?.displayName ?? 'Conta Honji'}<span>Editar perfil</span></a><a href="https://gabriel.honji.com.br/#acesso">Minha conta</a><button type="button" disabled={!account || signingOut} onClick={() => void logout()}>{signingOut ? 'Saindo…' : 'Sair'}</button>{logoutError&&<p role="alert">{logoutError}</p>}</div>}</div></div>
+          <div className="header-actions"><ThemeToggle theme={theme} onTheme={onTheme}/><AgendaNotifications/><div className="account-control" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setProfileOpen(false); }}><button className="account-avatar" type="button" aria-label="Abrir opções da conta" aria-expanded={profileOpen} onClick={() => setProfileOpen(value => !value)}>{initials}</button>{profileOpen && <div className="account-panel"><a className="account-name" href="https://gabriel.honji.com.br/#perfil"><strong title={account?.displayName ?? 'Conta Honji'}>{account?.displayName ?? 'Conta Honji'}</strong><span>Editar perfil</span></a><a href="https://gabriel.honji.com.br/#acesso">Minha conta</a><button type="button" disabled={!account || signingOut} onClick={() => void logout()}>{signingOut ? 'Desconectando…' : 'Desconectar'}</button>{logoutError&&<p role="alert">{logoutError}</p>}</div>}</div></div>
         </div>
       </header>
       <main tabIndex={-1} id="content" className="content">{children}</main>
-      <footer className="site-footer">
-        <div className="footer-inner">
-          <div className="footer-brand"><Brand /></div>
-          <ProblemReports owner={account?.owner}/><div className="footer-organization"><strong>CAECOMP</strong><span>Centro Acadêmico de Engenharia de Computação</span></div>
-          <div className="footer-signature"><span>DESENVOLVIDO POR</span><a href="https://github.com/gabrielhonji" target="_blank" rel="noreferrer">gabriel.honji</a><i aria-hidden="true">·</i><span>VERSÃO {__APP_VERSION__} · {__APP_RELEASE__}</span><i aria-hidden="true">·</i><span>UTFPR / APUCARANA</span></div>
-        </div>
-      </footer>
+      <AppFooter reportAction={<ProblemReports owner={account?.owner}/>}/>
       {account?.debugView?.available&&<aside className="debug-view-switcher"><label>Visualizar como<select aria-label="Perfil de visualização" value={account.debugView.mode} onChange={e=>void setDebugView(e.target.value as DebugMode)}><optgroup label="Administração"><option value="real">Minha conta</option><option value="global_admin">Administrador global</option></optgroup><optgroup label="CAECOMP"><option value="caecomp_admin">Administração / Presidência</option><option value="events_director">Diretor de Eventos</option><option value="events_member">Membro de Eventos</option><option value="products_member">Membro de Produtos</option></optgroup><optgroup label="XII"><option value="xii_admin">Administração / Presidência</option><option value="xii_secretary_member">Membro da Secretaria</option><option value="xii_sports_member">Membro de Esportes</option></optgroup></select></label></aside>}
     </div>
   );

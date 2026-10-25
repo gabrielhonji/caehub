@@ -4,6 +4,8 @@ import {skipToContent} from '../services/navigation';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Brand, HonjiBrand } from './Brand';
 import { ThemeToggle } from './ThemeToggle';
+import { AgendaNotifications } from './AgendaNotifications';
+import {AppFooter} from './AppFooter';
 import { BuyerEmailVerification } from './BuyerEmailVerification';
 import { Badge, Button, Dialog, EmptyState, ErrorState, Eyebrow, LoadingState } from './primitives';
 import { CommercialOrderForm } from './CommercialOrderForm';
@@ -34,7 +36,7 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
   const [catalog,setCatalog]=useState<SaleCatalog>(),[error,setError]=useState(false),[canBuy,setCanBuy]=useState(false),[checkingAccount,setCheckingAccount]=useState(true);
   const [needsStudentEmail,setNeedsStudentEmail]=useState(false);
   const [sessionDenied,setSessionDenied]=useState(false),[accountFailed,setAccountFailed]=useState(false);
-  const [account,setAccount]=useState<SessionInfo>(),[signingOut,setSigningOut]=useState(false);
+  const [account,setAccount]=useState<SessionInfo>(),[signingOut,setSigningOut]=useState(false),[profileOpen,setProfileOpen]=useState(false);
   const verification=location.hash.startsWith('#verificar-email');
   const ownOrderId=location.hash.startsWith('#/meus-pedidos/')?location.hash.split('/')[2]:undefined;
   const checkAccount=async()=>{setCheckingAccount(true);setAccountFailed(false);try{const value=await api<{canBuy:boolean;requiresStudentEmail?:boolean;sessionDenied?:boolean}>('/public/buyer-status');setCanBuy(value.canBuy);setNeedsStudentEmail(value.requiresStudentEmail===true);setSessionDenied(value.sessionDenied===true);if(value.canBuy||value.requiresStudentEmail)setAccount(await api<SessionInfo>('/me'));}catch{setCanBuy(false);setAccountFailed(true);}finally{setCheckingAccount(false);}};
@@ -168,9 +170,9 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
   if(location.hash==='#relatar-problema')return <div className="entry-state"><ProblemReportEntry/></div>;
   if(embedded)return content;
   return <div className="app-shell public-portal"><a className="skip-link" href="#content" onClick={skipToContent}>Pular para o conteúdo</a>
-    <header className="site-header"><div className="header-inner"><div className="navbar-brands"><HonjiBrand/><span className="navbar-divider" aria-hidden="true"/><Brand href="/"/></div><nav aria-label="Portal público"><a href="#campanhas">Lojinha</a><a href="/#/meus-pedidos">Meus pedidos</a>{account?.institutionalAccess&&<a className="public-internal-entry" href="/#/">Área interna do CAECOMP →</a>}</nav><div className="header-actions">{account&&<Button disabled={signingOut} onClick={()=>void logout()}>{signingOut?"Saindo…":"Sair do CAEHUB"}</Button>}<ThemeToggle theme={theme} onTheme={()=>setTheme(theme==='light'?'dark':'light')}/></div></div></header>
+    <header className="site-header"><div className="header-inner"><div className="navbar-brands"><HonjiBrand/><span className="navbar-divider" aria-hidden="true"/><Brand href="/"/></div><nav aria-label="Portal público"><a href="#campanhas">Lojinha</a><a href="/#/meus-pedidos">Meus pedidos</a>{account?.institutionalAccess&&<a className="public-internal-entry" href="/#/">Área interna do CAECOMP →</a>}</nav><div className="header-actions"><ThemeToggle theme={theme} onTheme={()=>setTheme(theme==='light'?'dark':'light')}/>{account&&<AgendaNotifications/>}{account&&<div className="account-control" onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget))setProfileOpen(false);}}><button className="account-avatar" type="button" aria-label="Abrir opções da conta" aria-expanded={profileOpen} onClick={()=>setProfileOpen(value=>!value)}>{account.displayName.split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join('').toUpperCase()}</button>{profileOpen&&<div className="account-panel"><a className="account-name" href="https://gabriel.honji.com.br/#perfil"><strong title={account.displayName}>{account.displayName}</strong><span>Editar perfil</span></a><a href="https://gabriel.honji.com.br/#acesso">Minha conta</a><button type="button" disabled={signingOut} onClick={()=>void logout()}>{signingOut?'Desconectando…':'Desconectar'}</button></div>}</div>}</div></div></header>
     <main tabIndex={-1} id="content" className="content">{content}</main>
-    <footer className="site-footer"><div className="footer-inner"><HonjiBrand/><a href="#relatar-problema">Relatar problema</a><div className="footer-organization"><strong>CAECOMP</strong><span>Centro Acadêmico de Engenharia de Computação</span></div><div className="footer-signature"><span>DESENVOLVIDO POR</span><a href="https://github.com/gabrielhonji">gabriel.honji</a><span>CAEHUB · {__APP_VERSION__}</span></div></div></footer>
+    <AppFooter reportAction={<a className="button" href="#relatar-problema">Relatar problema</a>}/>
   </div>;
 }
 
