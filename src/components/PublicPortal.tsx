@@ -53,8 +53,8 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
   const [ordersVersion,setOrdersVersion]=useState(0),[notice,setNotice]=useState(''),[pendingCampaign,setPendingCampaign]=useState('');
   const [theme,setTheme]=useSharedTheme();
   const load=async()=>{
-    try{const next=await api<SaleCatalog>('/public/catalog');setCatalog(next);setCampaignId(current=>current||next.campaigns[0]?.id||'');setError(false);}
-    catch{setError(true);}
+    try{const next=await api<SaleCatalog>('/public/catalog');setCatalog(next);setCampaignId(current=>current||next.campaigns[0]?.id||'');setError(false);return true;}
+    catch{setError(true);return false;}
   };
   useEffect(()=>{
     void load();
