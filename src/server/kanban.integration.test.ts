@@ -59,7 +59,13 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   assert.ok(foundation.json().boards.some((candidate:any)=>candidate.id===boardId));
   await foundationApp.close();
   assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${publicId}`,payload:{visibility:'directors'}})).statusCode,403);
+  assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${publicId}`,payload:{archived:true}})).statusCode,403,'helper cannot archive another author\'s card');
   assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${publicId}`,payload:{priority:'high',dueAt:null,tags:['teste']}})).statusCode,200);
+  const authored=await memberApp.inject({method:'POST',url:`/api/boards/${boardId}/cards`,payload:{title:`Autoral ${Date.now()}`,columnId:board.columns[0].id}});
+  assert.equal(authored.statusCode,201,authored.body);
+  assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${authored.json().id}`,payload:{archived:true}})).statusCode,200,'author can archive own card');
+  assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${authored.json().id}`,payload:{archived:false}})).statusCode,403,'only a manager can restore an archived card');
+  assert.equal((await ownerApp.inject({method:'PATCH',url:`/api/cards/${authored.json().id}`,payload:{archived:false}})).statusCode,200);
   assert.equal((await memberApp.inject({method:'POST',url:`/api/cards/${publicId}/transfers`,payload:{toMembershipId:'00000000-0000-4000-8000-000000000099'}})).statusCode,403);
   await new KanbanService(db,new InstitutionalService(db)).myTasks(member,{participation:'helper'});
   const tasks=await memberApp.inject({method:'GET',url:'/api/my-tasks?participation=helper'});
