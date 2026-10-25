@@ -4,6 +4,7 @@ import { configFromEnv, connect, migrate } from './database.js';
 import { InstitutionalService } from './service.js';
 import { OrderService } from './orders.js';
 import {drainProblemReportNotifications,purgeExpiredProblemReportAttachments} from './problem-reports.js';
+import {purgeArchivedCards} from './kanban.js';
 
 const db = await connect(configFromEnv(process.env));
 await migrate(db);
@@ -13,7 +14,9 @@ await orders.reconcile();
 let reconciling=false;
 const reconciliation=setInterval(async()=>{if(reconciling)return;reconciling=true;try{await orders.reconcile();}catch{console.error('Reservation reconciliation failed; availability still excludes expired holds.');}finally{reconciling=false;}},60000);
 reconciliation.unref();
-const retention=setInterval(async()=>{try{const now=new Date();await purgeExpiredProblemReportAttachments(db,now);await db.run('UPDATE commercial_payment_receipts SET content=NULL,deleted_at=? WHERE content IS NOT NULL AND expires_at<=?',[now,now]);}catch{console.error('Attachment retention cleanup failed.');}},60*60*1000);
+const runRetention=async()=>{try{const now=new Date();await purgeArchivedCards(db,now);await purgeExpiredProblemReportAttachments(db,now);await db.run('UPDATE commercial_payment_receipts SET content=NULL,deleted_at=? WHERE content IS NOT NULL AND expires_at<=?',[now,now]);}catch{console.error('Retention cleanup failed.');}};
+await runRetention();
+const retention=setInterval(runRetention,60*60*1000);
 retention.unref();
 const notifications=setInterval(()=>void drainProblemReportNotifications(db,identity).catch(()=>console.error('Problem report notification delivery failed.')),60000);notifications.unref();void drainProblemReportNotifications(db,identity).catch(()=>console.error('Problem report notification delivery failed.'));
 await app.listen({ host: '0.0.0.0', port: Number(process.env.PORT ?? 8080) });

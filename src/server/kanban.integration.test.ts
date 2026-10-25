@@ -4,7 +4,7 @@ import { buildApp } from './app.js';
 import { DevelopmentIdentityGateway } from './auth.js';
 import { configFromEnv, connect, migrate } from './database.js';
 import { InstitutionalService } from './service.js';
-import { KanbanService } from './kanban.js';
+import { assertDueDay, KanbanService, purgeArchivedCards } from './kanban.js';
 
 const owner = { subject: 'kanban-owner', displayName: 'Kanban Owner', projectAccess: true, owner: true };
 const member = { subject: 'kanban-member', displayName: 'Kanban Member', projectAccess: true, owner: false };
@@ -27,6 +27,13 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   await ownerApp.inject({ method:'PATCH',url:`/api/workspaces/${workspaceId}`,payload:{addMembershipId:memberId} });
   const boardId=(await ownerApp.inject({method:'GET',url:`/api/workspaces/${workspaceId}/boards`})).json()[0].id;
   const board=(await ownerApp.inject({method:'GET',url:`/api/boards/${boardId}`})).json();
+  const addedColumn=await ownerApp.inject({method:'POST',url:`/api/boards/${boardId}/columns`,payload:{name:'Revisão dirigida'}});
+  assert.equal(addedColumn.statusCode,201,addedColumn.body);assert.match(addedColumn.json().color,/^#[0-9A-F]{6}$/);
+  const addedColumnId=addedColumn.json().id;
+  assert.equal((await ownerApp.inject({method:'PATCH',url:`/api/columns/${addedColumnId}`,payload:{color:'#a1b2c3'}})).statusCode,200);
+  const persistedColumn=(await ownerApp.inject({method:'GET',url:`/api/boards/${boardId}`})).json().columns.find((column:any)=>column.id===addedColumnId);
+  assert.equal(persistedColumn.color,'#A1B2C3');
+  assert.equal((await ownerApp.inject({method:'PATCH',url:`/api/columns/${addedColumnId}`,payload:{color:'red'}})).statusCode,400);
   const deadline='2026-11-20T12:00:00.000Z';
   const dated=await ownerApp.inject({method:'POST',url:`/api/boards/${boardId}/cards`,payload:{title:'Prazo fictício UX',dueAt:deadline,priority:'high'}});assert.equal(dated.statusCode,201,dated.body);
   const datedId=dated.json().id;assert.equal(new Date((await ownerApp.inject({url:`/api/cards/${datedId}`})).json().dueAt).toISOString(),deadline);
@@ -41,6 +48,7 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   assert.ok((await ownerApp.inject({method:'GET',url:`/api/cards/${cardId}`})).json().completedAt);
 
   const memberApp=buildApp(new InstitutionalService(db),new DevelopmentIdentityGateway(member));
+  assert.equal((await memberApp.inject({method:'PATCH',url:`/api/columns/${addedColumnId}`,payload:{color:'#000000'}})).statusCode,403);
   assert.equal((await memberApp.inject({method:'GET',url:`/api/cards/${cardId}`})).statusCode,404);
   const publicCard=await ownerApp.inject({method:'POST',url:`/api/boards/${boardId}/cards`,payload:{title:`Público ${Date.now()}`,columnId:board.columns[0].id}});
   const publicId=publicCard.json().id;
@@ -61,6 +69,10 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${publicId}`,payload:{visibility:'directors'}})).statusCode,403);
   assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${publicId}`,payload:{archived:true}})).statusCode,403,'helper cannot archive another author\'s card');
   assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${publicId}`,payload:{priority:'high',dueAt:null,tags:['teste']}})).statusCode,200);
+  assert.equal((await memberApp.inject({method:'POST',url:`/api/boards/${boardId}/cards`,payload:{title:'Prazo passado',dueAt:'2000-01-01T12:00:00.000Z'}})).statusCode,409);
+  assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${publicId}`,payload:{dueAt:'2000-01-01T12:00:00.000Z'}})).statusCode,409);
+  assert.doesNotThrow(()=>assertDueDay('2026-10-24T12:00:00.000Z',-180,new Date('2026-10-25T02:30:00.000Z')));
+  assert.throws(()=>assertDueDay('2026-10-23T12:00:00.000Z',-180,new Date('2026-10-25T02:30:00.000Z')),/anterior/);
   const authored=await memberApp.inject({method:'POST',url:`/api/boards/${boardId}/cards`,payload:{title:`Autoral ${Date.now()}`,columnId:board.columns[0].id}});
   assert.equal(authored.statusCode,201,authored.body);
   assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${authored.json().id}`,payload:{archived:true}})).statusCode,200,'author can archive own card');
@@ -70,7 +82,7 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   await db.run('UPDATE cards SET archived_at=? WHERE id=?',[new Date('2026-01-31T12:00:00Z'),authored.json().id]);
   assert.equal((await memberApp.inject({method:'POST',url:'/api/kanban/retention/reconcile'})).statusCode,403);
   const retained=await new KanbanService(db,new InstitutionalService(db)).reconcileRetention(owner,new Date('2026-04-30T11:59:59Z'));assert.equal(retained.purged,0);
-  const purged=await new KanbanService(db,new InstitutionalService(db)).reconcileRetention(owner,new Date('2026-04-30T12:00:00Z'));assert.equal(purged.purged,1);
+  const purged=await purgeArchivedCards(db,new Date('2026-04-30T12:00:00Z'));assert.equal(purged.purged,1);
   const tombstone=await db.one<any>('SELECT title,purged_at AS purgedAt FROM cards WHERE id=?',[authored.json().id]);assert.equal(tombstone.title,'Cartão removido por retenção');assert.ok(tombstone.purgedAt);
   assert.equal((await ownerApp.inject({url:`/api/boards/${boardId}/archived-cards`})).json().some((card:any)=>card.id===authored.json().id),false);
   assert.equal((await memberApp.inject({method:'POST',url:`/api/cards/${publicId}/transfers`,payload:{toMembershipId:'00000000-0000-4000-8000-000000000099'}})).statusCode,403);
