@@ -14,7 +14,7 @@
 .kanban-forms summary,.card-edit-section>summary,.meeting-list-management>summary{cursor:pointer;min-height:44px;align-content:center}
 .card-collaboration .card-edit-section{margin:16px 0}.card-edit-section[open]>summary{margin-bottom:12px}
 .card-collaboration>fieldset>dl{margin-top:0}.card-page-navigation{flex-wrap:wrap}
-.dialog-confirming-discard::backdrop{background:#061224c7}.discard-confirmation{position:sticky;top:0;z-index:2;background:var(--surface);border:2px solid var(--danger,#a43838);border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 8px 30px #0005}
+.dialog-confirming-discard::backdrop{background:#061224c7}.dialog-confirming-discard .dialog{position:relative}.dialog-confirming-discard .dialog-content:has(.discard-confirmation)::before{content:'';position:absolute;z-index:3;inset:0;background:#061224a6}.discard-confirmation{position:absolute;z-index:4;left:50%;top:50%;width:min(460px,calc(100% - 32px));transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;box-shadow:0 18px 56px #0007}.discard-confirmation .button-danger{border-color:var(--danger,#a43838);background:var(--danger,#a43838);color:#fff}
 .discard-confirmation .form-actions{display:flex;flex-wrap:wrap;gap:10px}
 .button-danger{border-color:var(--danger,#a43838);background:var(--danger,#a43838);color:#fff}.button-danger:hover,.button-danger:focus-visible{background:color-mix(in srgb,var(--danger,#a43838) 86%,#000);border-color:color-mix(in srgb,var(--danger,#a43838) 86%,#000)}
 .meeting-date{font-size:13px;line-height:1.5}.calendar-event-time:has(.meeting-date){display:block}
