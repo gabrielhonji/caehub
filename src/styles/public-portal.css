@@ -46,3 +46,4 @@
 .buyer-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}.buyer-metrics>span{min-width:0}
 @media(max-width:720px){.buyer-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}}
 .remember-device{display:flex;align-items:center;gap:10px;min-height:44px;font-size:13px}.remember-device input{width:18px;height:18px;accent-color:var(--accent)}
+.login-choices{display:grid;justify-items:start;gap:10px}.login-choices small{display:block}
