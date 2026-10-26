@@ -32,7 +32,7 @@ function restore():Selection|undefined{
   }catch{/* The selection remains usable in memory. */}
 }
 
-export function PublicPortal({embedded=false,institutionalDenied=false}:{embedded?:boolean;institutionalDenied?:boolean}){
+export function PublicPortal({embedded=false}:{embedded?:boolean;institutionalDenied?:boolean}){
   const [saved]=useState(restore);
   const returnTo=encodeURIComponent(`${location.pathname}${location.search}${location.hash}`);
   const honjiLogin=`/auth/login?returnTo=${returnTo}`;
@@ -120,8 +120,6 @@ export function PublicPortal({embedded=false,institutionalDenied=false}:{embedde
   </section>;
   const ownOrdersRoute=location.hash.startsWith('#/meus-pedidos');
   const content=ownOrdersRoute&&!embedded?<><section className="commercial-heading buyer-page-heading"><div><Eyebrow>MINHA CONTA</Eyebrow><h1>Meus pedidos.</h1><p>Produtos, pagamento e retirada de cada compra.</p><a className="button button-secondary" href="#/comercial/comprar">← Voltar à lojinha</a></div></section>{orders}</>:<>
-    {institutionalDenied&&<p className="form-feedback" role="status">Sua conta pode usar a lojinha. O acesso institucional depende de concessão por um administrador.</p>}
-
     {verification&&<BuyerEmailVerification onVerified={()=>void checkAccount()}/>}
     <section className={`commercial-heading public-intro ${embedded?'buyer-page-heading':''}`}><div>
       <Eyebrow>{embedded?'COMERCIAL · MINHAS COMPRAS':'01 / HONJI + CAECOMP'}</Eyebrow>

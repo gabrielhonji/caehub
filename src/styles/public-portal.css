@@ -1,4 +1,4 @@
-.public-intro{padding-top:70px}
+.public-intro{padding-top:70px;border-bottom:0}
 .public-intro h2{font:400 clamp(28px,3vw,44px)/1.15 var(--font-editorial);margin:16px 0}
 .public-portal .commercial-campaign-section,.buyer-account-section,#selecao{scroll-margin-top:30px}
 .public-product-placeholder{min-height:150px;display:grid;place-items:center;background:var(--soft);border-bottom:1px solid var(--line);color:var(--muted);margin-bottom:20px}
