@@ -7,6 +7,8 @@ test('combos freeze one price and reserve mixed components exactly once',async()
   const f=await agendaFixture();
   try{
     const initial=(await f.apps.owner.inject('/api/commercial')).json();
+    const settings=(await f.apps.owner.inject('/api/commercial/settings')).json();
+    assert.equal((await f.apps.owner.inject({method:'PUT',url:'/api/commercial/settings',payload:{reservationMinutes:60,pixInstructions:'Instrução fictícia',revision:settings.revision}})).statusCode,200);
     const category=initial.categories.find((value:any)=>value.name==='Adesivos');
     const campaign=(await f.apps.owner.inject({method:'POST',url:'/api/commercial/campaigns',payload:{name:'Combo fictício',stage:'orders'}})).json().id;
     const create=async(name:string,mode:'physical'|'preorder')=>{

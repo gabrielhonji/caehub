@@ -112,7 +112,8 @@ test('Honji BFF validates callbacks, rotates sessions and enforces live authoriz
       assert.equal((await app.inject({url:'/api/me',headers:{cookie}})).json().error,'access_denied');
       assert.equal(decisionCalls,beforeDecision+1,'fresh authorization despite local cookie');
       const publicStatus=await app.inject({url:'/api/public/buyer-status',headers:{cookie}});assert.equal(publicStatus.statusCode,200);assert.deepEqual(publicStatus.json(),{canBuy:false,sessionDenied:true});
-      const access=await app.inject({url:'/acesso',headers:{cookie}});assert.equal(access.statusCode,200);assert.ok(access.body.includes('id="local-logout"'));assert.ok(access.body.includes('data-csrf="'+csrf+'"'));assert.ok(!access.body.includes('never-expose'));
+      const access=await app.inject({url:'/acesso',headers:{cookie}});assert.equal(access.statusCode,200);assert.ok(access.body.includes('id="local-logout"'));assert.ok(access.body.includes('data-csrf="'+csrf+'"'));assert.ok(access.body.includes('id="remember-device" type="checkbox"'));assert.ok(!access.body.includes('id="remember-device" type="checkbox" checked'));assert.ok(access.body.includes('SSO central'));assert.ok(!access.body.includes('never-expose'));
+      const accessScript=await app.inject('/honji-access.js');assert.ok(accessScript.body.includes('honji_remember='));assert.ok(accessScript.body.includes('Max-Age=${choice.checked?2592000:0}'));
       decision='suspended';assert.equal((await app.inject({url:'/api/foundation',headers:{cookie}})).statusCode,403);
       decision='unavailable';assert.equal((await app.inject({url:'/api/me',headers:{cookie}})).statusCode,503);
       decision='malformed';assert.equal((await app.inject({url:'/api/me',headers:{cookie}})).statusCode,503);

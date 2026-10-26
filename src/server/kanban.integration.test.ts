@@ -57,6 +57,7 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   assert.equal((await memberApp.inject({method:'POST',url:`/api/cards/${publicId}/comments`,payload:{body:'Comentário persistido'}})).statusCode,201);
   const detail=(await memberApp.inject({method:'GET',url:`/api/cards/${publicId}`})).json();
   assert.equal(detail.helpers.length,1); assert.equal(detail.checklist.length,1); assert.equal(detail.comments.length,1);
+  assert.equal(detail.permissions.edit,true);assert.equal(detail.permissions.archive,false,'helper can edit but cannot archive');assert.equal((await ownerApp.inject({method:'GET',url:`/api/cards/${publicId}`})).json().permissions.archive,true);
   assert.equal(detail.currentMembershipId,memberId); assert.ok(detail.eligibleParticipants.some((participant:any)=>participant.membershipId===memberId));
   let identityChecks=0;
   const foundationApp=buildApp(new InstitutionalService(db),{current:async()=>{identityChecks+=1;return member;}});
@@ -75,6 +76,7 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   assert.throws(()=>assertDueDay('2026-10-23T12:00:00.000Z',-180,new Date('2026-10-25T02:30:00.000Z')),/anterior/);
   const authored=await memberApp.inject({method:'POST',url:`/api/boards/${boardId}/cards`,payload:{title:`Autoral ${Date.now()}`,columnId:board.columns[0].id}});
   assert.equal(authored.statusCode,201,authored.body);
+  assert.equal((await memberApp.inject({method:'GET',url:`/api/cards/${authored.json().id}`})).json().permissions.archive,true,'author receives the same archive capability enforced by PATCH');
   assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${authored.json().id}`,payload:{archived:true}})).statusCode,200,'author can archive own card');
   assert.equal((await memberApp.inject({method:'PATCH',url:`/api/cards/${authored.json().id}`,payload:{archived:false}})).statusCode,403,'only a manager can restore an archived card');
   assert.equal((await ownerApp.inject({method:'PATCH',url:`/api/cards/${authored.json().id}`,payload:{archived:false}})).statusCode,200);

@@ -109,6 +109,7 @@ async function migrateSchema(db: Database): Promise<void> {
   ]){if(!await db.one('SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?',[table,column]))await db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);}
 
   await migrateCommercial(db);
+  if(!await db.one("SHOW COLUMNS FROM commercial_campaigns LIKE 'orders_url'"))await db.run('ALTER TABLE commercial_campaigns ADD COLUMN orders_url varchar(2048) NULL AFTER name,ADD COLUMN collection_url varchar(2048) NULL AFTER orders_url');
   await seed(db);
   await migrateCommercialCatalog(db);
   await migrateOrders(db);
