@@ -5,8 +5,8 @@
 .public-portal .commercial-campaign-section,.buyer-account-section,#selecao{scroll-margin-top:30px}
 .public-product-placeholder{min-height:150px;display:grid;place-items:center;background:var(--soft);border-bottom:1px solid var(--line);color:var(--muted);margin-bottom:20px}
 .public-product-placeholder span{font:italic 24px var(--font-editorial);text-align:center;padding:12px}
-.public-selection-line{display:flex;align-items:center;gap:20px;padding:20px 0;border-bottom:1px solid var(--line)}
-.selection-remove{width:44px;min-width:44px;padding:0;justify-content:center;gap:0}.selection-remove svg{width:18px;height:18px}
+.public-selection-line{display:grid;grid-template-columns:minmax(0,1fr) 152px 110px 44px;align-items:center;gap:16px;padding:20px 0;border-bottom:1px solid var(--line)}
+.selection-price{min-width:110px;text-align:right;font-variant-numeric:tabular-nums}.selection-remove{display:grid;width:44px;min-width:44px;height:44px;padding:0;place-items:center;gap:0;border-color:transparent;background:transparent}.selection-remove svg{width:19px;height:19px}.selection-remove:hover,.selection-remove:focus-visible{border-color:transparent;background:transparent;color:#b3262e}.buyer-selection-footer>.button{min-height:52px;padding-inline:28px}.checkout-login-intro{display:grid;gap:10px;max-width:480px}.checkout-login-intro h3,.checkout-login-intro p{margin:0}.login-choices{margin-top:22px;gap:12px}
 .public-selection-product{flex:1;min-width:0;display:grid;gap:5px;overflow-wrap:anywhere}
 .public-selection-product span{font-size:13px;color:var(--muted)}
 .public-selection-product small{color:var(--accent-strong)}
@@ -38,7 +38,7 @@
 .buyer-order-card footer{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:auto;padding-top:20px}.buyer-order-card footer>strong{font:400 24px var(--font-editorial)}
 @media(max-width:720px){
   .public-intro,.buyer-page-heading{padding-top:32px}
-  .public-selection-line{flex-wrap:wrap;gap:16px}.public-selection-product{flex-basis:100%}.public-selection-line>.button{margin-left:auto}
+  .public-selection-line{grid-template-columns:minmax(0,1fr) 44px}.public-selection-product{grid-column:1/-1}.public-selection-line>.quantity-stepper{grid-column:1}.selection-price{grid-column:1}.public-selection-line>.selection-remove{grid-column:2;grid-row:2/4;align-self:center}
   .public-portal .commercial-heading h1{font-size:clamp(36px,10vw,54px)}
   .buyer-selection{padding:20px}.buyer-selection-footer{align-items:stretch;flex-direction:column}
   .buyer-order-list{grid-template-columns:1fr}.buyer-account-section{padding:28px 0}.buyer-account-section>.compact-heading{align-items:flex-start}
