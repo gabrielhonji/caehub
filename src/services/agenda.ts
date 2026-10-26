@@ -8,7 +8,7 @@ export type MemberOption = { id:string;displayName:string;role:string;department
 export type DepartmentOption = { id:string;name:string };
 export type Session = { membership:null|{id:string;role:string};owner:boolean;canManage?:boolean;canReadAll?:boolean };
 export type AgendaNotification = { id:string;meetingId?:string;resourceType?:string;resourceId?:string;title:string;kind:string;priority?:'normal'|'high';createdAt:string;readAt?:string };
-export type AgendaFoundation={calendar:CalendarItem[];availability:AvailabilityBlock[];members:MemberOption[];departments:DepartmentOption[];notifications:AgendaNotification[];requests:ReviewRequest[];polls:MeetingPoll[];shifts:OperationalShift[];session:Session};
+export type AgendaFoundation={calendar:CalendarItem[];availability:AvailabilityBlock[];members:MemberOption[];departments:DepartmentOption[];notifications:AgendaNotification[];requests:ReviewRequest[];polls:MeetingPoll[];shifts:OperationalShift[];recommendedDepartmentId?:string|null;recommendedWorkspaceId?:string|null;session:Session};
 
 export const getSession=()=>api<Session>('/me');
 export const getAvailabilityOptions=()=>api<MemberOption[]>('/availability/options');
