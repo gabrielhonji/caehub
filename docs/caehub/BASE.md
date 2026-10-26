@@ -7,7 +7,12 @@
 - **R — Recomendação:** proposta deste pacote, ainda não aprovada como decisão de produto/contrato.
 - **P — Pendente:** detalhe indisponível ou decisão necessária; não preencher por inferência silenciosa.
 
-As regras de execução solicitadas, UI-001 e ENG-001 são obrigatórias. As recomendações de produto continuam propostas. A implementação pode avançar nas fatias C/H independentes; um P bloqueia apenas o comportamento que depende dele. Não substituir decisão aprovada por uma recomendação.
+As regras de execução aplicáveis e UI-001 são obrigatórias. Use `AGENTS.md` como
+roteador e consulte ENG-001 quando planejar ou executar validação; BASE não é
+leitura automática de toda tarefa. As recomendações de produto continuam
+propostas. A implementação pode avançar nas fatias C/H independentes; um P
+bloqueia apenas o comportamento que depende dele. Não substituir decisão
+aprovada por uma recomendação.
 
 ## Decisões comuns
 
@@ -24,7 +29,7 @@ As regras de execução solicitadas, UI-001 e ENG-001 são obrigatórias. As rec
 | C-08 | C/P | Agenda consolidada e turnos; regras operacionais antigas indisponíveis | AGENDA.md |
 | C-09 | C | Estoque físico central; encomendas exclusivas por lojinha | COMERCIAL.md |
 | ENG-001 | C | Leituras seletivas, escopo mínimo, testes proporcionais; suíte completa por marco/antes do release; sem atalhos de qualidade ou segurança | ENG-001.md |
-| C-10 | C | Não inventar endpoints/contratos definitivos; não editar AGENTS.md central Honji | Este documento |
+| C-10 | C | Não inventar endpoints/contratos definitivos; não alterar instruções de outro repositório sem autorização | Este documento |
 
 ## Preferências Honji aplicáveis
 
@@ -43,16 +48,18 @@ As regras de execução solicitadas, UI-001 e ENG-001 são obrigatórias. As rec
 | Comercial | COMERCIAL.md | Segurança: autorização; ACEITE: Comercial |
 | Manutenção/testes | Especificação afetada | ENG-001.md; critério correspondente em ACEITE.md |
 
-ENG-001 é leitura inicial de execução; reler apenas quando a tarefa mudar de classe de risco. Trabalho visual sempre depende do contrato de design, mesmo se a solicitação mencionar apenas um botão.
+ENG-001 rege execução e validação; leia as seções pertinentes ao planejar o lote
+ou quando sua classe de risco mudar. Trabalho visual sempre depende do contrato
+de design, mesmo se a solicitação mencionar apenas um botão.
 
 ## Pendências e desbloqueio
 
 | ID | O que falta | Bloqueia |
 | --- | --- | --- |
 | P-01 | Resolvido por BFF existente e D-62/Agente 08: account.access, project.access, sessão Keycloak viva e identidade estável; ver ARQUITETURA-SEGURANCA.md | Smoke pessoal Google/produção permanece distinto do gate descartável |
-| P-02 | Relação Espaço/departamento/board e regras de acesso/herança | Persistência e autorização dessas relações |
+| P-02 | Ambiguidade original superada por D-59/D-60 e pelos contratos atuais de Gestão; mudanças futuras seguem essas fontes | Não bloqueia a implementação atual; nova divergência exige decisão explícita |
 | P-03 | Cardinalidade de atribuições/auxiliares, poderes, transições e ciclo de vida de cartões | Operações de Kanban dependentes dessas regras |
-| P-04 | Origem da agenda, semântica de turnos, conflitos, visibilidade e fuso | Regras e integração de Agenda |
+| P-04 | Ambiguidade original superada pelas decisões vigentes de AGENDA.md sobre persistência, conflitos, visibilidade e fuso | Não bloqueia a implementação atual; aceite integrado permanece separado |
 | P-05 | Ativos CAECOMP, composição de marcas, fontes/paleta finais e acesso a componentes Honji | Aprovação visual final |
 | P-06 | Resolvido por Agentes 06/08: pedidos existentes e autosserviço externo com e-mail acadêmico verificado; prazo/Pix reais exigem configuração explícita | Configuração comercial real continua explícita |
 | P-07 | Resolvido: Fastify/MySQL, tsx/jose, testes/build em containers e canais oficiais | Ver ENG-001 e runbook de produção |

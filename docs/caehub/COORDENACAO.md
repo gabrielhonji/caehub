@@ -1,15 +1,33 @@
 # Coordenação de agentes
 
-## FE-17 — frontend e integração, 25/10/2026 — Doing
+## Uso e estado atual
 
-Responsável Codex /root. Escopo autorizado: F1, consumidores FE de F2,
-F3–F7 e auditoria integrada F8 do pacote mestre em
-`/home/gabriel/workdir/CAEHUB_planejamento_mestre`, sem produção ou deploy.
-Caminhos reservados nesta etapa: `src/app/`, `src/components/`, `src/hooks/`,
-`src/services/`, `src/styles/`, testes frontend/navegador pertinentes e este
-registro. Contratos CT01–CT08 vêm do Agent 16; frontend não altera regra,
-permissão, persistência ou arquivos de servidor. Q050/Q175 permanecem adiados.
-Primeiro lote: F1 G01+C01, base de navbar/footer e consumidores público/interno.
+Este documento conserva registros históricos por atividade. Para o pacote
+mestre corrente, entre por
+`/home/gabriel/workdir/CAEHUB_planejamento_mestre/STATUS_ATUAL.md` e consulte
+ledger, contratos ou episódios abaixo apenas pelo ID necessário. Checkpoints e
+handoffs anteriores não são estado atual nem nova especificação.
+
+FE-17 está pausado por decisão do usuário, sem caminhos reservados; F8 não foi
+iniciado. Não retome automaticamente. As regras correntes de coordenação,
+validação e Git estão em `AGENTS.md` e ENG-001/002; este arquivo não exige sua
+leitura integral.
+
+## FE-17 — frontend e integração, 25/10/2026 — Paused
+
+Responsável histórico Codex /root. Escopo autorizado: F1, consumidores FE de
+F2, F3–F7 e auditoria integrada F8 do pacote mestre, sem produção ou deploy.
+F1–F7 avançaram até MP02; os retornos BE foram implementados e consumidos, mas
+F8 e aceite integrado não começaram. A pausa libera `src/app/`,
+`src/components/`, `src/hooks/`, `src/services/`, `src/styles/`, testes e este
+registro. Q050/Q175 permanecem adiados.
+
+A separação anterior entre “frontend” e “arquivos de servidor” descrevia a
+alocação daquele lote, não uma regra por extensão. Templates HTML/CSS/JS gerados
+no servidor podem conter trabalho visual. O escritor é definido por
+comportamento e arquivo concreto; entrada, sessão, autorização, persistência e
+domínio permanecem sob responsabilidade backend, com coordenação explícita para
+mudanças visuais no mesmo arquivo.
 
 ## UI-14 — componentes React, 20/10/2026 — Done
 
