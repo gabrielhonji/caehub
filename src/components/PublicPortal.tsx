@@ -25,15 +25,16 @@ function LoginChoices({rememberDevice,setRememberDevice,googleLogin,honjiLogin}:
   const prepareGoogle=()=>{document.cookie=`honji_remember=${rememberDevice?'1':''}; Domain=.honji.com.br; Path=/; Max-Age=${rememberDevice?2592000:0}; SameSite=Lax; Secure`;};
   return <div className="login-choices"><label className="remember-device"><input type="checkbox" checked={rememberDevice} onChange={event=>setRememberDevice(event.target.checked)}/>Manter este dispositivo por 30 dias</label><a className="button button-primary" href={googleLogin} onClick={prepareGoogle}>Entrar ou criar conta com Google</a><a className="button button-secondary" href={honjiLogin}>Entrar com Honji</a><small>A opção mantém apenas o SSO central; a sessão local continua limitada a 8 h sem atividade e 12 h no total.</small></div>;
 }
-function restore():Selection|undefined{
+function storageKey(owner?:string){return owner?`${selectionKey}:${owner}`:selectionKey;}
+function restore(owner?:string):Selection|undefined{
   try{
-    const value=JSON.parse(sessionStorage.getItem(selectionKey)??'null');
+    const value=JSON.parse(localStorage.getItem(storageKey(owner))??'null');
     if(value&&typeof value.campaignId==='string'&&typeof value.requestKey==='string'&&Array.isArray(value.items)&&value.items.length<=100&&value.items.every((item:unknown)=>item&&typeof item==='object'&&'variantId' in item&&typeof item.variantId==='string'&&'quantity' in item&&typeof item.quantity==='string'))return value;
   }catch{/* The selection remains usable in memory. */}
 }
 
 export function PublicPortal({embedded=false}:{embedded?:boolean;institutionalDenied?:boolean}){
-  const [saved]=useState(restore);
+  const [saved]=useState(()=>restore());
   const returnTo=encodeURIComponent(`${location.pathname}${location.search}${location.hash}`);
   const honjiLogin=`/auth/login?returnTo=${returnTo}`;
   const googleLogin=`/auth/login?provider=google&returnTo=${returnTo}`;
@@ -48,6 +49,7 @@ export function PublicPortal({embedded=false}:{embedded?:boolean;institutionalDe
   async function logout(){if(!account||signingOut)return;setSigningOut(true);try{const response=await fetch('/auth/logout',{method:'POST',headers:{'x-csrf-token':account.csrfToken??'','content-type':'application/json'},body:JSON.stringify({mode:'provider'})});const result=await response.json();if(!response.ok)throw new Error();location.assign(result.redirect);}catch{setNotice('Não foi possível sair agora. Tente novamente.');setSigningOut(false);}}
   const [campaignId,setCampaignId]=useState(saved?.campaignId??''),[draft,setDraft]=useState<OrderDraft>(()=>({...emptyOrderDraft(),items:saved?.items??[]}));
   const [requestKey,setRequestKey]=useState(saved?.requestKey??newRequestKey()),[productId,setProductId]=useState(''),[variantId,setVariantId]=useState(''),[quantity,setQuantity]=useState('1');
+  const [selectionOwner,setSelectionOwner]=useState('');
   const [checkout,setCheckout]=useState(Boolean(saved?.items.length)),[busy,setBusy]=useState(false),[formError,setFormError]=useState(''),[detail,setDetail]=useState<OrderDetail>();
   const submitting=useRef(false);
   const [ordersVersion,setOrdersVersion]=useState(0),[notice,setNotice]=useState(''),[pendingCampaign,setPendingCampaign]=useState('');
@@ -61,9 +63,12 @@ export function PublicPortal({embedded=false}:{embedded?:boolean;institutionalDe
     void checkAccount();
   },[]);
   useEffect(()=>{
-    try{if(draft.items.length)sessionStorage.setItem(selectionKey,JSON.stringify({campaignId,items:draft.items,requestKey}));else sessionStorage.removeItem(selectionKey);}
+    if(!account?.subject)return;const owned=restore(account.subject),anonymous=restore();const next=owned??anonymous;if(next){setCampaignId(next.campaignId);setDraft({...emptyOrderDraft(),items:next.items});setRequestKey(next.requestKey);}try{localStorage.removeItem(selectionKey);}catch{/* Storage is optional. */}setSelectionOwner(account.subject);
+  },[account?.subject]);
+  useEffect(()=>{
+    try{const key=storageKey(selectionOwner||undefined);if(draft.items.length)localStorage.setItem(key,JSON.stringify({campaignId,items:draft.items,requestKey}));else localStorage.removeItem(key);}
     catch{/* No personal information is stored. */}
-  },[campaignId,draft.items,requestKey]);
+  },[campaignId,draft.items,requestKey,selectionOwner]);
   const campaign=catalog?.campaigns.find(item=>item.id===campaignId);
   const collection=campaign?.stage==='collection';
   const products=catalog?.products.filter(item=>catalog.links.some(link=>link.campaignId===campaignId&&link.productId===item.id)&&(!collection||item.mode==='physical'))??[];
@@ -134,8 +139,8 @@ export function PublicPortal({embedded=false}:{embedded?:boolean;institutionalDe
       {!catalog?(error?<ErrorState onRetry={()=>void load()}/>:<LoadingState/>):<>
         {error&&<p role="alert">Não foi possível atualizar. Confira novamente antes de comprar.</p>}
         {!catalog.campaigns.length?<EmptyState title="Novas campanhas vêm por aí.">Seus pedidos anteriores continuam disponíveis na sua conta.</EmptyState>:<>
-          <div className="commercial-campaigns" role="group" aria-label="Selecionar campanha">{catalog.campaigns.map(item=><button key={item.id} className="commercial-campaign" aria-pressed={item.id===campaignId} onClick={()=>chooseCampaign(item.id)}><span>{item.semester||'Semestre a definir'}</span><strong>{item.name}</strong><small>{item.stage==='orders'?'Vendas e encomendas':'Retirada e estoque'}</small></button>)}</div>
-          {campaign?<div className="buyer-campaign-context"><Badge tone="active">{collection?'02 · Retirada':'01 · Vendas e encomendas'}</Badge>{campaign.description&&<p>{campaign.description}</p>}<p>{collection?'As encomendas encerraram. Consulte a página Meus pedidos. A lojinha oferece somente produtos físicos.':'Escolha os produtos físicos ou faça sua encomenda dos modelos desta campanha.'}</p></div>:<p role="alert">A campanha selecionada não está mais aberta. Escolha outra e confira seus itens.</p>}
+          <div className="public-campaign-picker"><label>Campanha do semestre<select value={campaignId} onChange={event=>chooseCampaign(event.target.value)}>{catalog.campaigns.map(item=><option key={item.id} value={item.id}>{item.semester||'Semestre a definir'} · {item.name}</option>)}</select></label></div>
+          {campaign?<div className="buyer-campaign-context compact-campaign-context"><Badge tone="active">{collection?'02 · Retirada e estoque':'01 · Vendas e encomendas'}</Badge><p><strong>{campaign.name}</strong>{campaign.description?` · ${campaign.description}`:''}</p><small>{collection?'Encomendas encerradas; pedidos seguem em Meus pedidos e a lojinha mostra estoque físico.':'Produtos físicos e modelos sob encomenda desta campanha.'}</small></div>:<p role="alert">A campanha selecionada não está mais aberta. Escolha outra e confira seus itens.</p>}
         </>}
       </>}
     </section>
