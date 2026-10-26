@@ -10,7 +10,7 @@ import { getCollective, type CollectiveAvailability, type MemberOption, type Dep
 import { getWeeklyOccupancy, requestReview, reviewAvailability, type ReviewRequest, type WeeklyOccupancy } from '../services/agenda-advanced';
 import { today,recommendedMeeting } from '../domain/agenda-input';
 import { AgendaTimeFields } from './AgendaTimeFields';
-import { Badge, Button, EmptyState } from './primitives';
+import { Badge, Button, EmptyState, Toast } from './primitives';
 import { AgendaSummary, AgendaWorkflow } from './AgendaWorkflow';
 
 export function AvailabilityPlanning({members,departments,spaces,requests,canManage,canRead=canManage,membershipId,onSaved,onEditAvailability,onSchedule,openQuery=false}:{spaces:Space[];openQuery?:boolean;members:MemberOption[];departments:DepartmentOption[];requests:ReviewRequest[];canManage:boolean;canRead?:boolean;membershipId?:string;onSaved:()=>Promise<void>;onEditAvailability?:(returnToReview:()=>void)=>void;onSchedule?:(start:string,end:string,ids:string[])=>void}) {
@@ -39,7 +39,7 @@ export function AvailabilityPlanning({members,departments,spaces,requests,canMan
     <Button onClick={()=>launch(canRead?'week':'requests')}>{canRead?'Consultar horários':'Ver revisões'}{pending?` (${pending} pendentes)`:''}</Button>
   </AgendaSummary><AgendaWorkflow busy={busy} title={titles[mode]} open={open} onClose={()=>setOpen(false)}>
     {canRead&&<nav className="agenda-workflow-nav" aria-label="Etapas do planejamento"><Button aria-pressed={mode==='week'} onClick={()=>launch('week')}>Semana</Button><Button aria-pressed={mode==='interval'} onClick={()=>launch('interval')}>Período específico</Button>{canManage&&<Button aria-pressed={mode==='review'} onClick={()=>launch('review')}>Solicitar revisão</Button>}<Button aria-pressed={mode==='requests'} onClick={()=>launch('requests')}>Acompanhar respostas</Button></nav>}
-    <p role="status" aria-live="polite">{message}</p>
+    <Toast message={message}/>
     <div hidden={mode!=='week'}>
       {canRead&&<form className="agenda-form availability-week-form" onChange={()=>{if(grid)setQueryDirty(true);}} onSubmit={async event=>{
         event.preventDefault();const data=new FormData(event.currentTarget);if(Number(data.get('slotMinutes'))<30||Number(data.get('slotMinutes'))>240){setMessage('Escolha uma duração entre 30 minutos e 4 horas.');return;}if(selectedDepartments.length&&!data.getAll('membershipIds').length){setMessage('Selecione pelo menos uma pessoa dos departamentos escolhidos.');return;}const from=new Date(`${data.get('week')}T00:00:00`),to=new Date(from);to.setDate(to.getDate()+7);setBusy(true);setMessage('');
