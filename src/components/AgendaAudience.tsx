@@ -6,8 +6,8 @@ import {getWorkspaceDetail} from '../services/spaces';
 import type {Space} from '../domain/types';
 import type {MemberOption,DepartmentOption} from '../services/agenda';
 
-export function AgendaAudience({spaces,members,initialWorkspace='',selectedIds,departments=[]}:{spaces:Space[];members:MemberOption[];departments?:DepartmentOption[];initialWorkspace?:string;selectedIds?:string[]}){
- const [departmentIds,setDepartmentIds]=useState<string[]>([]),[workspace,setWorkspace]=useState(initialWorkspace);
+export function AgendaAudience({spaces,members,initialWorkspace='',initialDepartment='',selectedIds,departments=[]}:{spaces:Space[];members:MemberOption[];departments?:DepartmentOption[];initialWorkspace?:string;initialDepartment?:string;selectedIds?:string[]}){
+ const [departmentIds,setDepartmentIds]=useState<string[]>(initialDepartment?[initialDepartment]:[]),[workspace,setWorkspace]=useState(initialWorkspace);
  const [selected,setSelected]=useState<string[]>(selectedIds??[]),[workspaceDerived,setWorkspaceDerived]=useState<string[]>([]);
  const [loading,setLoading]=useState(false),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
  const workspaceControl=useRef<HTMLSelectElement>(null);
