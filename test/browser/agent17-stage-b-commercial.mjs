@@ -1,0 +1,74 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const {chromium}=createRequire(import.meta.url)('/security/node_modules/@playwright/test');
+const origin=process.env.CAEHUB_BROWSER_ORIGIN,evidence=process.env.CAEHUB_EVIDENCE_DIR;
+if(!origin||!evidence||process.env.NODE_ENV!=='development')throw new Error('Disposable development origin and evidence directory are required');
+const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+const page=await browser.newPage({viewport:{width:1440,height:1000},colorScheme:'light',locale:'pt-BR'});
+const errors=[];page.on('pageerror',error=>errors.push(error.message));
+const api=async(path,method='GET',data)=>{const response=await page.request.fetch(`${origin}/api${path}`,{method,data});assert.ok(response.ok(),`${method} ${path}: ${response.status()} ${await response.text()}`);return response.status()===204?undefined:response.json();};
+const choose=async(select,text)=>{const value=await select.locator('option').filter({hasText:text}).getAttribute('value');assert.ok(value,`Opção ${text} ausente`);await select.selectOption(value);};
+try{
+  const suffix=Date.now();
+  const initial=await api('/commercial'),category=initial.categories[0];
+  const settings=await api('/commercial/settings');
+  await api('/commercial/settings','PUT',{reservationMinutes:60,pixInstructions:'Instrução fictícia sem chave real',revision:settings.revision});
+  const campaign=await api('/commercial/campaigns','POST',{name:`Campanha combo F8 ${suffix}`,semester:'2026.2',stage:'orders',description:'Dados fictícios para aceite integrado'});
+  const create=async(name,mode,price)=>api('/commercial/products','POST',{name:`${name} ${suffix}`,categoryId:category.id,costCents:100,saleCents:price,mode,campaignId:campaign.id,options:[]});
+  const shirt=await create('Camiseta','preorder',6500),mug=await create('Caneca','physical',4500),keychain=await create('Chaveiro','physical',500);
+  let catalog=await api('/commercial');
+  const variantOf=id=>catalog.variants.find(value=>value.productId===id);
+  const mugVariant=variantOf(mug.id),keychainVariant=variantOf(keychain.id),shirtVariant=variantOf(shirt.id);
+  await api(`/commercial/variants/${mugVariant.id}/movements`,'POST',{kind:'entry',quantity:5,justification:'Estoque fictício F8'});
+  await api(`/commercial/variants/${keychainVariant.id}/movements`,'POST',{kind:'entry',quantity:5,justification:'Estoque fictício F8'});
+
+  await page.goto(`${origin}/#/comercial`);
+  await page.getByRole('heading',{name:/Cada campanha/}).waitFor();
+  await page.getByRole('button',{name:new RegExp(`Campanha combo F8 ${suffix}`)}).click();
+  await page.getByRole('button',{name:'Cadastrar combo',exact:true}).first().click();
+  let dialog=page.getByRole('dialog',{name:'Cadastrar combo',exact:true});await dialog.waitFor();
+  await dialog.getByLabel('Nome do combo').fill(`Combo 105 F8 ${suffix}`);
+  await choose(dialog.getByLabel('1º produto e variação'),`Camiseta ${suffix}`);
+  await choose(dialog.getByLabel('2º produto e variação'),`Caneca ${suffix}`);
+  await dialog.getByRole('button',{name:'Adicionar produto ao combo'}).click();
+  await choose(dialog.getByLabel('3º produto e variação'),`Chaveiro ${suffix}`);
+  await dialog.getByLabel('Preço final (R$)').fill('105');
+  await dialog.screenshot({path:`${evidence}/combo-cadastro-manual-desktop-light.png`});
+  await dialog.getByRole('button',{name:'Cadastrar combo',exact:true}).click();
+  await dialog.waitFor({state:'hidden'});
+
+  await page.getByRole('button',{name:'Cadastrar combo',exact:true}).first().click();dialog=page.getByRole('dialog',{name:'Cadastrar combo',exact:true});
+  await dialog.getByLabel('Nome do combo').fill(`Combo percentual F8 ${suffix}`);
+  await choose(dialog.getByLabel('1º produto e variação'),`Camiseta ${suffix}`);
+  await choose(dialog.getByLabel('2º produto e variação'),`Caneca ${suffix}`);
+  await dialog.getByRole('button',{name:'Desconto percentual'}).click();
+  await dialog.getByLabel('Desconto (%)').fill('10');
+  await dialog.getByRole('button',{name:'Cadastrar combo',exact:true}).click();await dialog.waitFor({state:'hidden'});
+  await page.getByRole('heading',{name:`Combo 105 F8 ${suffix}`,exact:true}).waitFor();
+  await page.screenshot({path:`${evidence}/comercial-combos-preenchidos-desktop-light.png`,fullPage:true});
+
+  catalog=await api('/commercial');
+  const manual=catalog.combos.find(value=>value.name===`Combo 105 F8 ${suffix}`),percentage=catalog.combos.find(value=>value.name===`Combo percentual F8 ${suffix}`);
+  assert.equal(manual.baseCents,11500);assert.equal(manual.priceCents,10500);assert.equal(percentage.priceCents,9900);
+  const beforeMug=catalog.variants.find(value=>value.id===mugVariant.id).availableQuantity,beforeKeychain=catalog.variants.find(value=>value.id===keychainVariant.id).availableQuantity;
+
+  await page.goto(`${origin}/`);
+  await page.getByLabel('Campanha do semestre').selectOption(campaign.id);
+  const comboCard=page.locator('.commercial-combo').filter({hasText:`Combo 105 F8 ${suffix}`});await comboCard.waitFor();
+  await comboCard.getByRole('button',{name:'Adicionar combo'}).click();
+  await page.locator('#selecao .public-selection-product').filter({hasText:`Combo 105 F8 ${suffix}`}).waitFor();
+  await page.locator('#selecao').screenshot({path:`${evidence}/lojinha-combo-carrinho-desktop-light.png`});
+  await page.getByRole('button',{name:'Conferir e concluir'}).click();
+  dialog=page.getByRole('dialog',{name:'Conferir meu pedido',exact:true});await dialog.waitFor();
+  await dialog.screenshot({path:`${evidence}/combo-checkout-preenchido-desktop-light.png`});
+  assert.ok((await dialog.textContent())?.includes(`Combo 105 F8 ${suffix}`),await dialog.textContent());
+  await dialog.getByRole('button',{name:'Confirmar meu pedido',exact:true}).click();
+  const registered=page.getByRole('dialog',{name:'Pedido registrado',exact:true});await registered.waitFor();
+  await registered.getByText(/Total registrado:/).waitFor();
+  await registered.screenshot({path:`${evidence}/pedido-combo-integrado-desktop-light.png`});
+  catalog=await api('/commercial');
+  assert.equal(catalog.variants.find(value=>value.id===mugVariant.id).availableQuantity,beforeMug-1);
+  assert.equal(catalog.variants.find(value=>value.id===keychainVariant.id).availableQuantity,beforeKeychain-1);
+  assert.deepEqual(errors,[]);
+  console.log('PASS combo UI manual/percentage, filled admin/public states and real mixed order with single physical reservation.');
+}finally{await browser.close();}

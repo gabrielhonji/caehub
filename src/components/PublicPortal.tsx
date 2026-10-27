@@ -30,7 +30,7 @@ function storageKey(owner?:string){return owner?`${selectionKey}:${owner}`:selec
 function restore(owner?:string):Selection|undefined{
   try{
     const value=JSON.parse(localStorage.getItem(storageKey(owner))??'null');
-    if(value&&typeof value.campaignId==='string'&&typeof value.requestKey==='string'&&Array.isArray(value.items)&&value.items.length<=100&&value.items.every((item:unknown)=>item&&typeof item==='object'&&'variantId' in item&&typeof item.variantId==='string'&&'quantity' in item&&typeof item.quantity==='string'))return value;
+    if(value&&typeof value.campaignId==='string'&&typeof value.requestKey==='string'&&Array.isArray(value.items)&&value.items.length<=100&&value.items.every((item:unknown)=>item&&typeof item==='object'&&'quantity' in item&&typeof item.quantity==='string'&&(('variantId' in item&&typeof item.variantId==='string')||('comboId' in item&&typeof item.comboId==='string'))))return value;
   }catch{/* The selection remains usable in memory. */}
 }
 
@@ -73,6 +73,7 @@ export function PublicPortal({embedded=false}:{embedded?:boolean;institutionalDe
   const campaign=catalog?.campaigns.find(item=>item.id===campaignId);
   const collection=campaign?.stage==='collection';
   const products=catalog?.products.filter(item=>catalog.links.some(link=>link.campaignId===campaignId&&link.productId===item.id)&&(!collection||item.mode==='physical'))??[];
+  const combos=catalog?.combos.filter(item=>item.campaignId===campaignId&&!collection)??[];
   const product=products.find(item=>item.id===productId);
   const variants=catalog?.variants.filter(item=>item.productId===product?.id)??[],variant=variants.find(item=>item.id===variantId);
   const preorder=product?.mode==='preorder'&&campaign?.stage==='orders';
@@ -82,6 +83,7 @@ export function PublicPortal({embedded=false}:{embedded?:boolean;institutionalDe
   };
   const chooseCampaign=(id:string)=>{if(id===campaignId)return;if(draft.items.length)setPendingCampaign(id);else changeCampaign(id);};
   const changeDraft=(next:OrderDraft)=>{setDraft(next);setRequestKey(newRequestKey());};
+  const addCombo=(comboId:string)=>{const line=draft.items.find(item=>item.comboId===comboId);changeDraft({...draft,items:line?draft.items.map(item=>item===line?{...item,quantity:String(Number(item.quantity)+1)}:item):[...draft.items,{comboId,quantity:'1'}]});setNotice('Combo adicionado à sua seleção. Confira a composição antes de concluir.');};
   const sectionLink=(event:MouseEvent<HTMLAnchorElement>,id:string)=>{if(embedded){event.preventDefault();document.getElementById(id)?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}};
   const add=()=>{
     if(!valid)return;
@@ -91,11 +93,13 @@ export function PublicPortal({embedded=false}:{embedded?:boolean;institutionalDe
     setProductId('');setFormError('');setNotice('Item adicionado à sua seleção. Confira abaixo antes de concluir.');
   };
   const selected=draft.items.map(line=>{
-    const variant=catalog?.variants.find(item=>item.id===line.variantId),product=products.find(item=>item.id===variant?.productId),count=Number(line.quantity);
+    const variant=catalog?.variants.find(item=>item.id===line.variantId),product=products.find(item=>item.id===variant?.productId),combo=combos.find(item=>item.id===line.comboId),count=Number(line.quantity);
     const preorder=product?.mode==='preorder'&&campaign?.stage==='orders';
-    return {line,variant,product,count,preorder,valid:Boolean(product&&variant&&Number.isInteger(count)&&count>0&&count<=1000000&&(preorder||count<=variant.availableQuantity))};
+    const comboParts=catalog?.comboItems.filter(item=>item.comboId===combo?.id).map(item=>{const partVariant=catalog.variants.find(value=>value.id===item.variantId),partProduct=catalog.products.find(value=>value.id===partVariant?.productId);return {item,variant:partVariant,product:partProduct};})??[];
+    const comboMaximum=Math.min(...comboParts.flatMap(part=>part.product?.mode==='physical'&&part.variant?[Math.floor(part.variant.availableQuantity/part.item.quantity)]:[]),1000000);
+    return {line,variant,product,combo,comboParts,count,preorder,max:combo?comboMaximum:preorder?1000000:variant?.availableQuantity??0,price:combo?.priceCents??product?.saleCents??0,valid:Boolean((combo||product&&variant)&&Number.isInteger(count)&&count>0&&count<=1000000&&count<=(combo?comboMaximum:preorder?1000000:variant?.availableQuantity??0))};
   });
-  const total=selected.reduce((sum,item)=>sum+(item.product?.saleCents??0)*(Number.isFinite(item.count)?item.count:0),0);
+  const total=selected.reduce((sum,item)=>sum+item.price*(Number.isFinite(item.count)?item.count:0),0);
   const refreshDetail=async()=>{
     if(!detail||busy)return;setBusy(true);setFormError('');
     try{setDetail(await api<OrderDetail>(`/commercial/my-orders/${detail.order.id}`));}
@@ -106,8 +110,8 @@ export function PublicPortal({embedded=false}:{embedded?:boolean;institutionalDe
     if(submitting.current||!catalog)return;submitting.current=true;setBusy(true);setFormError('');let registered=false;
     try{
       const items=selected.map(item=>{
-        if(!item.valid||!item.product)throw new Error('Confira os itens indisponíveis e as quantidades antes de concluir.');
-        return {variantId:item.line.variantId,quantity:item.count,expectedPriceCents:item.product.saleCents};
+        if(!item.valid)throw new Error('Confira os itens indisponíveis e as quantidades antes de concluir.');
+        return item.combo?{comboId:item.combo.id,quantity:item.count,expectedPriceCents:item.combo.priceCents}:{variantId:item.line.variantId,quantity:item.count,expectedPriceCents:item.product!.saleCents};
       });
       const result=await api<{id:string}>('/commercial/my-orders',{method:'POST',body:JSON.stringify({campaignId,requestKey,items})});
       registered=true;setNotice('Pedido registrado. Acompanhe o pagamento e a retirada em Meus pedidos.');
@@ -148,18 +152,18 @@ export function PublicPortal({embedded=false}:{embedded?:boolean;institutionalDe
 
     {campaign&&catalog&&<section className="commercial-catalog-section">
       <div className="compact-heading"><div><Eyebrow>LOJINHA · {campaign.name}</Eyebrow><h2>{collection?'Produtos físicos para comprar.':'Escolha seus produtos.'}</h2></div>{draft.items.length>0&&<a className="button button-secondary" href={embedded?'#/comercial/comprar':'#selecao'} onClick={event=>sectionLink(event,'selecao')}>Sua seleção · {draft.items.length}</a>}</div>
-      {!products.length?<EmptyState title={collection?'Nenhum produto físico disponível.':'O catálogo está sendo preparado.'}>{collection?'As encomendas feitas anteriormente aparecem somente nos seus pedidos.':'Os produtos publicados aparecerão nesta campanha.'}</EmptyState>:<div className="commercial-catalog">{products.map(item=>{
+      {!products.length&&!combos.length?<EmptyState title={collection?'Nenhum produto físico disponível.':'O catálogo está sendo preparado.'}>{collection?'As encomendas feitas anteriormente aparecem somente nos seus pedidos.':'Os produtos publicados aparecerão nesta campanha.'}</EmptyState>:<><div className="commercial-catalog">{products.map(item=>{
         const available=catalog.variants.filter(variant=>variant.productId===item.id).some(variant=>variant.availableQuantity>0),preorder=item.mode==='preorder'&&!collection;
         const itemVariants=catalog.variants.filter(variant=>variant.productId===item.id&&variant.status==='active');
         return <article className="commercial-product" key={item.id}><div className="public-product-placeholder" aria-label="Produto sem imagem cadastrada"><span>{item.category}</span></div><header><Eyebrow>{item.category}</Eyebrow><Badge tone={preorder?'waiting':available?'active':'neutral'}>{preorder?'Sob encomenda':available?'Estoque físico':'Indisponível'}</Badge></header><h3>{item.name}</h3><p className="commercial-product-description">{item.description||'Consulte as variações disponíveis.'}</p><p className="product-variant-summary">{itemVariants.slice(0,3).map(value=>value.name).join(' · ')}{itemVariants.length>3?` +${itemVariants.length-3}`:''}</p><div className="commercial-product-price"><strong>{money(item.saleCents)}</strong><span>por unidade</span></div><Button disabled={!preorder&&!available} onClick={()=>{setProductId(item.id);setVariantId((catalog.variants.find(variant=>variant.productId===item.id&&(item.mode==='preorder'&&!collection||variant.availableQuantity>0))??catalog.variants.find(variant=>variant.productId===item.id))?.id??'');setQuantity('1');setFormError('');}}>{available||preorder?'Ver produto':'Sem estoque'}</Button></article>;
-      })}</div>}
+      })}</div>{combos.length>0&&<div className="commercial-catalog combo-catalog">{combos.map(combo=>{const parts=catalog.comboItems.filter(item=>item.comboId===combo.id).map(item=>{const partVariant=catalog.variants.find(value=>value.id===item.variantId),partProduct=catalog.products.find(value=>value.id===partVariant?.productId);return {item,variant:partVariant,product:partProduct};}),available=parts.every(part=>part.product?.mode==='preorder'||Boolean(part.variant&&part.variant.availableQuantity>=part.item.quantity));return <article className="commercial-product commercial-combo" key={combo.id}><div className="public-product-placeholder" aria-label="Combo sem imagem cadastrada"><span>COMBO</span></div><header><Eyebrow>COMBO</Eyebrow><Badge tone={available?'active':'neutral'}>{available?'Físico + encomenda':'Indisponível'}</Badge></header><h3>{combo.name}</h3><p className="commercial-product-description">{combo.description||parts.map(part=>`${part.item.quantity} × ${part.product?.name??'Produto'} · ${part.variant?.name??'Variação'}`).join(' + ')}</p><div className="commercial-product-price"><strong>{money(combo.priceCents)}</strong><span>{combo.priceCents<combo.baseCents?`soma ${money(combo.baseCents)}`:'preço do combo'}</span></div><Button disabled={!available||draft.items.length>=100} onClick={()=>addCombo(combo.id)}>{available?'Adicionar combo':'Sem estoque'}</Button></article>;})}</div>}</>}
     </section>}
     {catalog&&draft.items.length>0&&<section id="selecao" className="commercial-catalog-section buyer-selection">
       <Eyebrow>SUA SELEÇÃO · {campaign?.name??'Campanha indisponível'}</Eyebrow><h2>Confira antes de pedir.</h2><p>Os itens ainda não estão reservados. O preço e a disponibilidade serão conferidos ao concluir.</p>
-      {selected.map(item=><div className="public-selection-line form-fields" key={item.line.variantId}>
-        <div className="public-selection-product"><strong>{item.product?.name??'Produto indisponível'}</strong><span>{item.variant?.name??'Variação indisponível'} · {item.preorder?'Sob encomenda':'Produto físico'}</span>{!item.valid&&<small role="alert">Remova o item indisponível ou corrija a quantidade.</small>}</div>
-        <QuantityStepper hideLabel label={`Quantidade de ${item.product?.name??'item'}`} value={item.count} max={item.preorder?1000000:item.variant?.availableQuantity??1} onChange={value=>changeDraft({...draft,items:draft.items.map(line=>line===item.line?{...line,quantity:String(value)}:line)})}/>
-        <strong className="selection-price">{money((item.product?.saleCents??0)*(Number.isFinite(item.count)?item.count:0))}</strong><Button className="selection-remove" aria-label={`Remover ${item.product?.name??'item'} da seleção`} title="Remover da seleção" onClick={()=>changeDraft({...draft,items:draft.items.filter(line=>line!==item.line)})}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16m-10 4v6m4-6v6M9 7l1-3h4l1 3m3 0-1 14H7L6 7"/></svg><span className="sr-only">Remover</span></Button>
+      {selected.map(item=><div className="public-selection-line form-fields" key={item.line.comboId??item.line.variantId}>
+        <div className="public-selection-product"><strong>{item.combo?.name??item.product?.name??'Produto indisponível'}</strong><span>{item.combo?item.comboParts.map(part=>`${part.item.quantity} × ${part.product?.name??'Produto'}`).join(' + '):`${item.variant?.name??'Variação indisponível'} · ${item.preorder?'Sob encomenda':'Produto físico'}`}</span>{!item.valid&&<small role="alert">Remova o item indisponível ou corrija a quantidade.</small>}</div>
+        <QuantityStepper hideLabel label={`Quantidade de ${item.combo?.name??item.product?.name??'item'}`} value={item.count} max={Math.max(1,item.max)} onChange={value=>changeDraft({...draft,items:draft.items.map(line=>line===item.line?{...line,quantity:String(value)}:line)})}/>
+        <strong className="selection-price">{money(item.price*(Number.isFinite(item.count)?item.count:0))}</strong><Button className="selection-remove" aria-label={`Remover ${item.combo?.name??item.product?.name??'item'} da seleção`} title="Remover da seleção" onClick={()=>changeDraft({...draft,items:draft.items.filter(line=>line!==item.line)})}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16m-10 4v6m4-6v6M9 7l1-3h4l1 3m3 0-1 14H7L6 7"/></svg><span className="sr-only">Remover</span></Button>
       </div>)}
       <div className="buyer-selection-footer"><div className="commercial-total"><span>Total estimado</span><strong>{money(total)}</strong></div><Button variant="primary" disabled={!selected.every(item=>item.valid)||!campaign} onClick={()=>{setFormError('');setCheckout(true);}}>Conferir e concluir</Button></div>
     </section>}

@@ -53,7 +53,7 @@ export function CommercialOrders({catalog,campaignId,onInventoryChange,mode='adm
   };
   const refreshDetail=async()=>{if(!detail||busy)return;setBusy(true);setFormError('');setFeedback('');try{setDetail(await api<OrderDetail>(`/commercial/${route}/${detail.order.id}`));await load();}catch(e){setFormError(failure(e));}finally{setBusy(false);}};
   const create=async()=>{
-    const items=draft.items.map(line=>{const v=catalog!.variants.find(v=>v.id===line.variantId),p=catalog!.products.find(p=>p.id===v?.productId);return {variantId:line.variantId,quantity:Number(line.quantity),expectedPriceCents:p!.saleCents};});
+    const items=draft.items.map(line=>{if(line.comboId){const combo=catalog!.combos.find(value=>value.id===line.comboId);return {comboId:line.comboId,quantity:Number(line.quantity),expectedPriceCents:combo!.priceCents};}const v=catalog!.variants.find(value=>value.id===line.variantId),p=catalog!.products.find(value=>value.id===v?.productId);return {variantId:line.variantId,quantity:Number(line.quantity),expectedPriceCents:p!.saleCents};});
     const result=await mutate(`/commercial/${mode==='mine'?'my-orders':'orders'}`,{campaignId,requestKey,items,...(mode==='admin'?{...(draft.buyerPersonId?{buyerPersonId:draft.buyerPersonId}:{buyerName:draft.buyerName}),buyerContact:draft.buyerContact}:{})});
     if(result?.id){setDraft(emptyOrderDraft());setRequestKey(newRequestKey());await open('detail',result.id,true);}
   };
