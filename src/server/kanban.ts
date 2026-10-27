@@ -59,7 +59,7 @@ export class KanbanService {
   }
 
   private async card(actor: Actor, cardId: string) {
-    const row = await this.db.one<CardRow>(`SELECT c.id,c.board_id AS boardId,b.workspace_id AS workspaceId,w.department_id AS departmentId,c.creator_membership_id AS creatorId,c.responsible_membership_id AS responsibleId,c.visibility,c.archived_at AS archivedAt,c.version FROM cards c JOIN boards b ON b.id=c.board_id JOIN workspaces w ON w.id=b.workspace_id WHERE c.id=?`, [cardId]);
+    const row = await this.db.one<CardRow>(`SELECT c.id,c.board_id AS boardId,b.workspace_id AS workspaceId,w.department_id AS departmentId,c.creator_membership_id AS creatorId,c.responsible_membership_id AS responsibleId,c.visibility,c.archived_at AS archivedAt,c.version FROM cards c JOIN boards b ON b.id=c.board_id JOIN workspaces w ON w.id=b.workspace_id WHERE c.id=? AND c.purged_at IS NULL`, [cardId]);
     if (!row) throw new NotFound('card');
     const context = await this.context(actor, row.workspaceId);
     if (row.visibility === 'directors' && !context.manager && !context.broadRead) throw new NotFound('card');

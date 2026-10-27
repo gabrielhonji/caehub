@@ -87,6 +87,7 @@ test('Kanban persists its vertical flow and hides director cards from members', 
   const purged=await purgeArchivedCards(db,new Date('2026-04-30T12:00:00Z'));assert.equal(purged.purged,1);
   const tombstone=await db.one<any>('SELECT title,purged_at AS purgedAt FROM cards WHERE id=?',[authored.json().id]);assert.equal(tombstone.title,'Cartão removido por retenção');assert.ok(tombstone.purgedAt);
   assert.equal((await ownerApp.inject({url:`/api/boards/${boardId}/archived-cards`})).json().some((card:any)=>card.id===authored.json().id),false);
+  assert.equal((await ownerApp.inject({method:'PATCH',url:`/api/cards/${authored.json().id}`,payload:{archived:false}})).statusCode,404,'purged tombstone cannot be restored or edited');
   assert.equal((await memberApp.inject({method:'POST',url:`/api/cards/${publicId}/transfers`,payload:{toMembershipId:'00000000-0000-4000-8000-000000000099'}})).statusCode,403);
   await new KanbanService(db,new InstitutionalService(db)).myTasks(member,{participation:'helper'});
   const tasks=await memberApp.inject({method:'GET',url:'/api/my-tasks?participation=helper'});
