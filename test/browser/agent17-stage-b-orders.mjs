@@ -23,8 +23,17 @@ try{
   const lastHistory=dialog.locator('.order-history li').last();
   if(await lastHistory.count())assert.equal(await lastHistory.evaluate(element=>getComputedStyle(element).borderBottomWidth),'0px');
   await dialog.screenshot({path:`${evidence}/meu-pedido-detalhes-desktop-light.png`});
+  const repeat=dialog.getByRole('button',{name:'Refazer pedido',exact:true});assert.equal(await repeat.count(),1);
+  await repeat.click();const repeatDialog=page.getByRole('dialog',{name:'Refazer pedido vencido'});await repeatDialog.waitFor();
+  assert.equal(await repeatDialog.getByRole('button',{name:'Atualizar disponibilidade'}).count(),1);
+  assert.equal(await repeatDialog.getByRole('button',{name:'Abrir lojinha'}).count(),0);
+  const checkout=repeatDialog.getByRole('button',{name:/Conferir novo pedido|Prosseguir com os itens disponíveis/});await checkout.click();
+  const checkoutDialog=page.getByRole('dialog',{name:'Conferir novo pedido'});await checkoutDialog.waitFor();
+  assert.ok(await checkoutDialog.locator('.quantity-stepper').count()>0);
+  assert.ok(await checkoutDialog.getByRole('button',{name:/Remover /}).count()>0);
+  await checkoutDialog.screenshot({path:`${evidence}/refazer-pedido-conferencia-desktop-light.png`});
   await page.setViewportSize({width:390,height:844});await page.emulateMedia({colorScheme:'dark'});
-  await dialog.screenshot({path:`${evidence}/meu-pedido-detalhes-mobile-dark.png`});
+  await checkoutDialog.screenshot({path:`${evidence}/refazer-pedido-conferencia-mobile-dark.png`});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   assert.deepEqual(errors,[]);
   console.log('PASS buyer orders filled list/detail, grouped badges, compact items, history, responsive dark state.');
