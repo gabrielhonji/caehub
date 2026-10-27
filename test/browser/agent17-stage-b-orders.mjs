@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const {chromium}=createRequire(import.meta.url)('/security/node_modules/@playwright/test');
+const origin=process.env.CAEHUB_BROWSER_ORIGIN,evidence=process.env.CAEHUB_EVIDENCE_DIR;
+if(!origin||!evidence||process.env.NODE_ENV!=='development')throw new Error('Disposable development origin and evidence directory are required');
+const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+const page=await browser.newPage({viewport:{width:1440,height:1000},colorScheme:'light',locale:'pt-BR'});
+const errors=[];page.on('pageerror',error=>errors.push(error.message));
+try{
+  await page.goto(`${origin}/#/meus-pedidos`);
+  const card=page.locator('.buyer-order-card').first();await card.waitFor();
+  assert.ok(await card.locator('header .badge').count()>=2,'Reserva e pagamento devem permanecer juntos no cabeçalho.');
+  const itemText=await card.locator('.buyer-purchased-items').innerText();
+  assert.doesNotMatch(itemText,/Produto físico|Aguardando pagamento/,'Cumprimento e pagamento pertencem aos detalhes.');
+  assert.equal(await card.getByRole('button',{name:/Mais detalhes do pedido/}).count(),1);
+  await page.screenshot({path:`${evidence}/meus-pedidos-preenchidos-desktop-light.png`,fullPage:true});
+  await card.getByRole('button',{name:/Mais detalhes do pedido/}).click();
+  const dialog=page.getByRole('dialog',{name:'Detalhes do pedido'});await dialog.waitFor();
+  const refresh=dialog.getByRole('button',{name:'Atualizar detalhes'}),close=dialog.getByRole('button',{name:'Fechar diálogo'});
+  assert.ok((await refresh.boundingBox()).x<(await close.boundingBox()).x,'Atualizar detalhes deve ficar antes de fechar.');
+  assert.equal(await dialog.locator('.order-history').count(),1);
+  await dialog.locator('.order-history>summary').click();
+  const lastHistory=dialog.locator('.order-history li').last();
+  if(await lastHistory.count())assert.equal(await lastHistory.evaluate(element=>getComputedStyle(element).borderBottomWidth),'0px');
+  await dialog.screenshot({path:`${evidence}/meu-pedido-detalhes-desktop-light.png`});
+  await page.setViewportSize({width:390,height:844});await page.emulateMedia({colorScheme:'dark'});
+  await dialog.screenshot({path:`${evidence}/meu-pedido-detalhes-mobile-dark.png`});
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  assert.deepEqual(errors,[]);
+  console.log('PASS buyer orders filled list/detail, grouped badges, compact items, history, responsive dark state.');
+}finally{await browser.close();}
